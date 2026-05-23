@@ -21,8 +21,8 @@ def layout(page):
 aliases = {
     "path_alias": ["path", "url", "route"],
     "build_alias": [ "build", "view", "builder", "component", "element", "contents", "controls",],
-    # hero_build takes True or 1 for static pathes, and True or int for dynamic pathes (True means 5)
-    "hero_build_alias": [ "hero_build", "hero_view", "hero_builder", "hero_component", "hero_element", "hero_contents", "hero_controls",],
+    # build_hero takes True or 1 for static pathes, and True or int for dynamic pathes (True means 5)
+    "build_hero_alias": [ "build_hero", "hero_view", "build_heroer", "hero_component", "hero_element", "hero_contents", "hero_controls",],
     "fly_in_alias": ["fly_in", "loader", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
     "fly_in_override_alias": ["fly_in_override", "loader_override", "canActivate_override", "beforeEnter_override", "middleware_override", "beforeLoad_override",],
     "fly_out_alias": ["fly_out", "canDeactivate", "beforeUnload",],
@@ -30,7 +30,7 @@ aliases = {
     "subways_alias": ["subways", "children", "routes", "screens", "kids"],
     "layout_alias": ["layout", "frame",],
     "layout_override_alias": ["layout_override", "frame_override",],
-    "hero_layout_alias": ["hero_layout", "hero_frame",],
+    "layout_hero_alias": ["layout_hero", "hero_frame",],
     "fly_to_alias": ["fly_to", "redirect", "redirectTo",],
     "title_alias": ["title", ],
     "icon_alias": ["icon", "logo",],
@@ -41,6 +41,23 @@ aliases = {
 _rev_aliases = {val:k for k in aliases.keys() for val in aliases.get(k)}
 
 class Airway():
+    path:str=None
+    build=None
+    subways:list[Airway]=None
+    fly_to:str=None
+    layout = None
+    layout_override:bool=None
+    fly_in = None
+    fly_in_override:bool=None 
+    fly_out=None
+    fly_out_override:bool=None,
+    is_zone:bool=None,
+    build_hero:bool=None
+    layout_hero:bool=None
+    title=None
+    icon=None
+    post_fly=None
+
     _airways_all = set() # every created or cloned airway
     _airways_wild = set() # original but never adopted
     _registered_classes = None
@@ -318,7 +335,7 @@ Notice: async functions are also supported
                  fly_to:str=None, layout = None, layout_override:bool=None,
                     fly_in = None, fly_in_override:bool=None, 
                     fly_out=None, fly_out_override:bool=None,
-                    is_zone:bool=None, hero_build:bool=None, hero_layout:bool=None,
+                    is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                     title=None, icon=None, post_fly=None, **kwargs):
         if not Airway._pending_classes: 
             Airway._pending_classes = set()
@@ -337,8 +354,8 @@ Notice: async functions are also supported
         self.fly_out_override = None
         self.icon = None
         self.title = None
-        self.hero_build = None
-        self.hero_layout = None
+        self.build_hero = None
+        self.layout_hero = None
         self.post_fly = None
         self._class = None
 
@@ -350,11 +367,11 @@ Notice: async functions are also supported
         self.fly_in_alias = None
         self.fly_out_alias = None
         self.fly_in_override_alias = None
-        self. fly_out_override_alias = None
+        self.fly_out_override_alias = None
         self.title_alias = None
         self.icon_alias = None
-        self.hero_build_alias = None
-        self.hero_layout_alias = None
+        self.build_hero_alias = None
+        self.layout_hero_alias = None
         self.post_fly_alias = None
 
         params = locals()
@@ -645,8 +662,8 @@ class Airline: # singleton only 1 instance
             'layout_nodes', # list of layoutNodes
             'title','title_alias', # title
             'icon','icon_alias', # icon
-            'hero_build', 'hero_build_alias',
-            'hero_layout', 'hero_layout_alias',
+            'build_hero', 'build_hero_alias',
+            'layout_hero', 'layout_hero_alias',
             'is_zone', # False as default
             '_class',
             'regex', # None as default for dynamic nodes
@@ -692,7 +709,7 @@ class Airline: # singleton only 1 instance
             self._new_layouts = set()
             self._arounds = set()
             self._new_arounds = set()
-            self._hero_builds = {}
+            self._build_heros = {}
             self.page = page
             self._temp_data = [] # list of controls to update
 
@@ -804,7 +821,7 @@ class Airline: # singleton only 1 instance
             if e.view is not None and not getattr(e.page, "_is_navigating", False):
                 e.page.fly._is_navigating = True
                 fly_out_check = await self._apply_fly_out_checks(e.page, e.view)
-                Airline._BuildObj._save_hero_build(e.page, e.view)
+                Airline._BuildObj._save_build_hero(e.page, e.view)
                 e.page.views.remove(e.view)
                 if e.page.views:
                     top_view = e.page.views[-1]
@@ -892,19 +909,19 @@ class Airline: # singleton only 1 instance
             if airway._class:
                 if airway.build_alias:
                     build_node = Airline._BuildNode(None, airway._class, airway.build_alias,
-                                                    hero_attr_name=airway.hero_build_alias, 
+                                                    hero_attr_name=airway.build_hero_alias, 
                                                     post_fly_attr_name=airway.post_fly_alias)
                 if airway.layout_alias:
                     layout_node = Airline._LayoutNode(None, airway._class, airway.layout_alias,
                                                       airway.layout_override_alias,
-                                                      hero_attr_name=airway.hero_layout_alias, 
+                                                      hero_attr_name=airway.layout_hero_alias, 
                                                     post_fly_attr_name=airway.post_fly_alias)
             else:
                 if airway.build:
-                    build_node = Airline._BuildNode(airway.build, hero_static=airway.hero_build,
+                    build_node = Airline._BuildNode(airway.build, hero_static=airway.build_hero,
                                                     post_fly_static=airway.post_fly)
                 if airway.layout:
-                    layout_node = Airline._LayoutNode(airway.layout, hero_static=airway.hero_layout,
+                    layout_node = Airline._LayoutNode(airway.layout, hero_static=airway.layout_hero,
                                                       post_fly_static=airway.post_fly)
 
             layout_nodes = list(p_layout_nodes) + ([layout_node] if layout_node else [])
@@ -1309,7 +1326,7 @@ class Airline: # singleton only 1 instance
         for i in range(len(page.views) - 1, -1, -1):
             vi = page.views[i]
             if vi.route not in final_paths and await self._apply_fly_out_checks(page, vi):
-                Airline._BuildObj._save_hero_build(page, vi)
+                Airline._BuildObj._save_build_hero(page, vi)
                 page.views.pop(i)
         
         for index, flight_node in enumerate(final_nodes_list):
@@ -1321,14 +1338,14 @@ class Airline: # singleton only 1 instance
             pre_view = None
             if existing_view:
                 build_obj = existing_view._fly_build_obj if hasattr(existing_view, "_fly_build_obj") else None
-                Airline._BuildObj._save_hero_build(page, existing_view)
+                Airline._BuildObj._save_build_hero(page, existing_view)
                 page.views.remove(existing_view)
             
             if not build_obj:
                 if flight_node.is_dynamic:
-                    build_obj = page.fly._hero_builds.get(flight_node.path, {}).get(final_paths[index], None)
+                    build_obj = page.fly._build_heros.get(flight_node.path, {}).get(final_paths[index], None)
                 else:
-                    build_obj = page.fly._hero_builds.get(flight_node.path, None)
+                    build_obj = page.fly._build_heros.get(flight_node.path, None)
             if not build_obj or not isinstance(build_obj, Airline._BuildObj):
                 build_obj = Airline._BuildObj._create_build_obj(page, flight_node.build_node )
 
@@ -1644,7 +1661,7 @@ class Airline: # singleton only 1 instance
             return objs_map
 
         @classmethod
-        def _save_hero_build(cls, page, view):
+        def _save_build_hero(cls, page, view):
             if not hasattr(view, "_fly_build_obj"):
                 return
             
@@ -1652,7 +1669,7 @@ class Airline: # singleton only 1 instance
             hero_val = Airline._get_sync_hero(build_node)
             if hero_val:
                 if build_node.is_dynamic():
-                    map = page.fly._hero_builds.get(build_node.path, {})
+                    map = page.fly._build_heros.get(build_node.path, {})
                     map[view.route]=view._fly_build_obj
                     hero_val = hero_val if isinstance(hero_val, int) else 5
                     while map and len(map) > hero_val:
@@ -1661,7 +1678,7 @@ class Airline: # singleton only 1 instance
                     map = view._fly_build_obj
             else:
                 map = None
-            page.fly._hero_builds[view.route] = map
+            page.fly._build_heros[view.route] = map
 
     class _LayoutNode: # one node created for one layout for all times
         def __init__(self, static=None, _class=None, 

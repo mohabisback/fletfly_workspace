@@ -30,29 +30,30 @@ Look at this single block of code. It demonstrates auto-pathing (static & dynami
 from fletfly import Airway, slot
 import flet as ft
 
-@Airway
-class Home:                                  # 1. Auto-path detection ("/home")
-    def layout(page):                        # 2. Inheritable layout structure
+class Home(Airway):                          # Route detection: path auto named to "/home"
+    def layout(page):                        # Auto-detected layout by names (layout, frame)
         return ft.Column([
             ft.Text("Header"),
-            slot(page),                      # Injected Content 1
-            slot(page),                      # Injected Content 2
+            slot(page),                      # Anonymous slot (auto-injected)
+            slot(page),                      # Anonymous slot (auto-injected)
             ft.Text("Footer")
         ])
         
-    def build(page):                         # 3. Content for "/home"
+    def build(page):                         # Auto-detected build by names (view, content, component, element)
         return (
-            ft.Text("Hi"),                   # Fills Content 1
-            ft.Text("Welcome home")          # Fills Content 2
+            ft.Text("Hi"),                   # Binds to first available slot
+            ft.Text("Welcome home")          # Binds to second available slot
         )
+    
+    class _Helper:                           # Private scope (ignored by router)
+        pass
 
-    @Airway(":id")                           # 4. Auto-resolves to "/home/:id"
+    @Airway(":id")                           # Sub route detection, path: "/home/:id"
     class User:
-        def build(page):
-            # 5. Inherits Home layout automatically!
+        def build(page):                     # Injected into self or inheritable layout
             return (
-                ft.Text("User profile:"),              # Fills Content 1
-                ft.Text(f"{page.params['id']}")        # Fills Content 2
+                ft.Text(f"{page.fly.params['id']}"),        # Accesses resolved URL params
+                ft.Text(f"{page.fly.query['favourites']}")  # Accesses resolved URL query
             )
 ```
 
