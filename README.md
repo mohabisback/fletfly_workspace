@@ -16,7 +16,7 @@
 > * **[File-Based](fletfly/docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*
 > * **[Decorator-Based](fletfly/docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*
 
----
+--- 
  📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
 ---
 
