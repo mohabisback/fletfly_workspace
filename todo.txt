@@ -1,0 +1,71 @@
+plans
+
+
+
+الـ Scroll Position: في صفحات الويب الطويلة، لما بترجع لورا، رياكت راوتر بيحاول يرجعك لنفس النقطة اللي كنت واقف فيها في نص الصفحة. في فليت، أحياناً الـ ListView بيرجع لأول الصفحة من فوق.
+
+الـ Dynamic Data Re-fetching: لو الصفحة بتعتمد على بيانات من API، هل المفروض لما أرجع لها ألاقي الداتا القديمة (Instant) ولا المفروض تعمل Refresh؟ رياكت بيدي خيارات للتحكم في ده.
+
+الـ Memory Management: لو الأبلكيشن كبر جداً وبقى فيه 50 فيو في الـ Stack، الرامات هتتقل لأن كل فيو محتفظ بالـ TextFields بتاعته. رياكت راوتر "المهم بيه" بيعمل Unmount للفيوز البعيدة عشان يوفر رامات، ويرجع يبنيها لما
+
+
+
+
+
+
+
+
+
+
+
+Documentations:
+
+In Fly-in or Fly-out(middlewares) during the navigation process, the Airline engine provides a real-time tracking object injected directly into the page instance.
+These properties are only available and valid during the active execution of your middleware guards.
+
+page.flight_radar: Returns the path of the pad currently being processed by the middleware. Think of it as the "Transit port" the plane is currently passing through.
+
+page.is_building: A boolean that returns True only if the flight_radar is currently pointing at the Final Destination of the trip. It returns False if the plane is just passing through a air_zone or a parent path (Transit).
+
+[!IMPORTANT]
+These properties are dynamic. If your flight passes through multiple guards, page.flight_radar will update sequentially to reflect the current node's path.
+
+# by default all callable views creation will be created once upon Router initiation
+
+which is most efficient for hardware, if you have a function that really need to be recalled with each update, please use flyState for the variables in that view, and thank you.
+
+
+func('//////')
+func *args are =  ('////',)
+
+Airway('////') #
+__new__ *args are =  ('////') # don't register no class in args
+
+obj("//////") # inject self with theses shit, string in first place means route
+__call__ args = ('//////',)
+
+
+@func
+func *args are =  (<class '__main__.hi'>,)
+
+@Airway # register me
+__new__ *args are =  (<class '__main__.hi'>,) # check register
+
+@obj
+__call__ args = (<class '__main__.hi'>,) # inject Class with self attr + check register
+
+
+@func("///////")
+func *args are =  ('////////',)
+func wrapper cls + *args <class '__main__.hi'> ('////////',)
+
+@Airway("////////")
+__new__ *args are =  ('/////////',) # check register
+__call__ args (<class '__main__.hi'>,) # inject self attr in this class + check register
+
+@obj("//////") # two calls (fuck)
+__call__ args = ('//////',) # inject self with these
+__call__ args = (<class '__main__.hi'>,) # inject Class with self attr + check register
+
+
+can i make the router not in page level? or 2 routers in the page?
