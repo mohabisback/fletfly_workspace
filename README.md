@@ -1,3 +1,5 @@
+> 💡 **Note:** This is the workspace for the [`fletfly`](./fletfly) library project. 
+---
 # fletfly
 **The Component Composition Engine for Flet.**
 
