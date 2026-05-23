@@ -16,9 +16,12 @@
 > * **[File-Based](fletfly/docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*
 > * **[Decorator-Based](fletfly/docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*
 
---- 
- 📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
 ---
+
+ 📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
+
+---
+
 
 ## The 20-Line Engine Shock
 Look at this single block of code. It demonstrates auto-pathing (static & dynamic), dynamic (nameless) slot injection, and hierarchical layout inheritance—all without a single manual routing string or `page.add()` call.
