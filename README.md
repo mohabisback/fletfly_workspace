@@ -1,10 +1,13 @@
-> 💡 **Note:** This is the workspace for the [`fletfly`](./fletfly) library project. 
+> 💡 **Note:** This is the workspace for the [`fletfly`](./fletfly) library project.
+
 ---
+
 # fletfly
 **The Component Composition Engine for Flet.**
 
 "Stop writing procedural routing logic. `fletfly` injects data into your builds, nests views and shared components into multi-layered layouts, reconciles the tree, and preserves state—all with built-in middlewares, microfrontend nav and zero boilerplate."
 
+---
 > 💡 **Polyglot Design:** `fletfly` adapts to your coding model. The core engine is unified, but the syntax is yours to choose.
 >
 > **Choose your weapon:**

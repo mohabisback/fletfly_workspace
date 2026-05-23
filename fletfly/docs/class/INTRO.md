@@ -3,18 +3,6 @@
 
 "Stop writing procedural routing logic. `fletfly` injects data into your builds, nests views and shared components into multi-layered layouts, reconciles the tree, and preserves state—all with built-in middlewares, microfrontend nav and zero boilerplate."
 
-> 💡 **Polyglot Design:** `fletfly` adapts to your coding model. The core engine is unified, but the syntax is yours to choose.
->
-> **Choose your weapon:**
->
-> * **[Class-Based](docs/class/INTRO.md)** — *Django, Flutter, ASP.NET*
-> * **[Registry/Dictionary](docs/dict/INTRO.md)** — *Vue, Express, Angular*
-> * **[Declarative](docs/declare/INTRO.md)** — *React, SwiftUI, Flutter Trees*
-> * **[File-Based](docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*
-> * **[Decorator-Based](docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*
->
-> ---
-> 📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
 ---
 
 ## The 20-Line Engine Shock
