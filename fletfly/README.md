@@ -40,7 +40,7 @@ class Home:                                  # 1. Auto-path detection ("/home")
             # 5. Inherits Home layout automatically!
             return (
                 ft.Text("User profile:"),              # Fills Content 1
-                ft.Text(f"{page.params['id']}")        # Fills Content 2
+                ft.Text(f"{page.fly.params['id']}")        # Fills Content 2
             )
 ```
 
