@@ -1,7 +1,11 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "fletfly"
 version = "0.1.0"
+description = "flet router engine"
+dependencies = [
+    "flet",
+]

@@ -1,6 +1,8 @@
+README.md
 fletfly.py
 pyproject.toml
 fletfly.egg-info/PKG-INFO
 fletfly.egg-info/SOURCES.txt
 fletfly.egg-info/dependency_links.txt
+fletfly.egg-info/requires.txt
 fletfly.egg-info/top_level.txt

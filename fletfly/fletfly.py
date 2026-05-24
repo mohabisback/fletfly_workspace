@@ -1,6 +1,21 @@
+from __future__ import annotations
 import flet as ft
-import re, sys, inspect, asyncio, os, importlib.util, time, threading
-__all__ = ['Airway', 'airway', 'route', 'Route', 'Airline', 'Router', 'fly_in', 'fly_out', 'Airzone', 'slot', 'data']
+import re, sys, inspect, asyncio, os, importlib.util, time, builtins
+try:
+    from js import console # type: ignore
+    _HAS_JS = True
+except ImportError:
+    _HAS_JS = False
+_original_print = builtins.print
+
+def smart_print(*args, **kwargs):
+    if _HAS_JS:
+        msg = " ".join(map(str, args))
+        console.log(msg)
+    _original_print(*args, **kwargs)
+builtins.print = smart_print
+
+__all__ = ['Airway', 'airway', 'route', 'Route', 'Airline', 'Router', 'fly_in', 'fly_out', 'Airzone', 'slot', 'data', 'fly', 'fly_around']
 
 _page_err_msg = f"""
 
@@ -43,7 +58,7 @@ _rev_aliases = {val:k for k in aliases.keys() for val in aliases.get(k)}
 class Airway():
     path:str=None
     build=None
-    subways:list[Airway]=None
+    subways:list[Airway]=[]
     fly_to:str=None
     layout = None
     layout_override:bool=None
@@ -213,7 +228,7 @@ Notice: async functions are also supported
         dynamic = None
         star = False
         for i, item in enumerate(airway.subways):
-            if item.path and ":" in item.path or ("[" in item.path and "]" in item.path):
+            if item.path and (":" in item.path or ("[" in item.path and "]" in item.path)):
                 if dynamic is not None:
                     raise TypeError(f"[fletfly] Error, can't allow two dynamic paths '{dynamic}','{item.path}'.")
                 else:
@@ -341,7 +356,7 @@ Notice: async functions are also supported
             Airway._pending_classes = set()
         if not Airway._registered_classes:
             Airway._registered_classes = set()
-        self._subways = Airway._SubwayList(self)
+        self._subways = Airway._SubwayList(self, subways if subways else []) # owner, subways arguments
 
         self.path = None
         self.build = None
@@ -376,6 +391,7 @@ Notice: async functions are also supported
 
         params = locals()
         del params['self']
+        del params['subways']
 
         for val_list in aliases.values():
 
@@ -386,14 +402,11 @@ Notice: async functions are also supported
                 if alias in params['kwargs']: 
                     params['kwargs'].pop(alias, None)
 
-        children_data = params.pop('subways', None)
         self.__dict__.update(params)
         self.__dict__.update(params['kwargs'])
 
         if self.path: self.path = self.path.lower()
 
-        if children_data:
-            self.subways = children_data
         self.parent = None
         Airway._airways_all.add(self)
         Airway._airways_wild.add(self)
@@ -419,9 +432,10 @@ Notice: async functions are also supported
         obj.parent = new_parent
         return obj
     def __repr__(self):
-        return f"<Airway Object path='{self.path}' fly_to='{self.fly_to}' is_zone='{self.is_zone}' _class={self._class}>"
+        subways_count = len(self.subways) if self.subways is not None else None
+        return f"<Airway Obj '{self.path}' fly_to='{self.fly_to}' subways=[{subways_count}] _class={self._class}>"
     class _SubwayList(list):
-        def __init__(self, owner, items=None):
+        def __init__(self, owner, items=[]):
             self.owner = owner
             super().__init__()
             if items:
@@ -734,6 +748,7 @@ class Airline: # singleton only 1 instance
         else:
             if scanned_zone:
                 Airway._validate_airway_final(scanned_zone)
+                
                 static_map, dynamic_map = cls._instance._parse_airways(scanned_zone,scanned_zone, 
                     current_full_path=base_path)
                 cls._instance._safe_merge(cls._instance.static_map,
@@ -839,7 +854,6 @@ class Airline: # singleton only 1 instance
 """
 
     def _get_path_fingerprint(self, path): # for matching dynamics :id == [user-id]
-        import re
         f_path = re.sub(r':[a-zA-Z0-9_]+', '<?>', path)
         f_path = re.sub(r'\[[a-zA-Z0-9_]+\]', '<?>', f_path)
         return f_path
@@ -854,7 +868,7 @@ class Airline: # singleton only 1 instance
         else: 
             temp_list = []
             for item in in_out_build_list:
-                temp_list.append(_list_middlewares(item))
+                temp_list.append(item)
         # get 
         for i in range(len(temp_list)-1,-1,-1):
             layout_node = temp_list[i]
@@ -1176,6 +1190,7 @@ class Airline: # singleton only 1 instance
         return full_chain
     
     async def _apply_fly_in_checks(self, page, nodes_chain, target_node):
+        return nodes_chain
         filtered_chain = []
         excuted_fly_in_out = set()
         for current_node in nodes_chain:
@@ -1216,7 +1231,7 @@ class Airline: # singleton only 1 instance
                             return
 
     async def _apply_fly_out_checks(self, page, view):
-
+        return True
         if getattr(view, "fly_out_approved", False): # already checked
             return True
         
@@ -1246,7 +1261,7 @@ class Airline: # singleton only 1 instance
         if node._class:
             attr = getattr(node, f"fly_{in_out}", None)
             if attr :
-                chain = self.get_sync_layout_chain(getattr(node , f"fly_{in_out}"), in_out)
+                chain = self._get_sync_layout_chain(getattr(node , f"fly_{in_out}"), in_out)
                 fly_in_out = _list_middlewares(chain)
         else:
             fly_in_out = getattr(node, f"fly_{in_out}", [])
@@ -1898,7 +1913,7 @@ class Airline: # singleton only 1 instance
                 return node.post_fly_static
             return None    
         @classmethod
-        def _apply_post_fly(cls, page, layout_build_func, layout_build_node):
+        def _apply_post_fly(cls, page:ft.Page, layout_build_func, layout_build_node):
 
             post_fly_func = cls._get_sync_post_fly(layout_build_node)
             
@@ -1910,8 +1925,13 @@ class Airline: # singleton only 1 instance
 
             if post_fly_func and captured:
 
-                def post_fly_worker(registry_snapshot):    
-                    data = post_fly_func()
+                async def post_fly_worker(registry_snapshot):    
+                    result = post_fly_func()
+                    
+                    if inspect.isawaitable(result):
+                        data = await result
+                    else:
+                        data = result
                     
                     for item in registry_snapshot:
                         attrs = item['map']
@@ -1924,8 +1944,8 @@ class Airline: # singleton only 1 instance
                                 setattr(control, attr, final_value)
                         
                     page.update()
-                threading.Thread(target=post_fly_worker, args=(captured,), daemon=True).start()
-
+                page.run_task(post_fly_worker, captured)
+                
             return controls_s
 
         @classmethod
@@ -2021,6 +2041,26 @@ class Airline: # singleton only 1 instance
             return None
 
 
+
+    def _default_error_view(self, page):
+        page.views.append(
+            ft.View(
+                route=page.route, 
+                controls=[
+                    ft.Text("404", size=50, weight="bold", color="red"),
+                    ft.Text(f"Oops! This path is not on our map."),
+                    ft.Button("Fly Home", on_click=lambda _: page.fly("/"))
+                ],
+                vertical_alignment=ft.MainAxisAlignment.CENTER,
+                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+            )
+        )
+        page.update()
+# endregion
+    
+    
+
+
 def data(page: ft.Page, control, **kwargs):
     data_msg=f"""
 [fletfly data] you must apply a lazy_loader function returning the lazy data, and use data() as following:
@@ -2068,24 +2108,6 @@ Hint: you can use flet auto complete first for the **kwargs, then move the ) up 
     return control
 
 
-
-    def _default_error_view(self, page):
-        page.views.append(
-            ft.View(
-                route=page.route, 
-                controls=[
-                    ft.Text("404", size=50, weight="bold", color="red"),
-                    ft.Text(f"Oops! This path is not on our map."),
-                    ft.Button("Fly Home", on_click=lambda _: page.fly("/"))
-                ],
-                vertical_alignment=ft.MainAxisAlignment.CENTER,
-                horizontal_alignment=ft.CrossAxisAlignment.CENTER,
-            )
-        )
-        page.update()
-# endregion
-    
-    
     """
     عندي مشكلة عويصة
     لما اليوزر بيدوس الباك بتاع الابليكيشن كذا مرة بسرعة وانا مش بلحق اتابعه الدنيا بتبوظ في الترتيب
@@ -2098,6 +2120,7 @@ class _FlyList(list):
     pass
 
 def _list_middlewares(*args):
+    
     # already handled
     if len(args) == 1 and isinstance(args[0], _FlyList):
         return args[0]
@@ -2333,7 +2356,6 @@ def fly_decorator(cls, path = None, *args, **kwargs): # @fly & @fly()
     return cls
 
 def fly(page, path="/", *args, **kwargs):
-    global __send_help_timer
     if isinstance(page, type): # @fly
         return fly_decorator(page) # page is path, will go for path parameter
 
@@ -2361,38 +2383,11 @@ Quick Setup:
         target = f"{page.fly.take_off_zone}{path.strip('/')}".replace("//", "/")
         page.run_task(airline._navigate, page, target)
         page.run_task(page.push_route, target)
-        if __send_help_timer:
-            __send_help_timer.cancel()
         return None
     else: # mistake or wrapper calling
-        __reset_help_timer()
         def wrapper(cls): # @fly()
             return fly_decorator(cls, page, *args, **kwargs)
         return wrapper
-
-__send_help_flag = True
-def __send_help():
-    print(f"""
-✈️{"="*65}
-[fletfly] Airline router should be defined in global space." +
-[fletfly] In your main(page) function you book your flights" +
-[fletfly] For your first flight, you must provide your flight book (page)." +
-Example 1:   airline.fly(page, '/')   | Example 2:   airline.fly(page)" +
-✈️{"-"*65} 
-After 1st flight, it's better to use the page to fly
-Example 1:   page.fly()   | Example 2:   page.fly('/')
-✈️{"="*65}
-    """)
-
-__send_help_timer = None
-def __reset_help_timer():
-    global __send_help_timer
-    if __send_help_timer: __send_help_timer.cancel()
-    __send_help_timer = threading.Timer(3.0, __send_help)
-    __send_help_timer.daemon = True
-    __send_help_timer.start()
-__reset_help_timer()
-
 
 airway = Airway
 route = Airway
