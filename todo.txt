@@ -41,7 +41,7 @@ func *args are =  ('////',)
 Airway('////') #
 __new__ *args are =  ('////') # don't register no class in args
 
-obj("//////") # inject self with theses shit, string in first place means route
+obj("//////") # inject self with these shit, string in first place means route
 __call__ args = ('//////',)
 
 
@@ -60,7 +60,7 @@ func *args are =  ('////////',)
 func wrapper cls + *args <class '__main__.hi'> ('////////',)
 
 @Airway("////////")
-__new__ *args are =  ('/////////',) # check register
+__new__ *args are =  ('/////////',)
 __call__ args (<class '__main__.hi'>,) # inject self attr in this class + check register
 
 @obj("//////") # two calls (fuck)
@@ -69,3 +69,23 @@ __call__ args = (<class '__main__.hi'>,) # inject Class with self attr + check r
 
 
 can i make the router not in page level? or 2 routers in the page?
+
+كلامك صحيح ودقيق جداً هندسياً. هذه هي القاعدة الذهبية لإدارة الذاكرة ودورة الحياة (Lifecycle) في أنظمة التوجيه الاحترافية، وهي الطريقة الصحيحة لترجمة "نية وإرادة المبرمج" دون أن تفرض عليه قيوداً معقدة.
+
+المبرمج يعبر عن نيته من خلال الرابط (URL) الذي يطلبه، ومهمتك كصانع للمكتبة هي تحويل هذا الرابط إلى قرار بخصوص الـ Instance.
+
+إليك التوجيه الهندسي لكيفية تنفيذ هذه القاعدة وتحديد حالة الكلاس (فعال أم غير فعال) تلقائياً داخل الراوتر:
+
+1. كيف تعرف أن الكلاس له "عنصر فعال"؟ (المحافظة على الـ Instance)
+يكون الكلاس فعالاً، ويجب على الراوتر الاحتفاظ بالـ Instance الخاصة به في حالة واحدة:
+
+إذا كان المسار الحالي (Current Route) يقع بالكامل تحت مظلة هذا الكلاس.
+
+مثال تطبيقي لترجمة النية:
+إذا كان المبرمج قد عرف Class A ومعه مسارات فرعية:
+
+المستخدم واقف في /user -> الـ Build الرئيسي للكلاس فعال -> الكائن حي.
+
+المستخدم انتقل إلى /user/settings -> الـ Layout الخاص بالكلاس لا يزال ثابتاً، ودالة الابن settings أصبحت فعالة -> الكائن حي.
+
+طالما أن المشغل (Router) يتحرك داخل نطاق روابط هذا الكلاس، فإن الـ Instance تظل محفوظة في قاموس داخلي بالراوتر يسمى مثلاً active_instances.

@@ -15,7 +15,7 @@ def smart_print(*args, **kwargs):
     _original_print(*args, **kwargs)
 builtins.print = smart_print
 
-__all__ = ['Airway', 'airway', 'route', 'Route', 'Airline', 'Router', 'fly_ins', 'fly_outs', 'Airzone', 'slot', 'data', 'fly', 'fly_around']
+__all__ = ['Airway', 'airway', 'route', 'Route', 'Airline', 'Router', 'fly_in', 'fly_out', 'Airzone', 'slot', 'data', 'fly', 'fly_around']
 
 _page_err_msg = f"""
 
@@ -38,147 +38,34 @@ aliases = {
     "build_alias": [ "build", "view", "builder", "component", "element", "contents", "controls",],
     # build_hero takes True or 1 for static pathes, and True or int for dynamic pathes (True means 5)
     "build_hero_alias": [ "build_hero", "hero_view", "build_heroer", "hero_component", "hero_element", "hero_contents", "hero_controls",],
-    "fly_ins_alias": ["fly_ins", "loader", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
-    "fly_ins_override_alias": ["fly_ins_override", "loader_override", "canActivate_override", "beforeEnter_override", "middleware_override", "beforeLoad_override",],
-    "fly_outs_alias": ["fly_outs", "canDeactivate", "beforeUnload",],
-    "fly_outs_override_alias": ["fly_outs_override", "canDeactivate_override", "beforeUnload_override",],
+    "fly_in_alias": ["fly_in", "loader", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
+    "fly_in_override_alias": ["fly_in_override", "loader_override", "canActivate_override", "beforeEnter_override", "middleware_override", "beforeLoad_override",],
+    "fly_out_alias": ["fly_out", "canDeactivate", "beforeUnload",],
+    "fly_out_override_alias": ["fly_out_override", "canDeactivate_override", "beforeUnload_override",],
+    "subways_alias": ["subways", "children", "routes", "screens", "kids"],
     "layout_alias": ["layout", "frame",],
     "layout_override_alias": ["layout_override", "frame_override",],
     "layout_hero_alias": ["layout_hero", "hero_frame",],
     "fly_to_alias": ["fly_to", "redirect", "redirectTo",],
     "title_alias": ["title", ],
     "icon_alias": ["icon", "logo",],
-    "subway_alias": ["subway", "child", "sub"],
-    "subways_alias": ["subways", "children", "routes", "screens", "subs"],
+    "subway_alias": ["subway", "child", "sub", "kid"],
     "fly_around_alias": ["fly_around", "shared", "shared_build"],
     "post_fly_alias": ["post_fly", "binder", "hydrator"],
 }
 _rev_aliases = {val:k for k in aliases.keys() for val in aliases.get(k)}
-class _MethodHandler:
-    def __init__(self, ctx=None):
-        self.ctx = ctx
-        
-    def __get__(self, instance, owner):
-        return self.__class__(instance if instance is not None else owner)
-
-    def __set__(self, instance, value):
-        if instance is not None:
-            setattr(instance, f"_{self.feature_name}", value)
-
-    def _process_core(self, first_arg, config_args: dict, append_to_list: bool = False):
-        _feature_name = "_" + self.feature_name
-        ins_cls_msg = f"""
-[fletfly] Can't use @airway.{self.feature_name} method decorating a class
-use @{self.feature_name} or @Airway.{self.feature_name} instead.
-"""
-
-        instance = None if self.ctx is None or isinstance(self.ctx, type) else self.ctx
-
-        if isinstance(first_arg, type):     # decorating a class using:
-            if instance:                    # @route.layout or @Airway().layout
-                raise ValueError(ins_cls_msg)
-            else:                           # @layout or @Airway.layout
-                setattr(first_arg, f"_fletfly_{self.feature_name}", True)
-            return first_arg
-            
-        elif callable(first_arg):           # Decorating a function or method using:
-            if instance:                    # @route.layout or @Airway().layout
-                if append_to_list:
-                    getattr(self.ctx, self.feature_name).append(first_arg)                     # methods to be excuted
-                    getattr(self.ctx, f"{self.feature_name}_alias").append(first_arg.__name__) # names of methods to be excuted
-                else:
-                    setattr(self.ctx, _feature_name, first_arg)                                # method to excute
-                    setattr(self.ctx, f"{self.feature_name}_alias", first_arg.__name__)        # name of method
-            else:                           # @layout or @Airway.layout
-                    setattr(first_arg, f"_fletfly_{self.feature_name}", True)                  # flag the func
-            return first_arg
-        else:                                       # Decorating with calling ()
-            def wrapper(func_or_class):
-                if isinstance(func_or_class, type): # Decorating a class
-                    if instance:
-                        raise ValueError(ins_cls_msg)
-                    else:
-                        setattr(func_or_class, f"_fletfly_{self.feature_name}", True)
-                        for key, val in config_args.items():
-                            if val is not None:
-                                setattr(func_or_class, f"{self.feature_name}_{key}", val)
-                                setattr(func_or_class, f"{self.feature_name}_{key}_alias", f"{self.feature_name}_{key}")
-                else:                               # Decorating a function or method with
-                    if instance:                    # @route.layout or @Airway().layout()
-                        if append_to_list:
-                            getattr(self.ctx, self.feature_name).append(func_or_class)                     # methods to be excuted
-                            getattr(self.ctx, f"{self.feature_name}_alias").append(func_or_class.__name__) # names of methods to be excuted
-                        else:
-                            setattr(self.ctx, _feature_name, func_or_class)
-                            for key, val in config_args.items():
-                                if val is not None:
-                                    setattr(self.ctx, f"{self.feature_name}_{key}", val)
-                            setattr(self.ctx, f"{self.feature_name}_alias", func_or_class.__name__)
-                    else:                           # @layout() or @Airway.layout()
-                        setattr(func_or_class, f"_fletfly_{self.feature_name}", True)
-                        for key, val in config_args.items():
-                            if val is not None:
-                                setattr(func_or_class, f"_fletfly_{self.feature_name}_{key}", val)
-                return func_or_class
-            return wrapper
-
-class _Layout(_MethodHandler):
-    feature_name = "layout"
-    def __call__(self, 
-                 hero:bool=None,
-                 override:bool=None
-                 ):
-        return self._process_core(hero, {
-            "hero": hero,
-            "override": override
-            })
-    
-class _Build(_MethodHandler):
-    feature_name = "build"
-    def __call__(self, 
-                    hero:bool=None
-                    ):
-        return self._process_core(hero, {
-            "hero": hero
-            })
-
-class _FlyIn(_MethodHandler):
-    feature_name = "fly_ins"
-    def __call__(self, 
-                 override:bool=None
-                 ):
-        return self._process_core(override, {
-            "override": override
-            }, append_to_list=True)
-class _FlyOut(_MethodHandler):
-    feature_name = "fly_outs"
-    def __call__(self, 
-                 override:bool=None
-                 ):
-        return self._process_core(override, {
-            "override": override
-            }, append_to_list=True)
-    
-layout = _Layout()
-build = _Build()
-fly_in = _FlyIn()
-fly_out = _FlyOut()
-
 
 class Airway():
-    layout = _Layout()
-    build = _Build()
-    fly_in = _FlyIn()
-    fly_out = _FlyOut()
-
     path:str=None
+    build=None
     subways:list[Airway]=[]
     fly_to:str=None
+    layout = None
     layout_override:bool=None
-    fly_ins = None
-    fly_ins_override:bool=None 
-    fly_outs=None
-    fly_outs_override:bool=None,
+    fly_in = None
+    fly_in_override:bool=None 
+    fly_out=None
+    fly_out_override:bool=None,
     is_zone:bool=None,
     build_hero:bool=None
     layout_hero:bool=None
@@ -188,8 +75,8 @@ class Airway():
     
     _airways_all = set() # every created or cloned airway
     _airways_wild = set() # original but never adopted
-    _registered_children_classes = set()
-    _pending_classes = set()
+    _registered_classes = None
+    _pending_classes = None
     def __setattr__(self, name, value):
         if name in _rev_aliases:
             name = _rev_aliases[name].replace("_alias", "")
@@ -208,219 +95,82 @@ class Airway():
 
         raise AttributeError(f"'{self.__class__.__name__}' object has no attribute '{name}'")
     
-    _map = {}
+    """    create a 1 element Tree (Airway object with path "/")
+
+        create an inject_into_tree function that takes (airway, 'a/b/c' = None) #now we are here
+
+        Router.inject(Tree, "/a/b/c") or Router.inject(Tree) for root injection
+
+        @Airway("/a/b/c") # inject at position
+
+        class C(A,B) # inherit
+
+        path = "a/b/c" # inject at position
+
+        subways=[D, E] # register childhood
+
+        1. التسجيل اليدوي (Explicit Manual Registration):
+
+        2. التسجيل عبر الديكوريشن (Decorator-based Registration):
+
+        3. التسجيل عبر اصطلاح التسمية (Convention-over-Configuration):
+
+        4. التسجيل عبر التوريث (Inheritance-based Registration):
+
+        5.التسجيل عبر اثبات البنوّة(childhood-based Registration): 
+
+    """
     @classmethod
-    def _get_parent(cls, path):
-        path = path.strip().strip("/").replace("//", "/")
-        if len(path) > 0 and not path.startswith("/"): path = "/" + path
-        segments = [s for s in path.split("/")]
-        current_path = ""
-        current_parent = None
-        for i, seg in enumerate(segments[:-1]):
-            if current_path not in cls._map:
-                existing_node = next((n for n in (current_parent.subways if current_parent else []) if n.path == seg), None)
-                new_node = existing_node or Airway(path=seg, is_placeholder=True)    
-                cls._map[current_path] = new_node
-                if current_parent and not existing_node:
-                    current_parent.subways.append(new_node)
-            current_parent = cls._map[current_path]
-            current_path += "/" + segments[i+1]
-        return current_parent
+    def _append_classes(cls):
+        classes = []
 
-    @classmethod
-    def _handle_index(cls, parent, child):
-        if not parent or not child: return False
-        check_attr = "build_alias" if (parent._class and child._class) else "build"
-        
-        if parent and parent.path is not None and not getattr(parent, check_attr, None) and( 
-            child.path=="" and getattr(child, check_attr, None) is not None):
-            
-            attr_list = ["build", "build_hero", "fly_to", "icon", "title", "post_fly"]
-            for item in attr_list:               
-                if parent._class and child._class:
-                    alias_key = item + "_alias"
-                    attr_alias = getattr(child, alias_key, None)
-                    
-                    if attr_alias:
-                        if not getattr(parent, alias_key, None):
-                            setattr(parent, alias_key, attr_alias)
-                            
-                        if hasattr(child._class, attr_alias) and not hasattr(parent._class, attr_alias):
-                            setattr(parent._class, attr_alias, getattr(child._class, attr_alias))
-                            
-                if not getattr(parent, item, None) and getattr(child, item, None) is not None:
-                    setattr(parent, item, getattr(child, item))
-                    
-            return True
-        return False
-    
-    @classmethod
-    def _inject_into_tree(cls, route_node, parent_full_path:str = "", parent:Airway = None):
-        """
-Command Bunker, injection, if there is a path, then create a node in the map.
-        """
-        airway = None
-        subways = []
-        if isinstance(route_node, Airway):
-            airway = route_node
-            subways = airway.subways
-            airway.subways = []
-        if isinstance(route_node, type):
-            airway, subways = cls._airway_from_class(route_node)
-        if not airway: return None
+        for pot_cls in cls._pending_classes:
+            if pot_cls not in cls._registered_classes:  
+                classes.append(cls._airway_from_class(pot_cls))
 
-        path1 = parent_full_path if parent_full_path else ""
-        path2 = airway.path if airway.path else "" 
-        path = (path1 + "/" + path2) if path1 or path2 else ""
-        path = path.strip().strip("/").replace("//", "/")
-        if len(path) > 0 and not path.startswith("/"): path = "/" + path
-
-        # handling index situation
-        if Airway._handle_index(parent, airway):
-            return airway # no kids allowed in pathless index, they should be kids of the pather
-        elif airway.path is not None:
-            airway.path = path.split("/")[-1] if "/" in path else path
-
-            if path in ("", "/"):
-                if not cls._map.get(""): 
-                    cls._map[""] = airway
-                else:
-                    root_node = cls._map[""]
-                    if getattr(root_node, "is_placeholder", False):
-                        airway.subways.extend(root_node.subways)
-                        cls._map[""] = airway
-                    else:
-                        raise ValueError("Router already has a root")
-            else:
-                if path in cls._map:
-                    old_node = cls._map[path]
-                    if getattr(old_node, "is_placeholder", False):
-                        cls._map[path] = airway
-                        airway.subways.extend(old_node.subways)
-                        
-                        parent_node = cls._get_parent(path)
-                        for i, child in enumerate(parent_node.subways):
-                            if child is old_node:
-                                parent_node.subways[i] = airway
-                                break
-                        else:
-                            parent_node.subways.append(airway)
-                    else:
-                        raise ValueError(f"Path '{path}' already defined")
-                else:
-                    cls._map[path] = airway
-                    parent_node = cls._get_parent(path)
-                    parent_node.subways.append(airway)
-        elif parent:
-            parent.subways.append(airway)
-        else:
-            raise ValueError("[fletfly] can't inject pathless airway into the tree")
-
-        if subways:
-            for item in subways:
-                cls._inject_into_tree(item, path, parent = airway)
-
-        return airway   
-
-    @classmethod
-    def _unify_class_subways(cls, _class:type)->list:
-        subways = set()
-        for attr_name, attr_value in _class.__dict__.items():
-            if not attr_name.startswith("_"):
-                if isinstance(attr_value, type):
-                    subways.add(attr_value)
-                elif attr_name in aliases["subways_alias"]:
-                    if attr_value and isinstance(attr_value, (list, tuple)):
-                        subways.update(attr_value)
-        cls._registered_children_classes.update(subways)
-
-        _class._unified_subways = list(subways)
-        for subway in subways:
-            cls._unify_class_subways(subway)
-        return list(subways)
+        inheriting_classes = Airway.__subclasses__()
+        inheriting_classes.sort(key=lambda x: x.__qualname__.count('.'), reverse=True)
+        for pot_cls in inheriting_classes:
+            if pot_cls not in cls._registered_classes:  
+                classes.append(cls._airway_from_class(pot_cls))
+        return classes
     
     # creates airway object carrying a 
     @classmethod
-    def _airway_from_class(cls, _class:type):
-        local_aliases = dict(_rev_aliases)
-        def remove_aliases_of(del_key):
-            for key in list(local_aliases.keys()): 
-                if local_aliases[key] == del_key:
-                    del local_aliases[key]
-
-        airway_kids = []
+    def _airway_from_class(cls, _class:type, path = None):
+        
         class_way = Airway(_class = _class)
-        normal_airway = _class.__dict__.keys().isdisjoint(["_fletfly_build","_fletfly_layout", "_fletfly_fly_ins", "_fletfly_fly_outs"])  
+        def _append_child(child):
+            node = Airway._airway_from_class(child)
+            node.parent = class_way
+            class_way.subways.append(node)
 
-        flagged_attr = []
-        for attr_name, attr_val in _class.__dict__.items():
-            for item_name in ["build", "layout", "fly_ins", "fly_outs"]:
-                if hasattr(attr_val, f"_fletfly_{item_name}"): # if function has decorator
-                    flagged_attr.append(attr_name)
-                    old_attr_alias = getattr(class_way, f"{item_name}_alias", None)
-                    if item_name in ["build", "layout"]:
-                        if (old_attr_alias and old_attr_alias != attr_val.__name__):
-                            raise ValueError(f"[fletfly] class {_class.__name__} already has a {item_name} function named '{old_attr_alias}'")
-                        else:
-                            setattr(class_way, f"{item_name}_alias", attr_val.__name__)
-                            remove_aliases_of(item_name)
-                            for other_name, other_val in attr_val.__dict__.items():
-                                if other_name.startswith("_fletfly_") and other_name != f"_fletfly_{item_name}":
-                                    setattr(class_way, other_name.replace("_fletfly_",""), other_val)
-                    else: # fly_ins, fly_outs
-                        if not hasattr(class_way, item_name):
-                            setattr(class_way, item_name, [])
-                            setattr(class_way, f"{item_name}_alias", [])
-                        getattr(class_way, item_name).append(attr_val)
-                        getattr(class_way, f"{item_name}_alias").append(attr_val.__name__)
-
-
-        for attr_name, attr_val in _class.__dict__.items():
-            if not attr_name.startswith("_"):
-                if attr_name in flagged_attr:
-                    continue
-                elif Airline.auto_attrs_detect and attr_name in local_aliases:
-                    target_attr = local_aliases[attr_name]
-                    if target_attr in ["fly_ins", "fly_outs"]:
-                        if not hasattr(class_way, target_attr):
-                            setattr(class_way, target_attr, [])
-                            setattr(class_way, f"{target_attr}_alias", [])
-                        getattr(class_way, target_attr).append(attr_val)
-                        getattr(class_way, f"{target_attr}_alias").append(attr_name)
-                    else:
-                        # For non-accumulative attributes like path
-                        setattr(class_way, target_attr, attr_name)
-                        remove_aliases_of(target_attr)
-
-                elif not isinstance(attr_val, type) and callable(attr_val) and(
-                    normal_airway and Airline.method_routes_detect ):
-                    airway_kids.append(Airway(path=attr_name, build_alias=attr_name, _class=_class))
+        aliases = dict(_rev_aliases)
+        
+        dir_list = dir(class_way._class) # search the class
+        for attr in dir_list: # search his class
+            if not attr.startswith("_"):
+                c = getattr(class_way._class, attr)
+                if isinstance(c, type):
+                    _append_child(c)
+                    aliases.pop(attr, None)
+                elif attr in aliases and not attr == "subways" and not attr == "_subways":
+                    setattr(class_way, aliases[attr], attr)
+                    #setattr(class_way, attr, getattr(class_way._class, attr))
+                    del_key = attr
+                    for key in list(aliases.keys()): 
+                        if aliases[key] == del_key:
+                            del aliases[key]
         
         # self.path_alias = "path" # now
         if getattr(class_way, "path_alias", None):
             class_way.path = getattr(class_way._class, class_way.path_alias) # path = "/something" # now
-        
-        elif Airline.auto_path_naming and normal_airway:
+        elif Airline._auto_class_naming:
             class_way.path = class_way._class.__name__.lower().replace("_", "-")
+        cls._registered_classes.add(_class)
         
-        class_kids = _class._unified_subways if "_unified_subways" in _class.__dict__ else cls._unify_class_subways(_class)        # returning new Airway, and potential kids of classes
-        return class_way, class_kids + airway_kids
-
-    @classmethod
-    def _append_classes(cls, handed_classes=None):
-        if handed_classes is None:
-            handed_classes = []
-        pending = cls._pending_classes if Airline.decorations_detect else set()
-        inherited = set(Airway.__subclasses__()) if Airline.inheritance_detect else set()
-        all_classes = set(handed_classes) | pending | inherited
+        return class_way
     
-        for pot_cls in all_classes:
-            cls._unify_class_subways(pot_cls)
-        
-        for pot_cls in all_classes:
-            if pot_cls not in cls._registered_children_classes:
-                Airway._inject_into_tree(pot_cls)
-
     @classmethod
     def _validate_airzone_final(cls, zone, allow_fallback = True)->Airway:
         airzone: Airway = None
@@ -457,7 +207,7 @@ and use fly_to='{airzone.path}' in your Home AirZone.
                 potential_path = None
                 potential2_path = ""
                 for way in zone:
-                    if way.path not in (None, "", "/") and way._build:
+                    if way.path not in (None, "", "/") and way.build:
                         found_path = way.path
                         break
                     elif way.path not in (None, "", "/") and way.subways:
@@ -484,8 +234,8 @@ fly_to redirect will be set to you first valid page in the list fly_to ="{found_
 
     @classmethod
     def _validate_airway_final(cls, airway: Airway, allow_fallback = True):
-        path, build, layout = airway.path, airway._build, airway._layout
-        fly_ins, fly_outs, fly_to = airway.fly_ins, airway.fly_outs, airway.fly_to
+        path, build, layout = airway.path, airway.build, airway.layout
+        fly_in, fly_out, fly_to = airway.fly_in, airway.fly_out, airway.fly_to
 
         # Route with no fly_to nor build nor kids should be deleted
         if fly_to is not None:
@@ -495,9 +245,9 @@ fly_to redirect will be set to you first valid page in the list fly_to ="{found_
                     print(f"[fletfly] Warning: build function <{build.__name__}> will be ignored, airline fly_to {fly_to}.")
         if (not callable(build) and build is not None) or (not callable(layout) and layout is not None):
             raise ValueError(_page_err_msg)
-        if (fly_ins is not None and not callable(fly_ins)) or (fly_outs is not None and not callable(fly_outs)):
+        if (fly_in is not None and not callable(fly_in)) or (fly_out is not None and not callable(fly_out)):
             print(f"""
-[fletfly] fly_ins entry middlewares and fly_outs exit middlewares should be callable functions that returns <True> for entry approval, <False> for refusal and <str> for redirecting
+[fletfly] fly_in entry middlewares and fly_out exit middlewares should be callable functions that returns <True> for entry approval, <False> for refusal and <str> for redirecting
 Notice: async functions are also supported
                   """)
         dynamic = None
@@ -508,7 +258,7 @@ Notice: async functions are also supported
                     raise TypeError(f"[fletfly] Error, can't allow two dynamic paths '{dynamic}','{item.path}'.")
                 else:
                     dynamic = item.path
-            elif item.path in (None, "", "/") and item._build is not None:
+            elif item.path in (None, "", "/") and item.build is not None:
                 if star:
                     raise TypeError(f"[fletfly] Error, can't allow 2 fallback in '{airway.path}' path.")
                 else:
@@ -521,7 +271,7 @@ Notice: async functions are also supported
             if not item.subways:
                 if item.path in ("/", "", None):
                     print(f"[fletfly] Warning: Airway path {item.path if item.path else ""} found with no path no subways.")
-                elif item.fly_to is None and item._build is None:
+                elif item.fly_to is None and item.build is None:
                     #print(f"[fletfly] Warning: Airway path '{item.path if item.path else ''}'.")
                     #print(f"[fletfly] it has no fly_to, no build and no subways.")
                     pass
@@ -571,30 +321,83 @@ Notice: async functions are also supported
 
         return _validated_list
 
+    def __call__(self, *args, **kwargs):
+        if len(args) == 1 and isinstance(args[0], type): # @Airway
+            target_cls = args[0]
+            """
+            for attr_name, attr_value in self.__dict__.items():
+                if not attr_name.startswith('_') and not callable(attr_value):  
+                    if not hasattr(target_cls, attr_name):
+                        setattr(target_cls, attr_name, attr_value)   """
+            Airway._pending_classes.add(target_cls)
+            return target_cls
+        
+        if args and isinstance(args[0], str):
+            self.path = args[0]
+            
+        if kwargs:
+            for key, value in kwargs.items():
+                # هنا بنخزن fly_in = "check_admin" جوه الأوبجيكت كـ String
+                setattr(self, key, value)
+
+        return self
+
+
+    def airway(self, *args, **kwargs):
+        if not args and not kwargs:
+            raise ValueError("[fletfly] .airway() method must have arguments")
+
+        # my_path = Airway('/')
+        # @my_path.airway("/", fly_in = func1) # case 4
+        if kwargs or any(isinstance(x, str) for x in args):
+            if not args or not isinstance(args[0], str):
+                raise ValueError(f"❌ First Argument must be string path, not {args[0].__name__}")
+            else:
+                if len(args) > 1:
+                    raise ValueError("[fletfly] Use named arguments only in this decorator, except path path")
+                # ok 
+                def decorator(func):
+                    if not callable(func) or isinstance(func, Airway):
+                        raise TypeError("[fletfly] Decorator function is not callable, or wrong type.")
+
+                    child = Airway(path=args[0], build=func)
+                    for key, value in kwargs.items():
+                        setattr(child, key, value)
+                    self.subways.append(child)
+                    return func
+                return decorator
+        else:
+            # my_path = Airway('/')
+            # my_path.airway({'path':'/user', 'element':func1}) # case 3
+            if args: self.subways.extend(args)
+            return self
+
     def __init__(self, path:str=None, build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                    fly_ins = None, fly_ins_override:bool=None, 
-                    fly_outs=None, fly_outs_override:bool=None,
+                    fly_in = None, fly_in_override:bool=None, 
+                    fly_out=None, fly_out_override:bool=None,
                     is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                     title=None, icon=None, post_fly=None, **kwargs):
+        if not Airway._pending_classes: 
+            Airway._pending_classes = set()
+        if not Airway._registered_classes:
+            Airway._registered_classes = set()
+        self._subways = Airway._SubwayList(self, subways if subways else []) # owner, subways arguments
 
-        self._layout=None
-        self._build=None
-        self.layout_override = None
         self.path = None
+        self.build = None
         self.fly_to = None
-        self.fly_outs = None
-        self.fly_ins_override = None
-        self.fly_outs_override = None
+        self.layout = None
+        self.layout_override = None
+        self.fly_in = None
+        self.fly_out = None
+        self.fly_in_override = None
+        self.fly_out_override = None
         self.icon = None
         self.title = None
         self.build_hero = None
         self.layout_hero = None
         self.post_fly = None
-        self.subways = None
-        self.fly_ins = None
-        self.fly_outs = None
-
         self._class = None
 
         self.path_alias = None
@@ -602,121 +405,170 @@ Notice: async functions are also supported
         self.fly_to_alias = None
         self.layout_alias = None
         self.layout_override_alias = None
-        self.fly_ins_alias = None
-        self.fly_outs_alias = None
-        self.fly_ins_override_alias = None
-        self.fly_outs_override_alias = None
+        self.fly_in_alias = None
+        self.fly_out_alias = None
+        self.fly_in_override_alias = None
+        self.fly_out_override_alias = None
         self.title_alias = None
         self.icon_alias = None
         self.build_hero_alias = None
         self.layout_hero_alias = None
         self.post_fly_alias = None
 
-        self._adjust_locals(locals())
-        #initiating lists
-        if not self.subways: self.subways = []
-        if not self.fly_ins: self.fly_ins = []
-        if not self.fly_outs: self.fly_outs = []
-        if not self.fly_ins_alias: self.fly_ins_alias = []
-        if not self.fly_outs_alias: self.fly_outs_alias = []
+        params = locals()
+        del params['self']
+        del params['subways']
+
+        for val_list in aliases.values():
+
+            for alias in val_list:
+                if params.get(val_list[0]) is None: 
+                    params[val_list[0]] = params['kwargs'].get(alias, None)
+                
+                if alias in params['kwargs']: 
+                    params['kwargs'].pop(alias, None)
+
+        self.__dict__.update(params)
+        self.__dict__.update(params['kwargs'])
+
+        if self.path: self.path = self.path.lower()
 
         self.parent = None
         Airway._airways_all.add(self)
         Airway._airways_wild.add(self)
-
-    def _adjust_locals(self, params):
-        del params['self']
-        for val_list in aliases.values():
-            for alias in val_list:
-                original = val_list[0]
-                if params.get(original) is None: # if local self.layout = None
-                    if params['kwargs'].get(alias, None) is not None: # if not frame = None
-                        params[original] = params['kwargs'].get(alias, None)              
-                if alias in params['kwargs']: 
-                    params['kwargs'].pop(alias, None)
-
-        # initiating private
-        for item in ("build", "layout"):
-            params["_"+item] = params[item]
-            del params[item]
-        
-        for k, v in params.items():
-            if v is not None and k != "kwargs":
-                self.__dict__[k] = v
-        for k, v in params.get("kwargs", {}).items():
-            if v is not None:
-                self.__dict__[k] = v
-        if self.path: self.path = self.path.lower()
-        
-    def __new__(cls, *args, **kwargs):
-        if len(args)==1 and isinstance(args[0], type): # @Airway
-            cls._pending_classes.add(args[0]) # register class
-            return args[0]
-        return super().__new__(cls)
-
-    def __call__(self, path:str=None, build=None, subways:list[Airway]=None,
-                 fly_to:str=None, layout = None, layout_override:bool=None,
-                    fly_ins = None, fly_ins_override:bool=None, 
-                    fly_outs=None, fly_outs_override:bool=None,
-                    is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
-                    title=None, icon=None, post_fly=None, **kwargs):
-        # @obj, @Airway("string") first call, @obj("str", **kwargs) second call
-        if isinstance(path, type):
-            cl = path
-            for name, value in self.__dict__.items():     # inject values into class
-                if name in ("_build", "_layout"):
-                    setattr(cl, name.lstrip("_"), value)
-                elif name.startswith('_'):
-                    continue
-                elif value is not None and not isinstance(value, _MethodHandler):
-                    setattr(cl, name, value)
-            self.__class__._pending_classes.add(cl)
-
-            self._class = cl                              # inject class ref into instance
-            return cl
-        # @obj("str", **kwargs) first call
-        else:
-            self._adjust_locals(locals())
-            return self
-
     def __dir__(self):
         global aliases
         return [key[0] for key in aliases] + ["_class"] + list(aliases.keys()) 
+    
+    def __new__(cls, *args, **kawrgs):
+        if len(args)==1 and isinstance(args[0], type):
+            if not cls._pending_classes:
+                cls._pending_classes = set()
+            Airway._pending_classes.add(args[0]) # register class
+            return cls
+        return super().__new__(cls)
 
+
+    def _clone(self, new_parent:Airway):
+        obj = Airway(**self.__dict__)
+        if obj in Airway._airways_wild:
+            Airway._airways_wild.remove(obj)
+        if hasattr(self, "_subways") and self._subways is not None:
+            obj._subways = self._subways.clone(new_owner=obj)
+        obj.parent = new_parent
+        return obj
     def __repr__(self):
         subways_count = len(self.subways) if self.subways is not None else None
-        _class = self._class.__name__ if self._class else 'None'
-        fly_to = self.fly_to if self.fly_to else 'None'
-        bld = self._build if self._build else 'None'
-        bld_alias = self.build_alias if self.build_alias else 'None'
-        return f'<Airway Obj {("'"+self.path+"'"):<10} build={("'"+bld+"'"):<10} build_alias={("'"+bld_alias+"'"):<10} subways=[{subways_count:2}] _class={_class:<10}>'
+        return f"<Airway Obj '{self.path}' fly_to='{self.fly_to}' subways=[{subways_count}] _class={self._class}>"
+    class _SubwayList(list):
+        def __init__(self, owner, items=[]):
+            self.owner = owner
+            super().__init__()
+            if items:
+                self.extend(items)
 
-    @classmethod
-    def _format_airway_tree(cls, airway, prefix="", is_last=True, is_root=True):
-        cls_ = airway._class.__name__ if airway._class else "None"
-        path = airway.path if airway.path else "/"
-        subways_count = len(airway.subways) if airway.subways else 0
-        bld = airway._build.__name__ if airway._build else 'None'
-        bld_alias = airway.build_alias if airway.build_alias else 'None'
+        # validates children as Airway object
+        # clone objects with current parent
+        # check duplicity in path
+        def _validate_list_item(self, item):
+            children = Airway._validate_children(item)            
+            cloned_list = []
+            existing_paths = [x.path for x in self if x.path is not None] # avoid checking path = None
+            for child in children:
+                path = getattr(child, 'path', None)
+                if path: # avoid checking path = None
+                    if path in existing_paths:
+                        parent = self.owner
+                        fullpath = ""
+                        loops = 0
+                        while isinstance(parent, Airway) and loops < 10:
+                            if getattr(parent, "path"): fullpath = parent.path + fullpath
+                            parent = getattr(parent , "parent", "")
+                            loops += 1
+                        raise ValueError(f"[fletfly] Duplicated path '{path}' detected in subways of {fullpath}")
+                    else:
+                        existing_paths.append(path)
+                if getattr(child, "parent"):
+                    cloned_list.append(child._clone(self.owner))
+                else:
+                    if child in Airway._airways_wild:
+                        Airway._airways_wild.remove(child)
+                    cloned_list.append(child)
+            return cloned_list
 
-        marker = "└── " if is_last else "├── "
-        output = f"{prefix}{marker}Obj: '{path}' | Class: <{cls_}> | Subways: [{subways_count}] | Build: <{bld}> | Build_alias: <{bld_alias}>\n"
-        
-        if airway.subways:
-            child_prefix = prefix + ("    " if is_last else "│   ")
-            
-            output += f"{child_prefix}│\n"
-            
-            for i, subway in enumerate(airway.subways):
-                is_subway_last = (i == len(airway.subways) - 1)
-                output += cls._format_airway_tree(subway, child_prefix, is_subway_last, is_root=False)
-            
-            output += f"{child_prefix}│\n"
-        if is_root and output.endswith("│\n"):
-            output = output.rstrip("│\n") + "\n"
-            
-        return output
+        def append(self, item):
+            children = self._validate_list_item(item)
+            super().extend(children)
 
+        def insert(self, index, item):
+            children = self._validate_list_item(item)
+            for i, v in enumerate(children):
+                super().insert(index + i, v)
+
+        def extend(self, items):
+            children = self._validate_list_item(items)
+            super().extend(children)
+        def __setitem__(self, index, item):
+            children = self._validate_list_item(item)
+            if isinstance(index, slice):
+                for old_child in self[index]:
+                    self._release_child(old_child) 
+                super().__setitem__(index, children)
+            else:
+                self._release_child(self[index])
+                super().__setitem__(index, children[0])
+
+        def _release_child(self, child):
+            if child and hasattr(child, 'parent'):
+                child.parent = None
+
+        def clear(self):
+            for child in self:
+                self._release_child(child)
+            super().clear()
+
+        def pop(self, index=-1):
+            child = super().pop(index)
+            self._release_child(child)
+            return child
+
+        def remove(self, item):
+            super().remove(item)
+            self._release_child(item)
+
+        def __delitem__(self, index):
+            # لما المبرمج يستخدم del subways[0]
+            if isinstance(index, slice):
+                for child in self[index]:
+                    self._release_child(child)  
+            else:
+                child = self[index]
+                self._release_child(self[index])
+            super().__delitem__(index)
+
+        def clone(self, new_owner):
+            new_list = Airway._SubwayList(owner=new_owner)
+            for item in self:
+                list.append(new_list, item._clone(new_owner))
+            return new_list
+    
+    @property
+    def subways(self):
+        if not hasattr(self, "_subways") or self._subways is None:
+            self._subways = Airway._SubwayList(self)
+        return self._subways
+
+    @subways.setter
+    def subways(self, value):
+        if isinstance(value, Airway._SubwayList):
+            self._subways = value
+        else:
+            if not hasattr(self, "_subways") or self._subways is None:
+                self._subways = Airway._SubwayList(self)
+            self._subways.clear()
+            if value:
+                self._subways.extend(value)
+    
     def _vampire(self, victim):
         if not victim or self is victim:
             return self
@@ -726,14 +578,14 @@ Notice: async functions are also supported
         if self.parent and victim.parent:
             raise ValueError(f"[fletfly] Union Error: Both airways have parents. Cannot merge '{self.path}' and '{victim.path}'.")
         
-        if self._build and victim._build:
+        if self.build and victim.build:
             raise ValueError(f"[fletfly] Union Error: Conflict in 'build'. Both airways provide content for path '{self.path}'.")
         
-        if self._layout and victim._layout:
+        if self.layout and victim.layout:
             raise ValueError(f"[fletfly] Union Error: Conflict in 'layout' (layout). Both airways define a layout.")
 
         for key, value in victim.__dict__.items():
-            if key in ('subways', 'fly_ins', 'fly_outs', 'parent'):
+            if key in ('_subways', 'fly_ins', 'fly_outs', 'parent'):
                 continue
             
             if getattr(self, key, None) is None:
@@ -784,13 +636,9 @@ class FlyPad:
 # max_pads is a periority, and it saves target then main home then nearest parent to target then nearest view to target
 
 class Airline: # singleton only 1 instance
-    initial_route = ""
-    auto_path_naming = True
-    method_routes_detect = True
-    auto_attrs_detect = True
-    inheritance_detect = True
-    decorations_detect = True
     _instance = None
+    _auto_class_naming = True
+    _auto_func_naming = True
     _shared_map = {}
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -812,43 +660,34 @@ class Airline: # singleton only 1 instance
 """)
         return cls._instance
     
-    def __init__(self, zone_or_class_or_list = [], initial_route = "", error_path:str = "", every_level_fallback=True,
-                 fly_pads:FlyPad = FlyPad.home_all_from_last_port, max_pads:int = 5,
-                 decorations_detect=True, inheritance_detect=True,
-                 auto_path_naming = True, method_routes_detect = True,
-                 auto_attrs_detect=True):
+    def __init__(self, zone_or_class_or_list: Airway, error_build:str = "", every_level_fallback=True,
+                 fly_pads:FlyPad = FlyPad.home_all_from_last_port, max_pads:int = 5, auto_class_naming = True):
         if hasattr(self, "_initialized"):
             return
-        Airline.decorations_detect = decorations_detect
-        Airline.inheritance_detect = inheritance_detect
-        Airline.auto_path_naming = auto_path_naming
-        Airline.auto_attrs_detect = auto_attrs_detect
-        Airline.method_routes_detect = method_routes_detect
-        Airline.initial_route = initial_route
-        self.error_path = error_path
+        self.error_build = error_build
         self.every_level_fallback = every_level_fallback
         self.fly_pads = fly_pads
         self.max_pads = max_pads
+        Airline._auto_class_naming = auto_class_naming
         if isinstance(zone_or_class_or_list, (list, tuple, set)):
             zone_or_class_or_list = list(zone_or_class_or_list)
         else:
             zone_or_class_or_list = [zone_or_class_or_list]
         
-        Airway._append_classes(zone_or_class_or_list)
+        validated = Airway._validate_children(zone_or_class_or_list)
+        print("-------------------validated------------------")
+        for item in validated: print(item)
+
+        validated.extend(Airway._append_classes())
+        validated = Airway._validate_airzone_final(validated, every_level_fallback)
         self.static_map = {} 
         self.dynamic_map = {}
-
-        for key, val in Airway._map.items():
-            print (val, "path:", key)
-        final_airway = Airway._map.get("", None)
-        if not final_airway:
-            raise ValueError(f"[fletfly] There are no routes to handle...")
-        self._parse_airways(final_airway)
+        self._parse_airways(validated)
 
         print("----------------------- static map ---------------------")
         for item in self.static_map.values(): print(item)
-        print("----------------------- dynamic map ---------------------")
-        for item in self.dynamic_map.values(): print(item)
+        #print("----------------------- dynamic map ---------------------")
+        #for item in self.dynamic_map.values(): print(item)
         self._initialized = True
     
     class _FlightNode:
@@ -858,8 +697,8 @@ class Airline: # singleton only 1 instance
             'take_off_zone', # '/segment1/zonesegment1/'
             'lineage', # [flight_node, flight_node]
             'build_node',
-            'fly_ins', # [{"func":func1, "args":args, "takeoff":'/'}]
-            'fly_outs', # [{"func":func2, "args":args, "takeoff":'/'}]
+            'fly_in', # [{"func":func1, "args":args, "takeoff":'/'}]
+            'fly_out', # [{"func":func2, "args":args, "takeoff":'/'}]
             'fly_to', 'fly_to_alias', # redirect, redirectTo
             'layout_nodes', # list of layoutNodes
             'title','title_alias', # title
@@ -877,8 +716,8 @@ class Airline: # singleton only 1 instance
             
             if self.is_zone is None: self.is_zone = False
             if self.lineage is None: self.lineage = []
-            if self.fly_ins is None: self.fly_ins = []
-            if self.fly_outs is None: self.fly_outs = []
+            if self.fly_in is None: self.fly_in = []
+            if self.fly_out is None: self.fly_out = []
             if self.layout_nodes is None: self.layout_nodes = []
 
         @property
@@ -900,12 +739,12 @@ class Airline: # singleton only 1 instance
         def __init__(self, page):
             self.params = {}        # المعاملات (مثل :id)
             self.query = {}       # معاملات الاستعلام
-            self.fly_ins_radar = "/"        # المسار اللحظي للميدل وير
-            self.fly_ins_is_target = False # هل وصلنا للمحطة النهائية؟
+            self.fly_in_radar = "/"        # المسار اللحظي للميدل وير
+            self.fly_in_is_target = False # هل وصلنا للمحطة النهائية؟
             self.take_off_zone = "/"     # نقطة انطلاق اليوزر
             self.last_success_path = "/" # لعمل Rollback عند الخطأ
             self.is_navigating = False
-            self.closing_view = None    # the view which is closing for fly_outs
+            self.closing_view = None    # the view which is closing for fly_out
             self._slots_map = {}
             self._layouts = set()
             self._new_layouts = set()
@@ -917,7 +756,6 @@ class Airline: # singleton only 1 instance
 
         def __call__(self, path: str = "/"):
             target = f"{self.take_off_zone}{path.strip('/')}".replace("//", "/")
-            if target == "/": target = ""
             self.page.run_task(self.page.push_route, target)
     
     @classmethod
@@ -925,7 +763,7 @@ class Airline: # singleton only 1 instance
         cls = self_or_cls if isinstance(self_or_cls, type) else self_or_cls.__class__
         
         if not root_dir: root_dir = os.getcwd()
-        cls.method_routes_detect = auto_naming
+        cls._auto_func_naming = auto_naming
         
         base_path = "/" + base_path.strip("/")
         if base_path == "/": base_path = ""
@@ -959,10 +797,10 @@ class Airline: # singleton only 1 instance
                             main_object = obj
                             main_object.path = file_or_folder_name
                         else:
-                            if (obj._build is None or main_obj._build is None) and (obj._layout is None or main_obj.layout is None):
+                            if (obj.build is None or main_obj.build is None) and (obj.layout is None or main_obj.layout is None):
                                 main_object._vampire(obj)
-                            elif ((obj._build and main_object._build) or (obj._layout and main_object._layout)) and (
-                                obj.path in ("", "/") or (obj.path is None and not cls.method_routes_detect)):
+                            elif ((obj.build and main_object.build) or (obj.layout and main_object.layout)) and (
+                                obj.path in ("", "/") or (obj.path is None and not cls._auto_func_naming)):
                                     raise ValueError(f"[fletfly] Double pathless routes in {file_or_folder_name}.py"
                                                     f"           pathless route in page.py, index.py or main.py is a folder master route")
                             else:
@@ -983,7 +821,7 @@ class Airline: # singleton only 1 instance
         main_obj = None
         #dict for .py files in the folder
         files = {f: os.path.join(folder_path, f) for f in os.listdir(folder_path) if f.endswith('.py')}
-        for page_file in ['page.py', 'index.py', 'main.py', 'layout.py', 'layout.py', 'fly_ins.py', 'fly_outs.py', 'middlewares.py']:
+        for page_file in ['page.py', 'index.py', 'main.py', 'layout.py', 'layout.py', 'fly_in.py', 'fly_out.py', 'middlewares.py']:
             if page_file in files:
                 main_obj = cls._scan_file(files[page_file], folder_name, main_obj)
                 del files[page_file]
@@ -1021,10 +859,10 @@ class Airline: # singleton only 1 instance
         """
         
         try:
-            fly_outs_check = True
+            fly_out_check = True
             if e.view is not None and not getattr(e.page, "_is_navigating", False):
                 e.page.fly._is_navigating = True
-                fly_outs_check = await self._apply_fly_outs_checks(e.page, e.view)
+                fly_out_check = await self._apply_fly_out_checks(e.page, e.view)
                 Airline._BuildObj._save_build_hero(e.page, e.view)
                 e.page.views.remove(e.view)
                 if e.page.views:
@@ -1033,7 +871,7 @@ class Airline: # singleton only 1 instance
                     e.page.fly.params = getattr(top_view, "params", {})
                     e.page.fly.query = getattr(top_view, "query", {})
                     await e.page.push_route(top_view.route)
-            if fly_outs_check != True:
+            if fly_out_check != True:
                 await asyncio.sleep(0.2)
                 e.page.views.append(e.view)
                 await e.page.push_route(e.page.fly.last_success_path)
@@ -1045,7 +883,6 @@ class Airline: # singleton only 1 instance
     def _get_path_fingerprint(self, path): # for matching dynamics :id == [user-id]
         f_path = re.sub(r':[a-zA-Z0-9_]+', '<?>', path)
         f_path = re.sub(r'\[[a-zA-Z0-9_]+\]', '<?>', f_path)
-        f_path = re.sub(r'\{[a-zA-Z0-9_]+\}', '<?>', f_path)
         return f_path
 
 # region Parse
@@ -1079,8 +916,8 @@ class Airline: # singleton only 1 instance
     # chick if children for each go to start point
     def _parse_airways(self, airway:Airway, parent_lineage=None, 
                        current_full_path="/", current_take_off_zone="/",
-                        p_fly_ins=[], p_fly_outs=[], p_layout_nodes=[]):
-        true_node = airway._build or airway.build_alias or airway.fly_to or airway.fly_to_alias
+                        p_fly_in=[], p_fly_out=[], p_layout_nodes=[]):
+        true_node = airway.build or airway.build_alias or airway.fly_to or airway.fly_to_alias
         if true_node or airway.subways:
             seg = airway.path.strip("/") if airway.path else ""
             raw_path = f"{current_full_path.rstrip('/')}/{seg.strip('/')}"
@@ -1088,47 +925,47 @@ class Airline: # singleton only 1 instance
             take_off_zone = raw_path.rstrip("/") + "/" if airway.is_zone else current_take_off_zone
             # no build then absolutely no page to see
             if airway._class:
-                over = {"_class":airway._class, "over":airway.fly_ins_override}
-                attr = {"_class":airway._class, "attr":airway.fly_ins_override}
-                local_fly_ins = [over, attr]
-                for dic in local_fly_ins: dic["take_off_zone"] = current_take_off_zone
-                fly_ins = p_fly_ins + local_fly_ins
-                over = {"_class":airway._class, "over":airway.fly_outs_override}
-                attr = {"_class":airway._class, "attr":airway.fly_outs_override}
-                local_fly_outs = [over, attr]
-                for dic in local_fly_outs: dic["take_off_zone"] = current_take_off_zone
-                fly_outs = p_fly_outs + local_fly_outs
+                over = {"_class":airway._class, "over":airway.fly_in_override}
+                attr = {"_class":airway._class, "attr":airway.fly_in_override}
+                local_fly_in = [over, attr]
+                for dic in local_fly_in: dic["take_off_zone"] = current_take_off_zone
+                fly_in = p_fly_in + local_fly_in
+                over = {"_class":airway._class, "over":airway.fly_out_override}
+                attr = {"_class":airway._class, "attr":airway.fly_out_override}
+                local_fly_out = [over, attr]
+                for dic in local_fly_out: dic["take_off_zone"] = current_take_off_zone
+                fly_out = p_fly_out + local_fly_out
             else:
-                fly_ins = _FlyList([d for d in p_fly_ins if d.get("inheritable", True) or d.get("apply_per_view", False)])
-                fly_outs = _FlyList([d for d in p_fly_outs if (d.get("inheritable", False) or d.get("apply_per_view", False))])#must inherit if apply per view
-                local_fly_ins = _list_middlewares(airway.fly_ins)
-                local_fly_outs = _list_middlewares(airway.fly_outs)
-                for dic in local_fly_ins: dic["take_off_zone"] = current_take_off_zone
-                for dic in local_fly_outs: dic["take_off_zone"] = current_take_off_zone
-                fly_ins = _FlyList(local_fly_ins) if airway.fly_ins_override else _FlyList(fly_ins + list(local_fly_ins))
-                fly_outs = _FlyList(local_fly_outs) if airway.fly_outs_override else _FlyList(list(local_fly_outs) + fly_outs)
+                fly_in = _FlyList([d for d in p_fly_in if d.get("inheritable", True) or d.get("apply_per_view", False)])
+                fly_out = _FlyList([d for d in p_fly_out if (d.get("inheritable", False) or d.get("apply_per_view", False))])#must inherit if apply per view
+                local_fly_in = _list_middlewares(airway.fly_in)
+                local_fly_out = _list_middlewares(airway.fly_out)
+                for dic in local_fly_in: dic["take_off_zone"] = current_take_off_zone
+                for dic in local_fly_out: dic["take_off_zone"] = current_take_off_zone
+                fly_in = _FlyList(local_fly_in) if airway.fly_in_override else _FlyList(fly_in + list(local_fly_in))
+                fly_out = _FlyList(local_fly_out) if airway.fly_out_override else _FlyList(list(local_fly_out) + fly_out)
             
             build_node = None
             layout_node = None
+            print(111111111111111111, airway)
             if airway._class:
                 if airway.build_alias and getattr(airway._class, airway.build_alias):
-                    build_node = Airline._BuildNode(static=None, _class=airway._class, attr_name=airway.build_alias,
+                    build_node = Airline._BuildNode(None, airway._class, airway.build_alias,
                                                     hero_attr_name=airway.build_hero_alias, 
                                                     post_fly_attr_name=airway.post_fly_alias)
-                if (airway.layout_alias and getattr(airway._class, airway.layout_alias)) or(
-                    airway.layout_override_alias and getattr(airway._class, airway.layout_override_alias)):
-                    layout_node = Airline._LayoutNode(static=None, _class=airway._class, attr_name=airway.layout_alias,
-                                                      over_name=airway.layout_override_alias,
+                if airway.layout_alias and getattr(airway._class, airway.layout_alias):
+                    layout_node = Airline._LayoutNode(None, airway._class, airway.layout_alias,
+                                                      airway.layout_override_alias,
                                                       hero_attr_name=airway.layout_hero_alias, 
                                                     post_fly_attr_name=airway.post_fly_alias)
             else:
-                if airway._build:
-                    build_node = Airline._BuildNode(static=airway._build, hero_static=airway.build_hero,
+                if airway.build:
+                    build_node = Airline._BuildNode(airway.build, hero_static=airway.build_hero,
                                                     post_fly_static=airway.post_fly)
-                if airway._layout:
-                    layout_node = Airline._LayoutNode(static=airway._layout, hero_static=airway.layout_hero,
-                                                      post_fly_static=airway.post_fly, static_over = airway.layout_override)
-                
+                if airway.layout:
+                    layout_node = Airline._LayoutNode(airway.layout, hero_static=airway.layout_hero,
+                                                      post_fly_static=airway.post_fly)
+
             layout_nodes = list(p_layout_nodes) + ([layout_node] if layout_node else [])
 
             if true_node:
@@ -1146,8 +983,8 @@ class Airline: # singleton only 1 instance
                     is_zone=airway.is_zone,
                     layout_nodes=layout_nodes, 
                     lineage=current_lineage,
-                    fly_ins=fly_ins,
-                    fly_outs=fly_outs,
+                    fly_in=fly_in,
+                    fly_out=fly_out,
                     _class=airway._class
                 )
                 
@@ -1162,7 +999,7 @@ class Airline: # singleton only 1 instance
 
             if airway.subways:
                 for subway in airway.subways:
-                    self._parse_airways(subway, current_lineage, raw_path, take_off_zone, fly_ins, fly_outs, layout_nodes)
+                    self._parse_airways(subway, current_lineage, raw_path, take_off_zone, fly_in, fly_out, layout_nodes)
                     #self._safe_merge(self.static_map, self.dynamic_map, child_static, child_dynamic)
 
     def _safe_merge(self, main_static, main_dynamic, static, dynamic, skip_conflicts = False):
@@ -1199,13 +1036,12 @@ class Airline: # singleton only 1 instance
 
         regex_pattern = re.sub(r':([a-zA-Z0-9_]+)', r'(?P<\1>[^/]+)', pattern)  
 
-        regex_pattern = re.sub(r'\{([a-zA-Z0-9_]+)\}', r'(?P<\1>[^/]+)', regex_pattern)
         return re.compile(f"^{regex_pattern}$")
 # endregion
 
 # region Navigate
     async def _navigate(self, page, fullpath = None):
-        print(1111111111111111111)
+        
         start = time.perf_counter()
         print(f"Time taken: {(time.perf_counter() - start) * 1000:.2f}ms")
         
@@ -1214,10 +1050,8 @@ class Airline: # singleton only 1 instance
         node, params = self.match_path(path)
         if self._check_fly_to(page, node): return None
 
-        if not node:
-            node, params = self._handle_fallback(page, node, path) 
-        if not node:
-            return None
+        node, params = self._handle_fallback(page, node, path) 
+        if not node: return None
 
         if self._check_fly_to(page, node): return None
         
@@ -1228,7 +1062,7 @@ class Airline: # singleton only 1 instance
 
         step1 = self._apply_fly_pads(node) 
         
-        step2 = await self._apply_fly_ins_checks(page, step1, node)
+        step2 = await self._apply_fly_in_checks(page, step1, node)
 
         if not step2: return
         
@@ -1262,7 +1096,7 @@ class Airline: # singleton only 1 instance
         if path in self.static_map:
             
             node:Airline._FlightNode = self.static_map[path]
-            return node, {}
+            return node, None
 
         for pattern in reversed(list(self.dynamic_map.keys())):
             match = pattern.match(path)
@@ -1270,7 +1104,7 @@ class Airline: # singleton only 1 instance
                 node:Airline._FlightNode = self.dynamic_map[pattern]
                 return node, match.groupdict()
 
-        return None, {}
+        return None, None
 
     def _check_fly_to(self, page, node):
         if node:
@@ -1299,11 +1133,11 @@ class Airline: # singleton only 1 instance
                     
                     if node or not temp_path:
                         break
-            if not node and self.error_path:
-                current_zone_error = (page.fly.take_off_zone.rstrip("/") + "/" + self.error_path.strip("/"))
+            if not node and self.error_build:
+                current_zone_error = (page.fly.take_off_zone.rstrip("/") + "/" + self.error_build.strip("/"))
                 node, params = self.match_path(current_zone_error)
                 if not node:
-                    node, params = self.match_path("/" + self.error_path.strip("/"))
+                    node, params = self.match_path("/" + self.error_build.strip("/"))
             if not node:
                 self._default_error_view(page)
                 return None, None
@@ -1382,13 +1216,13 @@ class Airline: # singleton only 1 instance
 
         return full_chain
     
-    async def _apply_fly_ins_checks(self, page, nodes_chain, target_node):
+    async def _apply_fly_in_checks(self, page, nodes_chain, target_node):
         return nodes_chain
         filtered_chain = []
-        excuted_fly_ins_out = set()
+        excuted_fly_in_out = set()
         for current_node in nodes_chain:
             is_final = (current_node == target_node)
-            check = self._run_node_fly_ins_out(page, "in", None, current_node, is_final, excuted_fly_ins_out)
+            check = self._run_node_fly_in_out(page, "in", None, current_node, is_final, excuted_fly_in_out)
             
             if inspect.isawaitable(check):
                 check = await check
@@ -1412,7 +1246,7 @@ class Airline: # singleton only 1 instance
     async def _artificial_back(self,page, response, view):
         result = await response
         if result is True:
-            view.fly_outs_approved = True
+            view.fly_out_approved = True
             if page.views and len(page.views) > 1:
                 if page.views[-1] == view:
                     for i in range(len(page.views)-1, -1, -1):
@@ -1423,16 +1257,16 @@ class Airline: # singleton only 1 instance
                             page.update()
                             return
 
-    async def _apply_fly_outs_checks(self, page, view):
+    async def _apply_fly_out_checks(self, page, view):
         return True
-        if getattr(view, "fly_outs_approved", False): # already checked
+        if getattr(view, "fly_out_approved", False): # already checked
             return True
         
         node = getattr(view, "node", None)
         
         if not node: return True # its ok to leave, can't stop you
 
-        check = self._run_node_fly_ins_out(page, in_out="out", view=view, node=node, is_building=True, excuted_fly_ins_out=set())
+        check = self._run_node_fly_in_out(page, in_out="out", view=view, node=node, is_building=True, excuted_fly_in_out=set())
 
         if inspect.isawaitable(check):
             await page.push_route(view.route)
@@ -1449,23 +1283,23 @@ class Airline: # singleton only 1 instance
         
         return True #any other case scenario
 
-    def _run_node_fly_ins_out(self, page, in_out, view, node:_FlightNode, is_building, excuted_fly_ins_out:set):
+    def _run_node_fly_in_out(self, page, in_out, view, node:_FlightNode, is_building, excuted_fly_in_out:set):
 
         if node._class:
             attr = getattr(node, f"fly_{in_out}", None)
             if attr :
                 chain = self._get_sync_layout_chain(getattr(node , f"fly_{in_out}"), in_out)
-                fly_ins_out = _list_middlewares(chain)
+                fly_in_out = _list_middlewares(chain)
         else:
-            fly_ins_out = getattr(node, f"fly_{in_out}", [])
+            fly_in_out = getattr(node, f"fly_{in_out}", [])
         last_res = True
         page.fly.is_building = is_building
-        page.fly.fly_ins_radar = node.path
+        page.fly.fly_in_radar = node.path
         if view: page.fly.closing_view = view
         
         try:
-            for mw in fly_ins_out:
-                if mw.get("apply_per_view", False) or id(mw) not in excuted_fly_ins_out:
+            for mw in fly_in_out:
+                if mw.get("apply_per_view", False) or id(mw) not in excuted_fly_in_out:
                     func = mw["func"]
                     last_res = func(page, *mw["args"], **mw["kwargs"])
                     if inspect.isawaitable(last_res):
@@ -1486,7 +1320,7 @@ class Airline: # singleton only 1 instance
 
                     if last_res is not True:
                         break # هيخرج فوراً بالـ False أو الـ String
-                    excuted_fly_ins_out.add(id(mw))
+                    excuted_fly_in_out.add(id(mw))
                 else:
                     continue
         except Exception as e:
@@ -1533,7 +1367,7 @@ class Airline: # singleton only 1 instance
 
         for i in range(len(page.views) - 1, -1, -1):
             vi = page.views[i]
-            if vi.route not in final_paths and await self._apply_fly_outs_checks(page, vi):
+            if vi.route not in final_paths and await self._apply_fly_out_checks(page, vi):
                 Airline._BuildObj._save_build_hero(page, vi)
                 page.views.pop(i)
         
@@ -1667,7 +1501,7 @@ class Airline: # singleton only 1 instance
             if name:
                 self.name = name
             else: 
-                if not Airline.method_routes_detect:
+                if not Airline._auto_func_naming:
                     raise ValueError("[fletfly] shared build must have a name, or you can turn on auto_func_naming")
                 else:
                     if static and callable(static):
@@ -1889,12 +1723,11 @@ class Airline: # singleton only 1 instance
             page.fly._build_heros[view.route] = map
 
     class _LayoutNode: # one node created for one layout for all times
-        def __init__(self, static=None, static_over=None, _class=None, 
+        def __init__(self, static=None, _class=None, 
                      attr_name=None, over_name=None,
                      hero_static=None, hero_attr_name=None,
                      post_fly_static=None, post_fly_attr_name=None):
             self.static = static #function
-            self.static_over = static_over #function
             self._class = _class #class
             self.attr_name = attr_name
             self.over_name = over_name
@@ -1904,28 +1737,14 @@ class Airline: # singleton only 1 instance
             self.post_fly_attr_name = post_fly_attr_name
 
         @classmethod
-        def _get_not_overrided_layout_nodes(cls, layout_node_list: list[Airline._LayoutNode]):
+        def _get_not_overrided_layout_nodes(cls, layout_node_list:list[Airline._LayoutNode]):
             slice_idx = 0
-            for i in range(len(layout_node_list) - 1, -1, -1):
+            for i in range(len(layout_node_list)-1, -1, -1):
                 n = layout_node_list[i]
-                dynamic_over = False
-                if n._class and n.over_name:
-                    dynamic_over = bool(getattr(n._class, n.over_name, False))
-                
-                static_over = getattr(n, 'static_over', False)
-                if dynamic_over or static_over:
-                    has_dynamic_layout = bool(getattr(n._class, n.attr_name, None)) if (n._class and getattr(n, 'attr_name', None)) else False
-                    has_static_layout = bool(getattr(n, "static", None))
-                    
-                    if has_dynamic_layout or has_static_layout:
-                        slice_idx = i
-                    else:
-                        slice_idx = i + 1  # حجب المسارات السابقة واستبعاد العقدة الحالية الفارغة
+                if n._class and n.over_name and getattr(n._class, n.over_name):
+                    slice_idx = i
                     break
-            returning = layout_node_list[slice_idx:]
-            return returning
-
-
+            return layout_node_list[slice_idx:]
         
     class _LayoutObj:# objects for same or different layout
         def __init__(self, objs_map:dict=None, holders:list[ft.Control]=None,
@@ -2320,7 +2139,7 @@ Hint: you can use flet auto complete first for the **kwargs, then move the ) up 
     عندي مشكلة عويصة
     لما اليوزر بيدوس الباك بتاع الابليكيشن كذا مرة بسرعة وانا مش بلحق اتابعه الدنيا بتبوظ في الترتيب
     محتاجة ضبط من نار، واعادة تفكير هنعمل ايه
-    سواءا كان فيه fly_outs or not
+    سواءا كان فيه fly_out or not
     """
 
 class _FlyList(list):
@@ -2499,13 +2318,13 @@ outlet = slot
 shared = fly_around
 
 
-def fly_ins(*args, override=False, inheritable=True, apply_per_view=False, **kwargs):
-    return _fly_ins_out("in", *args, override=override, inheritable=inheritable, apply_per_view=apply_per_view, **kwargs)
+def fly_in(*args, override=False, inheritable=True, apply_per_view=False, **kwargs):
+    return _fly_in_out("in", *args, override=override, inheritable=inheritable, apply_per_view=apply_per_view, **kwargs)
 
-def fly_outs(*args, override=False, inheritable=False, apply_per_view=False, **kwargs):
-    return _fly_ins_out("out", *args, override=override, inheritable=inheritable, apply_per_view=apply_per_view, **kwargs)
+def fly_out(*args, override=False, inheritable=False, apply_per_view=False, **kwargs):
+    return _fly_in_out("out", *args, override=override, inheritable=inheritable, apply_per_view=apply_per_view, **kwargs)
    
-def _fly_ins_out(in_out, *args, override, inheritable, apply_per_view, **kwargs):
+def _fly_in_out(in_out, *args, override, inheritable, apply_per_view, **kwargs):
         
     if not args and not override:
         raise ValueError(f"❌ [fletfly] fly_{in_out}() cannot be empty unless fly_{in_out}_override is True.")
@@ -2542,42 +2361,60 @@ def _fly_ins_out(in_out, *args, override, inheritable, apply_per_view, **kwargs)
         return res
     return wrapper
 
-def fly(page, path=None, *args, **kwargs):
-    if not isinstance(page, ft.Page): # fly(ft.Page,)
-        raise RuntimeError(f"""
-✈️{"="*65}
-[fletfly] Page argument is mandatory
-You must pass page argument as the first argument to fly() function like this:
-def main(page):
-    fly(page)
-ft.run(main)
-# or you can easily do just this:
-ft.run(fly)
-            """)        
-    else:
+def fly_decorator(cls, path = None, *args, **kwargs): # @fly & @fly()
+    global aliases
+    if path:
+        cls.path = path
+    for p in aliases["path_alias"]:
+        if p in kwargs:
+            cls.path = kwargs[p]
+            kwargs.pop(p)
+            break
+    if args:
+        print("[fletfly] Warning: Only route path string is allowed as nameless argument."
+              "Named arguments will be added as attributes to your class.")
+    for key, value in kwargs.items():
+            setattr(cls, key, value)
+
+    if not hasattr(Airway, "_pending_classes"):
+        Airway._pending_classes = set()
+    Airway._pending_classes.add(cls)
+
+    return cls
+
+def fly(page, path="/", *args, **kwargs):
+    if isinstance(page, type): # @fly
+        return fly_decorator(page) # page is path, will go for path parameter
+
+    elif isinstance(page, ft.Page): # fly(ft.Page,)
         airline = Airline._instance
         if airline is None:
-            print(f"""
+            raise RuntimeError(f"""
 ✈️{"="*65}
-[fletfly] Airline Router is automatically initialized with default values,
-and automated scan based on decorators and inheritance of Airway class.
-if you want to assign routes, adjust options for the router,
-You better do it in the global scope outside main function like this:
-Airline(<class_or_dict_or_airwayObj_or_list>, **options...)
+[fletfly] NO AIRLINE FOUND!
+You must create a single Airline instance before flying.
+remember to do it in GLOBAL scope (NOT in 'main()' function)
+✈️{"-"*65}
+Quick Setup:
+1. Airline(airway('/', view_function))  # Global scope
+2. fly(page, '/')                       # Inside main()
+✈️{"="*65}
             """)
-            airline = Airline()
-
-        if path is None:
-            path = page.route if page.route not in ("", "/", None) else ""
-        if not path and Airline.initial_route:
-            path = Airline.initial_route
+        if path == "": path = "/"
         if not hasattr(page, "fly"):
             page.fly = Airline.FlyBox(page)
             page.on_route_change = airline._handle_route_change 
             page.on_view_pop = airline._handle_view_pop
             page.views.clear()
-        print(path)
-        page.fly(path)
+        
+        target = f"{page.fly.take_off_zone}{path.strip('/')}".replace("//", "/")
+        page.run_task(airline._navigate, page, target)
+        page.run_task(page.push_route, target)
+        return None
+    else: # mistake or wrapper calling
+        def wrapper(cls): # @fly()
+            return fly_decorator(cls, page, *args, **kwargs)
+        return wrapper
 
 airway = Airway
 route = Airway

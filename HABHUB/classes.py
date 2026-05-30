@@ -1,26 +1,51 @@
+
 import flet as ft
 import fletfly as fty
 from fletfly import Airway, fly
 
-@Airway('/home1')
-class page1: 
+
+@Airway('home1')
+class page1:
     pass
-    class page1(Airway): pass
+    class page11(Airway): pass
 
 @Airway()
 class page2:
-    route = "/home2"
-    class page1(Airway): pass
+    route = ""
+    def element(page):
+        return ft.Text("Home")
+    class page21(Airway): pass
+
+
+def parent(cls):
+    cls.parent = "Mohab"
+    return cls
+def brother(cls):
+    cls.brother = "Amer"
+    return cls
+
 @Airway
 class page3:
-    route = "/home3"
-
-home = Airway("/home4")
+    route = "/home3" 
+    def layout(page):
+        return ft.Column([
+            ft.Text("HHHHHHHHHHHHHHHH"),
+            fty.slot(page),
+            ft.Text("FFFFFFFFFFFFFFFF")
+        ])
+    
+    def build(page):
+        return ft.Text("home3")
+    def page31(page):
+        return ft.Text("page 31, A func in the class, returning ft.Control, we'll treat it as a page")
+    def page32(page):
+        return ft.Text("page 32, fast page, nothing but path, build & ref to the class")
+home = Airway("home1/home4")
 @home
 class page4: pass
 
 home = Airway()
-@home("/home5")
+@home("/home1/home888/home999/home5")
 class page5:
     class page51:
         url = "home51"
@@ -31,54 +56,75 @@ class page5:
         class page5(Airway):
             path = "525"
 
-@fly
-class page6:
-    route = "/home6"
+class page6(Airway):
+    route = "/home1/home888"
 
-@fly("/home7")
-class page7: pass
+@Airway("/home1/home888/home999")
+class page7(Airway):
+    def build(page):
+        return ft.Text("home1/home888/home999")
 
 class page8(Airway):
-    path = "/home8"
+    path = "/:name/[age]/{address}"
+    def build(page):
+        return ft.Text(f"This is home999 of {page.fly.params.get("name", "No one")}")
     class page81: pass
 class page9(Airway):
     url = "/home9"
-    class page91:
+    class page91():
         url = "home91"
-        class page911:
+        class page911():
             path = "home911"
     class page92:
-        url = "home93"
+        url = "home92"
         class page921:
             path = "home921"
     class page93:
         url = "home93"
-        class page931:
+        class page931(page1, page2, page3):
             path = "home931"
+    subways = [page6, page7, page8]
+page9.subways.append(page8)
 
-class page20:
-    pass
+class page0(Airway):
+    def layout(page):
+        return ft.Column([
+            ft.Text("This is a nice header"),
+            ft.Text("this is a very nice header"),
+            fty.slot(page),
+            ft.Text("This is a footer"),
+            ft.Text("this is a very nice footer"),
+        ])
+    def view(page):
+        return ft.Text("This is Page20 Class")
     
-    class page21:
-        class page1: pass
-        pass
-    class page22:
-        pass
-        class page1: pass
-    class page23:
+    class page01:
+        def layout(page):
+            return ft.Column([ft.Text("21 21 21 21 21 21"),
+                              fty.slot(page),
+                              ft.Text("21 21 21 21 21 21")
+            ])
+        def build(page):
+            return ft.Text("This is page21")
+        class page1:
+            layout_override = True
+            def build(page):
+                return ft.Text("This is page 1")
+    class page02:
         pass
         class page1: pass
 
 
+"""
 weird = [
-    {"path":"page77", "component":lambda:ft.Text("hi"), "children":[
+    {"path":"page77", "component":lambda p:ft.Text("hi"), "children":[
         {"path":"page101", "component":None},
         {"path":"page102", "compoentn":None},
         #{"path":":id", "view":lambda:ft.Text("hello")},
         #{"url":"[name]", "content": lambda: ft.Text("see you")}
 
     ]},
-    {"page76":lambda:ft.Text("bye")},
+    {"page76":lambda p:ft.Text("bye")},
 
 
     Airway("mohab", land=None, subways=[
@@ -88,10 +134,7 @@ weird = [
 
     ])])]
     
-
-airline = fty.Airline([page20, weird])
-
-
+"""
 
 def mw_son(must_arg1, must_arg2, optional_arg1 = "default optional_arg1", optional_arg2 = "default optional_arg2"):
     print("🔐 [MW 1] Checking son...")
@@ -127,7 +170,7 @@ def mw_role(must_arg1, must_arg2, optional_arg1 = "default optional_arg1", optio
     print("injected is_final is working:", fty.is_final)
     return True
 # --- تجربة الـ Nesting في الخريطة (Static Map) ---
-
+"""
 Pages = {
     "/": lambda p: ft.Text("Home Page"),
     
@@ -152,9 +195,6 @@ Pages = {
                               }),
     "error": lambda p: ft.Text("Error")
 }
-# 3. التشغيل
-def main(page: ft.Page):
-    fly(page)
 
-if __name__ == "__main__":
-    ft.run(main)
+"""
+ft.run(fly)
