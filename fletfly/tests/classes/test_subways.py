@@ -35,14 +35,13 @@ def test_subway_explicit_path_and_diffusion():
 def test_subway_implicit_path_fallback():
     # Scenario 2: @subway is used as a bare decorator without passing any explicit path.
     # The subsystem must fall back to using the decorated method's exact identifier name as the path.
-    
+    Airline.detect_inner_classes = False
     class Settings:
         @subway
         def security_logs(self, page): pass
         @subway("hi")
         def function2(self,page): pass
 
-        @subway
         class A: pass
 
         @subway("c")
@@ -50,11 +49,9 @@ def test_subway_implicit_path_fallback():
 
     airway, kids = Airway._airway_from_class(Settings)
     
-    assert len(kids) == 4
+    assert len(kids) == 3
     for item in kids:
-        if not getattr(item, "path", None):
-            sub2=item
-        elif item.path == "c":
+        if item.path == "c":
             sub3 = item
         elif item.path == "hi":
             sub1 = item
@@ -68,7 +65,40 @@ def test_subway_implicit_path_fallback():
     assert sub1.path == "hi"
     assert sub1.build_clsattr == "function2"
     assert sub1._class == Settings
-    assert sub2 == Settings.A
+    assert sub3 == Settings.B
+    assert sub3.path == "c"
+
+
+
+def test_subway_implicit_path_fallback():
+    # Scenario 2: @subway is used as a bare decorator without passing any explicit path.
+    # The subsystem must fall back to using the decorated method's exact identifier name as the path.
+    Airline.detect_inner_classes = False
+    Airline.detect_method_routes = False
+    class Settings:
+        @subway
+        def security_logs(self, page): pass
+
+        def function2(self,page): pass
+
+        class A: pass
+
+        @subway("c")
+        class B: pass
+
+    airway, kids = Airway._airway_from_class(Settings)
+    
+    assert len(kids) == 2
+    for item in kids:
+        if item.path == "c":
+            sub3 = item
+        elif item.path == "security_logs":
+            sub0 = item
+    
+    # Should automatically derive the path from the method name
+    assert sub0.path == "security_logs"
+    assert sub0.build_clsattr == "security_logs"
+    assert sub0._class == Settings
     assert sub3 == Settings.B
     assert sub3.path == "c"
 

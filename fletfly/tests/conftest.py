@@ -18,5 +18,6 @@ def reset_fletfly_state():
     Airline.auto_path_naming = True
     Airline.detect_decorated_classes = True
     Airline.detect_airway_subclasses = True
+    Airline.detect_inner_classes = True
     Airline.detect_method_routes = True
     yield

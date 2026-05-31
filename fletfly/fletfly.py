@@ -102,8 +102,8 @@ class _MethodHandler:
                                 setattr(cl, "subways", [clas])
             elif instance:
                 raise ValueError(f"[fletfly] Can't use @airway.{self.name} method decorating a class, use @{self.name} or @Airway.{self.name} instead.")
-            else: # no need to inject in @subways
-                setattr(clas, _fletfly_+self.name, True)
+            
+            setattr(clas, _fletfly_+self.name, True)
             kwargs.pop('parents', None)
             for key, val in kwargs.items():
                 if key in ["override", "hero"]: key = f"{self.name}_{key}"
@@ -511,7 +511,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         for attr_name, attr_value in _class.__dict__.items():
             if attr_name.startswith("_"): continue
             if isinstance(attr_value, type):
-                subways.add(attr_value)
+                if Airline.detect_inner_classes or hasattr(attr_value, "_fletfly_subway"):
+                    subways.add(attr_value)
             elif attr_name in aliases["subways"]:
                 if attr_value and isinstance(attr_value, (list, tuple)):
                     subways.update(attr_value)
@@ -880,6 +881,7 @@ class Airline: # singleton only 1 instance
     detect_method_routes = True
     detect_airway_subclasses = True
     detect_decorated_classes = True
+    detect_inner_classes = True
     _instance = None
     _shared_map = {}
     def __new__(cls, *args, **kwargs):
