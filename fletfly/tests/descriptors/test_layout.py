@@ -17,84 +17,84 @@ def test_01():
     @layout
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is None
-    assert getattr(SampleClass, "layout_hero_alias", None) is None
+    assert getattr(SampleClass, "layout_hero_clsattr", None) is None
     assert getattr(SampleClass, "layout_override", None) is None
-    assert getattr(SampleClass, "layout_override_alias", None) is None
+    assert getattr(SampleClass, "layout_override_clsattr", None) is None
 
 def test_02():
     """ @layout() on class. attr '_fletfly_layout' = True only should be added to class"""
     @layout()
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is None
-    assert getattr(SampleClass, "layout_hero_alias", None) is None
+    assert getattr(SampleClass, "layout_hero_clsattr", None) is None
     assert getattr(SampleClass, "layout_override", None) is None
-    assert getattr(SampleClass, "layout_override_alias", None) is None
+    assert getattr(SampleClass, "layout_override_clsattr", None) is None
 
 def test_03():
     """ @layout(hero=True) on class """
     @layout(hero=True, override=True)
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is True
-    assert getattr(SampleClass, "layout_hero_alias", None) == "layout_hero"
+    assert getattr(SampleClass, "layout_hero_clsattr", None) == "layout_hero"
     assert getattr(SampleClass, "layout_override", None) is True
-    assert getattr(SampleClass, "layout_override_alias", None) == "layout_override"
+    assert getattr(SampleClass, "layout_override_clsattr", None) == "layout_override"
 
 def test_04():
     """ @Airway.layout on class. """
     @Airway.layout
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is None
-    assert getattr(SampleClass, "layout_hero_alias", None) is None
+    assert getattr(SampleClass, "layout_hero_clsattr", None) is None
     assert getattr(SampleClass, "layout_override", None) is None
-    assert getattr(SampleClass, "layout_override_alias", None) is None
+    assert getattr(SampleClass, "layout_override_clsattr", None) is None
 
 def test_05():
     """ @Airway.layout() on class."""
     @Airway.layout()
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is None
-    assert getattr(SampleClass, "layout_hero_alias", None) is None
+    assert getattr(SampleClass, "layout_hero_clsattr", None) is None
     assert getattr(SampleClass, "layout_override", None) is None
-    assert getattr(SampleClass, "layout_override_alias", None) is None
+    assert getattr(SampleClass, "layout_override_clsattr", None) is None
 
 def test_06():
     """ @Airway.layout(hero=True) on class."""
     @Airway.layout(hero=True, override=False)
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is True
-    assert getattr(SampleClass, "layout_hero_alias", None) == "layout_hero"
+    assert getattr(SampleClass, "layout_hero_clsattr", None) == "layout_hero"
     assert getattr(SampleClass, "layout_override", None) is False
-    assert getattr(SampleClass, "layout_override_alias", None) == "layout_override"
+    assert getattr(SampleClass, "layout_override_clsattr", None) == "layout_override"
 
 def test_07():
     """ @Airway.layout(hero=False) on class."""
     @Airway.layout(hero=False, override=True)
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout", None) is True
-    assert getattr(SampleClass, "layout_alias", None) is None
+    assert getattr(SampleClass, "layout_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_layout_hero", None) is None
     assert getattr(SampleClass, "layout_hero", None) is False
-    assert getattr(SampleClass, "layout_hero_alias", None) == "layout_hero"
+    assert getattr(SampleClass, "layout_hero_clsattr", None) == "layout_hero"
     assert getattr(SampleClass, "layout_override", None) is True
-    assert getattr(SampleClass, "layout_override_alias", None) == "layout_override"
+    assert getattr(SampleClass, "layout_override_clsattr", None) == "layout_override"
 
 def test_08():
     """ @Airway().layout on class -> error."""

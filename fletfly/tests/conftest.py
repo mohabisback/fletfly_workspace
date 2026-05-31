@@ -1,3 +1,4 @@
+# /tests/conftest.py
 import pytest
 from fletfly import Airway, Airline
 
@@ -12,5 +13,10 @@ def reset_fletfly_state():
     Airway._airways_wild.clear()
     Airway._registered_children_classes.clear()
     Airway._pending_classes.clear()
+    Airway._map.clear()
     Airline._instance = None
+    Airline.auto_path_naming = True
+    Airline.detect_decorated_classes = True
+    Airline.detect_airway_subclasses = True
+    Airline.detect_method_routes = True
     yield

@@ -17,70 +17,70 @@ def test_01():
     @build
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is None
-    assert getattr(SampleClass, "build_hero_alias", None) is None
+    assert getattr(SampleClass, "build_hero_clsattr", None) is None
 
 def test_02():
     """ @build() on class. attr '_fletfly_build' = True only should be added to class"""
     @build()
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is None
-    assert getattr(SampleClass, "build_hero_alias", None) is None
+    assert getattr(SampleClass, "build_hero_clsattr", None) is None
 
 def test_03():
     """ @build(hero=True) on class """
     @build(hero=True)
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is True
-    assert getattr(SampleClass, "build_hero_alias", None) == "build_hero"
+    assert getattr(SampleClass, "build_hero_clsattr", None) == "build_hero"
 
 def test_04():
     """ @Airway.build on class. """
     @Airway.build
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is None
-    assert getattr(SampleClass, "build_hero_alias", None) is None
+    assert getattr(SampleClass, "build_hero_clsattr", None) is None
 
 def test_05():
     """ @Airway.build() on class."""
     @Airway.build()
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is None
-    assert getattr(SampleClass, "build_hero_alias", None) is None
+    assert getattr(SampleClass, "build_hero_clsattr", None) is None
 
 def test_06():
     """ @Airway.build(hero=True) on class."""
     @Airway.build(hero=True)
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is True
-    assert getattr(SampleClass, "build_hero_alias", None) == "build_hero"
+    assert getattr(SampleClass, "build_hero_clsattr", None) == "build_hero"
 
 def test_07():
     """ @Airway.build(hero=False) on class."""
     @Airway.build(hero=False)
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_build", None) is True
-    assert getattr(SampleClass, "build_alias", None) is None
+    assert getattr(SampleClass, "build_clsattr", None) is None
     assert getattr(SampleClass, "_fletfly_build_hero", None) is None
     assert getattr(SampleClass, "build_hero", None) is False
-    assert getattr(SampleClass, "build_hero_alias", None) == "build_hero"
+    assert getattr(SampleClass, "build_hero_clsattr", None) == "build_hero"
 
 def test_08():
     """ @Airway().build on class -> error."""

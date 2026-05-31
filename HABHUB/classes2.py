@@ -28,7 +28,7 @@ class A:
     
     print(000000000, "route._layout", route._layout)
     print(555555555, "route.layout", route.layout)
-    print(666666666, "route.layout_alias", route.layout_alias)
+    print(666666666, "route.layout_clsattr", route.layout_clsattr)
     print(777777777, "route.layout_hero", route.layout_hero)
     print(888888888, "route.layout_override", route.layout_override)
 
