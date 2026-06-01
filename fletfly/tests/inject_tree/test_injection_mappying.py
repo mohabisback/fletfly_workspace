@@ -1,4 +1,4 @@
-# test_injection_mapping.py
+# fletfly/tests/inject_tree/test_injection_mapping.py
 import pytest
 from fletfly import Airway
 
@@ -65,8 +65,8 @@ def test_03():
     first_node = Airway(path="profile")
     Airway._inject_into_tree(first_node)
     
-    second_node = Airway(path="profile")
-    
+    second_node = Airway(path="profile", build=dummy_build)
+
     with pytest.raises(ValueError) as exc_info:
         Airway._inject_into_tree(second_node)
         

@@ -407,34 +407,21 @@ class Airway():
         return current_parent
 
     @classmethod
-    def _handle_index(cls, parent:Airway, child:Airway):
-        if not parent or not child: return False
+    def _handle_index(cls, parent:Airway, child:Airway, subways): # child.path = "" and parent
 
-        attr_list = ["build", "build_hero", "fly_to", "icon", "title", "post_fly"]
-        clsattr_list = [x + "_clsattr" for x in attr_list]
-        attr_list[0] = "_" + attr_list[0]
-
-        def diffuse(static=False, CBV=False):
-            for item in (attr_list if static else []) + (clsattr_list if CBV else []):
-                if getattr(parent, item, None) is None and getattr(child, item, None) is not None:
-                    setattr(parent, item, getattr(child, item))
-
-        if parent.path is not None and child.path == "" and not parent._build and not (
-            parent.build_clsattr and parent._class):
-            if child._build: # doesn't matter if child has a class, don't look at it
-                diffuse(static=True)
-                return True
-            elif child.build_clsattr and child._class: # ok, it is a build depending on a class.
-                if parent._class and parent._class == child._class:
-                    diffuse(static=True, CBV=True)
-                    return True
-                else:                              # No, can't move anything
-                    p = f"class <{parent._class.__name__}>" if parent._class else "class-less route"
-                    print(f"[fletfly] WARNING: destinct class <{child._class.__name__}> with <path = ''> can't be used as index for parent {p}")
-                    return False
-            else:
-                return False
-        return False
+        if parent.path is None:
+            raise ValueError(f"[fletfly] Can't add index with path = '' into a pathless parent route.")
+        if parent._build or (parent.build_clsattr and parent._class):
+            raise ValueError(f"[fletfly] Can't add index with path='' into parent with path='{parent.path}'. Parent already has a view build")
+        if getattr(parent, "index", None):
+            raise ValueError(f"[fletfly] Parent with path='{parent.path}', already has index. Can't duplicate.")        
+        if child._build or (child.build_clsattr and child._class):
+            parent.index = child
+            if subways:
+                print(f"[fletfly] WARNING: index for path='{parent.path}' can't have subroutes. All are ignored.")
+            return True
+        else:
+            raise ValueError(f"[fletfly] Parent with path='{parent.path}' can't have index with no build")
     
     @classmethod
     def _inject_into_tree(cls, route_node, parent_full_path:str = "", parent:Airway = None):
@@ -458,44 +445,48 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         while "//" in path: path = path.replace("//", "/")
         if len(path) > 0 and not path.startswith("/"): path = "/" + path
 
-        # handling index situation
-        if Airway._handle_index(parent, airway):
-            return airway # no kids allowed in pathless index, they should be kids of the pather
-        elif airway.path is not None:
-            airway.path = path.split("/")[-1] if "/" in path else path
-
-            if path in ("", "/"):
-                if not cls._map.get(""): 
+        # handling Root
+        if airway.path in ("", "/") and path in ("", "/"):
+            if not cls._map.get(""): 
+                cls._map[""] = airway
+            else:
+                root_node = cls._map[""]
+                if getattr(root_node, "is_placeholder", False):
+                    cls._update_tree_subways(airway.subways, root_node.subways)
                     cls._map[""] = airway
                 else:
-                    root_node = cls._map[""]
-                    if getattr(root_node, "is_placeholder", False):
-                        airway.subways.extend(root_node.subways)
-                        cls._map[""] = airway
-                    else:
-                        raise ValueError("Router already has a root")
-            else:
-                if path in cls._map:
-                    old_node = cls._map[path]
-                    if getattr(old_node, "is_placeholder", False):
-                        cls._map[path] = airway
-                        airway.subways.extend(old_node.subways)
-                        
-                        parent_node = cls._get_parent(path)
-                        for i, child in enumerate(parent_node.subways):
-                            if child is old_node:
-                                parent_node.subways[i] = airway
-                                break
-                        else:
-                            parent_node.subways.append(airway)
-                    else:
-                        raise ValueError(f"Path '{path}' already defined")
-                else:
-                    parent_node = cls._get_parent(path)
+                    cls._check_similarity(airway, root_node, "Router already has a root")
+                    airway = root_node
+                
+        # handling "" index
+        elif parent and airway.path == "" and cls._handle_index(parent, airway, subways):
+            return airway # handled and airway returned.
+        
+        # handling path situation
+        elif airway.path not in (None, "", "/"):
+            airway.path = path.split("/")[-1] if "/" in path else path
+            if path in cls._map:
+                old_node = cls._map[path]
+                if getattr(old_node, "is_placeholder", False):
                     cls._map[path] = airway
-                    parent_node.subways.append(airway)
+                    cls._update_tree_subways(airway.subways, old_node.subways)
+                    
+                    parent_node = cls._get_parent(path)
+                    for i, child in enumerate(parent_node.subways):
+                        if child is old_node:
+                            parent_node.subways[i] = airway
+                            break
+                    else: # if not break happened
+                        airway = cls._update_tree_subways(parent_node.subways, airway)
+                else:
+                    cls._check_similarity(airway, old_node, f"Path '{path}' already defined")
+                    airway = old_node
+            else:
+                parent_node = cls._get_parent(path)
+                cls._map[path] = airway
+                airway = cls._update_tree_subways(parent_node.subways, airway)
         elif parent:
-            parent.subways.append(airway)
+            airway = cls._update_tree_subways(parent.subways, airway)
         else:
             raise ValueError("[fletfly] can't inject pathless airway into the tree")
 
@@ -504,7 +495,43 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                 cls._inject_into_tree(item, path, parent = airway)
 
         return airway   
-
+    @classmethod
+    def _check_similarity(cls, a1:Airway, a2:Airway, err_msg=None)->Airway:
+        if (a1.path == a2.path) and (
+            a1._class == a2._class) and (( # even if _class = None
+            a1.build_clsattr and a2.build_clsattr and a1.build_clsattr == a2.build_clsattr)or(
+            a1._build and a2._build and a1._build == a2._build)):
+            print(f"[fletfly]: Duplication Warning: Airway route with path='{a1.path}' already added. second registration ignored.")
+            return True
+        else:
+            if err_msg: raise ValueError(err_msg)
+            return False
+    @classmethod
+    def _update_tree_subways(cls, subways, airways:Airway|list[Airway])->Airway|list[Airway]:
+        is_single = isinstance(airways, Airway)
+        if is_single: airways = [airways]
+        resolved = []
+        
+        for airway in airways:
+            add = True
+            active_airway = airway
+            for brother in subways:
+                if airway.path == brother.path and (
+                    cls._check_similarity(airway, brother,f"[fletfly] Airway route with path='{airway.path}' already exists.")
+                    ):
+                    add = False
+                    active_airway = brother
+                # Ensure both paths exist and contain dynamic parameters using regex
+                if airway.path and brother.path and re.search(r"[:{\[]", airway.path) and re.search(r"[:{\[]", brother.path):
+                    raise ValueError(
+                        f"Parent route already has a dynamic sub-route '{brother.path}'. "
+                        f"Cannot add another dynamic route '{airway.path}' at the same level."
+                    )
+            
+            if add: subways.append(airway)
+            resolved.append(active_airway)
+        return resolved[0] if is_single else resolved
+    
     @classmethod
     def _unify_class_subways(cls, _class:type)->list:
         subways = set()
@@ -634,110 +661,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                 Airway._inject_into_tree(pot_cls)
 
     @classmethod
-    def _validate_airzone_final(cls, zone, allow_fallback = True)->Airway:
-        airzone: Airway = None
-        if isinstance(zone, Airway):
-            airzone = zone
-            if airzone.path is None:
-                print('[fletfly] Info: pathless AirZone adjusted to (path="")')
-            elif airzone.path not in ("", "/"):
-                airzone.path = ""
-                print(f"""
-[fletfly] Invalid Home path: Your Main AirZone cannot have a path '{airzone.path}'.
-The Home route path must be '' or '/'. and it will be adjusted to ""
-Suggestion: Create a subway with path='{airzone.path}'
-and use fly_to='{airzone.path}' in your Home AirZone.
-                """)
-            airzone.path = ""
-        elif isinstance(zone, (list, tuple)):
-            if not zone: return
-            parent_index = -1
-            search_criteria = ("", "/")
-            
-            for i in range(0, len(zone)):
-                if zone[i].path in search_criteria:
-                    if parent_index > -1:
-                        raise TypeError('[fletfly] trying to get home page, but 2 paths has "" or "/" paths')
-                    else:
-                        parent_index = i
-            if parent_index >= 0:
-                airzone = zone.pop(parent_index)
-                airzone.subways = zone + airzone.subways
-                airzone.path = ""
-            else:
-                found_path = None
-                potential_path = None
-                potential2_path = ""
-                for way in zone:
-                    if way.path not in (None, "", "/") and way._build:
-                        found_path = way.path
-                        break
-                    elif way.path not in (None, "", "/") and way.subways:
-                        potential_path = way.path
-                    elif way.path not in (None, "", "/"):
-                        potential2_path = way.path
-                if not found_path:
-                    found_path = potential_path
-                if not found_path:
-                    found_path = potential2_path
-                    
-                if found_path:
-                    airzone = Airway("", fly_to=found_path, subways = zone)
-                    print(f"""
-[fletfly] No home is detected in the list, the home page will be empty
-fly_to redirect will be set to you first valid page in the list fly_to ="{found_path}"
-                    """)
-                else:
-                    raise ValueError("[fletfly] No home and even no path is detected in the list")
-        else:
-            return None
-        Airway._validate_airway_final(airzone,  allow_fallback)
-        return airzone 
-
-    @classmethod
-    def _validate_airway_final(cls, airway: Airway, allow_fallback = True):
-        path, build, layout = airway.path, airway._build, airway._layout
-        fly_ins, fly_outs, fly_to = airway.fly_ins, airway.fly_outs, airway.fly_to
-
-        # Route with no fly_to nor build nor kids should be deleted
-        if fly_to is not None:
-            if path == fly_to:
-                raise ValueError(f"[fletfly] Error: fly_to '{fly_to}' have same value of path '{path}'.")
-            elif build is not None:
-                    print(f"[fletfly] Warning: build function <{build.__name__}> will be ignored, airline fly_to {fly_to}.")
-        if (not callable(build) and build is not None) or (not callable(layout) and layout is not None):
-            raise ValueError(_page_err_msg)
-        if (fly_ins is not None and not callable(fly_ins)) or (fly_outs is not None and not callable(fly_outs)):
-            print(f"""
-[fletfly] fly_ins entry middlewares and fly_outs exit middlewares should be callable functions that returns <True> for entry approval, <False> for refusal and <str> for redirecting
-Notice: async functions are also supported
-                  """)
-        dynamic = None
-        star = False
-        for i, item in enumerate(airway.subways):
-            if item.path and (":" in item.path or ("[" in item.path and "]" in item.path)):
-                if dynamic is not None:
-                    raise TypeError(f"[fletfly] Error, can't allow two dynamic paths '{dynamic}','{item.path}'.")
-                else:
-                    dynamic = item.path
-            elif item.path in (None, "", "/") and item._build is not None:
-                if star:
-                    raise TypeError(f"[fletfly] Error, can't allow 2 fallback in '{airway.path}' path.")
-                else:
-                    item.path = "*"
-                    star = True
-
-        for i in range(len(airway.subways)-1, -1, -1):
-            item = airway.subways[i]
-            Airway._validate_airway_final(airway.subways[i], allow_fallback)
-            if not item.subways:
-                if item.path in ("/", "", None):
-                    print(f"[fletfly] Warning: Airway path {item.path if item.path else ""} found with no path no subways.")
-                elif item.fly_to is None and item._build is None:
-                    #print(f"[fletfly] Warning: Airway path '{item.path if item.path else ''}'.")
-                    #print(f"[fletfly] it has no fly_to, no build and no subways.")
-                    pass
-    @classmethod
     def _auto_unwrap(cls, zone):
         while isinstance(zone, (list, tuple, set)) and len(zone) == 1:
             collection_type = type(zone).__name__
@@ -858,7 +781,6 @@ def Airzone(zone, path=None):
         if path is None or path in ("", "/"):
             raise ValueError("[fletfly] Airway type airzone must have a distinct path path.")
         else:
-            zone = Airway._validate_airzone_final(zone)
             zone.path = path
             zone.is_zone = True
     return zone

@@ -1,4 +1,4 @@
-# test_flags_disabled.py
+# fletfly/tests/classes/test_flags_disabled.py
 import pytest
 from fletfly import Airway, Airline, layout
 

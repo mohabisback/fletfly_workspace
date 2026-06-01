@@ -1,8 +1,11 @@
-# test_injection_input_and_index.py
+# fletfly/tests/inject_tree/test_injection_input_and_index.py
 import pytest
 from fletfly import Airway
 
 def dummy_build(page):
+    pass
+
+def dummy_build2(page):
     pass
 
 
@@ -78,16 +81,20 @@ def test_05():
 
 def test_inject_handle_index_early_return_alive():
     # Edge Case: Trigger Airway._handle_index naturally to verify the early return logic.
-    # To return True: parent.path is not None, child.path == "", parent has no build, child has _build.
+    # To succeed: parent.path is not None, child.path == "", parent has no build, child has _build.
     parent = Airway(path="dashboard")
     child = Airway(path="")
-    child._build = dummy_build
+    child._build = dummy_build2
+
+    # Clear maps to ensure a clean testing environment
+    if "" in Airway._map: del Airway._map[""]
+    if "/" in Airway._map: del Airway._map["/"]
 
     # Invoke injection with active parent context
     result = Airway._inject_into_tree(child, parent_full_path="dashboard", parent=parent)
 
-    # It must return the child early, diffusing attributes, and NOT adding the pathless child to the map
+    # It must return the child early, assigning parent.index, and NOT adding the pathless child to the map
     assert result is child
     assert "" not in Airway._map
     assert "/" not in Airway._map
-    assert parent._build == dummy_build  # Verified that diffusion happened alive
+    assert parent.index is child  # Verified that explicit reference assignment happened alive

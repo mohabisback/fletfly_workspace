@@ -1,4 +1,4 @@
-# /tests/conftest.py
+# fletfly/tests/conftest.py
 import pytest
 from fletfly import Airway, Airline
 

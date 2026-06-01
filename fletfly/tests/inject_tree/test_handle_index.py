@@ -1,4 +1,4 @@
-# test_handle_index.py
+# fletfly/tests/inject_tree/test_handle_index.py
 import pytest
 from fletfly import Airway
 
@@ -10,117 +10,97 @@ def dummy_build2(page): pass
 
 
 def test_01():
-    # Should return False if either parent or child is missing
-    assert Airway._handle_index(None, Airway(path="")) is False
-    assert Airway._handle_index(Airway(path=""), None) is False
+    # Should raise ValueError if parent path is None
+    parent = Airway(path=None)
+    child = Airway(path="", build=dummy_build2)
+    with pytest.raises(ValueError, match="Can't add index with path = '' into a pathless parent route"):
+        Airway._handle_index(parent, child, subways=[])
 
 
 def test_02():
-    # Should return False if parent path is None or "/"
-    parent = Airway(path=None)
-    child = Airway(path="", build = dummy_build2)
-    assert Airway._handle_index(parent, child) is False
+    # Should raise ValueError if parent already has _build set
+    parent = Airway(path="/dashboard")
+    parent._build = dummy_build1
+    child = Airway(path="", build=dummy_build2)
     
-    # should return False if child path is None or Value
-    parent = Airway(path="/dashboard")
-    child = Airway(component = dummy_build2)
-    assert Airway._handle_index(parent, child) is False
+    with pytest.raises(ValueError, match="Parent already has a view build"):
+        Airway._handle_index(parent, child, subways=[])
 
-    parent = Airway(path="/dashboard")
-    child = Airway(path="value", element = dummy_build2)
-    assert Airway._handle_index(parent, child) is False
-
-
-def test_03():
-    # Should return False if parent already has _build set
-    parent = Airway(path="/dashboard", view = dummy_build1)
-    child = Airway(path="")
-    child.build = dummy_build2
-    assert Airway._handle_index(parent, child) is False
-
-    # Should return False if parent already has both class and build_clsattr
+    # Should raise ValueError if parent already has both class and build_clsattr
     parent_cls = Airway(path="/dashboard")
     parent_cls._class = DummyClass1
     parent_cls.build_clsattr = "parent_attr"
     
-    child_cls = Airway(path="")
-    child_cls.view = dummy_build2
-    assert Airway._handle_index(parent_cls, child_cls) is False
+    child_cls = Airway(path="", build=dummy_build2)
+    with pytest.raises(ValueError, match="Parent already has a view build"):
+        Airway._handle_index(parent_cls, child_cls, subways=[])
+
+
+def test_03():
+    # Should raise ValueError if parent already has an index assigned (Duplicate check)
+    parent = Airway(path="/dashboard")
+    child1 = Airway(path="", build=dummy_build1)
+    child2 = Airway(path="", build=dummy_build2)
+    
+    # First assignment succeeds
+    Airway._handle_index(parent, child1, subways=[])
+    
+    # Second assignment must fail
+    with pytest.raises(ValueError, match="already has index. Can't duplicate"):
+        Airway._handle_index(parent, child2, subways=[])
 
 
 def test_04():
-    # Should diffuse static attributes and return True when child._build exists
+    # Should successfully assign child to parent.index and return True (No diffusion)
     parent = Airway(path="/dashboard")
     child = Airway(path="", build=dummy_build2)
     child.icon = "dashboard_icon"
     child.title = "Dashboard Title"
 
-    result = Airway._handle_index(parent, child)
+    result = Airway._handle_index(parent, child, subways=[])
 
     assert result is True
-    assert parent._build == dummy_build2
-    assert parent.icon == "dashboard_icon"
-    assert parent.title == "Dashboard Title"
+    assert parent.index is child
+    # Core check: Attributes must NOT diffuse to the parent anymore
+    assert getattr(parent, "icon", None) != "dashboard_icon"
+    assert getattr(parent, "title", None) != "Dashboard Title"
 
 
 def test_05():
-    # Should diffuse both static and CBV attributes when classes match
+    # Should successfully assign a CBV child to parent.index without class restriction
     parent = Airway(path="/dashboard")
     parent._class = DummyClass1
 
     child = Airway(path="")
-    child._class = DummyClass1
+    child._class = DummyClass2  # Distinct classes are now allowed
     child.build_clsattr = "custom_class_build"
-    child.icon_clsattr = "custom_class_icon"
-    child.title = "CBV Title"
 
-    result = Airway._handle_index(parent, child)
+    result = Airway._handle_index(parent, child, subways=[])
 
     assert result is True
-    assert parent.build_clsattr == "custom_class_build"
-    assert parent.icon_clsattr == "custom_class_icon"
-    assert parent.title == "CBV Title"
+    assert parent.index is child
 
 
 def test_06(capsys):
-    # Should trigger warning and return False if parent and child have distinct classes
+    # Should trigger warning if index child has subroutes (subways is not empty)
     parent = Airway(path="/dashboard")
-    parent._class = DummyClass1
+    child = Airway(path="", build=dummy_build2)
+    fake_subways = ["some_subway_route"]
 
-    child = Airway(path="")
-    child._class = DummyClass2
-    child.build_clsattr = "some_clsattr"
+    result = Airway._handle_index(parent, child, subways=fake_subways)
 
-    result = Airway._handle_index(parent, child)
-
-    assert result is False
+    assert result is True
+    assert parent.index is child
+    
     captured = capsys.readouterr()
     assert "[fletfly] WARNING:" in captured.out
-    assert "destinct class <DummyClass2>" in captured.out
-    assert "parent class <DummyClass1>" in captured.out
+    assert f"index for path='{parent.path}' can't have subroutes. All are ignored." in captured.out
 
 
-def test_07(capsys):
-    # Should trigger warning specifying 'parent class-less route' if parent has no class
-    parent = Airway(path="/dashboard")
-    # parent._class is None
-
-    child = Airway(path="")
-    child._class = DummyClass2
-    child.build_clsattr = "some_clsattr"
-
-    result = Airway._handle_index(parent, child)
-
-    assert result is False
-    captured = capsys.readouterr()
-    assert "[fletfly] WARNING:" in captured.out
-    assert "destinct class <DummyClass2>" in captured.out
-    assert "parent class-less route" in captured.out
-
-
-def test_08():
-    # Should return False if child has neither _build nor class indicators
+def test_07():
+    # Should raise ValueError if child has neither _build nor class build indicators
     parent = Airway(path="/dashboard")
     child = Airway(path="")
     
-    assert Airway._handle_index(parent, child) is False
+    with pytest.raises(ValueError, match="can't have index with no build"):
+        Airway._handle_index(parent, child, subways=[])

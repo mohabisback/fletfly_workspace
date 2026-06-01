@@ -1,4 +1,4 @@
-# test_airway_append_mechanics.py
+# fletfly/tests/classes/test_airway_append_mechanics.py
 import pytest
 from fletfly import Airway, Airline
 

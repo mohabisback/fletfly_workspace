@@ -1,4 +1,4 @@
-# test_decorators.py
+# fletfly/tests/classes/test_decorators.py
 import pytest
 from fletfly import Airway, build, layout, fly_in, fly_out
 
