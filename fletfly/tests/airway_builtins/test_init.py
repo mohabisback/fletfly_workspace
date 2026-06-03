@@ -16,8 +16,7 @@ def test_defaults():
     assert aw.fly_outs_clsattr == []
     assert aw._class is None
     
-    assert aw in Airway._airways_all
-    assert aw in Airway._airways_wild
+    assert aw in Airway._pending_airways
 
 def test_init_with_arguments():
     """Verify explicit arguments are properly processed and stored."""

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import flet as ft
 import re, sys, inspect, asyncio, os, importlib.util, time, builtins
+from typing import overload, Callable, Any, Type, Union
 try:
     from js import console # type: ignore
     _HAS_JS = True
@@ -55,6 +56,82 @@ aliases = {
 }
 _rev_aliases = {val:k for k in aliases.keys() for val in aliases.get(k)}
 
+def _call_with_payload(func, page, availables: list[dict]):
+    payload = _get_set_payload(func) 
+    if not payload:
+        try:
+            return func()
+        except TypeError as e:
+            # Catching TypeError only to prevent hiding real bugs inside func
+            if "argument" in str(e) or "takes" in str(e):
+                return func(page)
+            raise
+
+    merged_data = {}
+    for data in availables:
+        if data:
+            for k, v in data.items():
+                if k not in merged_data:
+                    merged_data[k] = v
+    run_args = {}
+    
+    for key, val in payload["params"].items():           
+        if key == "page" and val is True:
+            run_args["page"] = page
+            continue
+            
+        if key in merged_data:
+            run_args[key] = merged_data[key]
+        elif val != "_fletfly":
+            run_args[key] = val
+        else:
+            raise ValueError(f"[fletfly] Missing required argument: '{key}' for '{func.__name__}'")
+            
+    if payload.get("kwargs", False):
+        for k, v in merged_data.items():
+            if k not in run_args:
+                run_args[k] = v
+
+    return func(**run_args)
+
+def _get_set_payload(func) -> dict | None:
+    payload = getattr(func, "_payload_fletfly", None)
+    if payload is not None:
+        return payload    
+        
+    if inspect.isclass(func) or not callable(func):
+        raise TypeError(f"[fletfly] '{func}' is not a valid callable or cannot be processed.")   
+        
+    try:
+        params = list(inspect.signature(func).parameters.values())
+    except (ValueError, TypeError) as e:
+        print(f"[fletfly] Can't get function payload, because of error:", e)
+        return None
+
+    payload = {"params":{}, "kwargs":False}
+
+    for p in params:
+        # Reject *args and positional-only arguments
+        if p.kind in (inspect.Parameter.POSITIONAL_ONLY, inspect.Parameter.VAR_POSITIONAL):
+            raise ValueError(f"[fletfly] Positional-only arguments and *args are not allowed in route handlers: '{p.name}'")
+            
+        # Build the flat payload
+        if p.kind == inspect.Parameter.VAR_KEYWORD:
+            payload["kwargs"] = True
+        elif p.name == "page":
+            payload["params"]["page"] = True
+        elif p.default != inspect.Parameter.empty:
+            payload["params"][p.name] = p.default
+        else:
+            payload["params"][p.name] = "_fletfly"
+            
+    try:
+        func._payload_fletfly = payload
+    except AttributeError:
+        pass    
+        
+    return payload
+
 class _MethodHandler:
     def __init__(self, ctx=None):
         self.ctx = ctx
@@ -71,44 +148,138 @@ class _MethodHandler:
                 else:
                     alist.append(value)
             else:
-                setattr(instance, self.set_name, value)
+                old_func = getattr(instance, self.set_name, None)
+                if old_func and old_func != value:
+                    raise ValueError(f"[fletfly] Airway route already has a {self.name} function")
+                else:
+                    setattr(instance, self.set_name, value) 
+    def _pre_process_core(self, *args, **kwargs):
+        no_decorator = False
+        keys = list(self.expected.keys())
+        func = None
+        config = {}
+        
+        if args:
+            if callable(args[0]) or isinstance(args[0], type):
+                if self.expected_func in kwargs:
+                    raise ValueError(f"[fletfly] Can't have 2 '{self.expected_func}' in arguments")
+                func = args[0]
+                remaining_args = args[1:]
+            else:
+                if self.expected_func in kwargs:
+                    raise ValueError(f"[fletfly] Cannot pass positional arguments when '{self.expected_func}' is provided as a keyword argument.")
+                remaining_args = args
+        else:
+            func = kwargs.pop(self.expected_func, None)
+            if func is not None and not callable(func):
+                raise ValueError(f"[fletfly] Argument '{self.expected_func}' must be a callable function or method.")
+            remaining_args = ()
+        if func and (remaining_args or kwargs): no_decorator = True
 
-    def _process_core(self, first_arg, config_args: dict):
+        if len(remaining_args) > len(keys):
+            raise ValueError(f"[fletfly] Function expected {len(keys)} arguments but got {len(remaining_args)}")
+
+        for i, val in enumerate(remaining_args):
+            key = keys[i]
+            expected_type = self.expected[key][0]  # Get type from tuple
+            
+            if key in kwargs:
+                raise ValueError(f"[fletfly] Can't have 2 '{key}' in arguments")
+            
+            if val is not None and not isinstance(val, expected_type):
+                raise TypeError(f"[fletfly] Argument '{expected_type}' must be of type {expected_type.__name__}")
+            
+            config[key] = val
+
+        for j in range(len(remaining_args), len(keys)):
+            key = keys[j]
+            expected_type = self.expected[key][0]   # Get type from tuple
+            default_value = self.expected[key][1]   # Get default from tuple
+            
+            
+            if key in kwargs:
+                val = kwargs.pop(key, None)
+                if val is not None and  not isinstance(val, expected_type):
+                    raise TypeError(f"[fletfly] Argument '{expected_type}' must be of type {expected_type.__name__}")
+                config[key] = val
+            else:
+                config[key] = default_value
+        config.update(kwargs)
+
+        return self._process_core(func, config, no_decorator)
+
+    def _process_core(self, first_arg, config_args: dict, no_decorator):
+        config_args = dict(config_args) if config_args else {}
         _clsattr = "_clsattr"
         _fletfly_= "_fletfly_"
 
         instance = None if self.ctx is None or isinstance(self.ctx, type) else self.ctx
-        def class_inject(clas, kwargs=None):
-            if kwargs is None: kwargs = {}
+
+        def subway_class(clas, kwargs=None, err_msg=None):
+            kwargs = dict(kwargs) if kwargs else {}
             parents = list(kwargs.get("parents") or [])
+            if instance or parents:
+                kwargs.pop("parents", None)   
+                for key, val in kwargs.items():
+                    if val is not None:
+                        if callable(val):
+                            raise ValueError(f"[fletfly] Can't assign {key} for this class, no callables are allowed by @subway decoration on a class.")
+                        setattr(clas, key, val)    
+                inject_subway(clas, parents)
+            else:
+                if err_msg: raise ValueError(err_msg)
+            
+        def subway_func(func, kwargs=None, err_msg=None):
+            kwargs = dict(kwargs) if kwargs else {}
+            parents = list(kwargs.get("parents") or [])
+            if instance or parents:
+                sub = Airway(build=func)
+                kwargs.pop("parents", None)   
+                for key, val in kwargs.items():
+                    if val is not None:
+                        if key == "build":
+                            raise ValueError(f"[fletfly] Can't assign build for this route, the decorated function is the build.")
+                        setattr(sub, key, val)
+                inject_subway(sub, parents)
+            else:
+                if err_msg:
+                    raise ValueError(err_msg)
+        
+        def inject_subway(class_or_airway, parents):
+            parents += [instance] if instance else []
+            for parent in parents:
+                cl = None
+                if isinstance(parent, Airway): 
+                    parent.subways.append(class_or_airway)   # append the class to the airway instance
+
+                elif isinstance(parent, type):
+                    cl = parent
+                if cl:
+                    parent_class_subways = getattr(cl, "subways", None)
+                    if parent_class_subways is not None:
+                        if isinstance(parent_class_subways, list):
+                            parent_class_subways.append(class_or_airway)
+                        elif isinstance(parent_class_subways, set):
+                            parent_class_subways.add(class_or_airway)
+                    else:
+                        setattr(cl, "subways", [class_or_airway])
+
+        def class_inject(clas, kwargs=None):
+            new_kwargs = dict(kwargs) if kwargs else {}
             if self.name == "subway":
-                if instance or parents:
-                    parents += [instance] if instance else []
-                    for parent in parents:
-                        cl = None
-                        if isinstance(parent, Airway): 
-                            parent.subways.append(clas)   # append the class to the airway instance
-                            cl = parent._class            # get his class to append to it too
-                        elif isinstance(parent, type):
-                            cl = parent
-                        if cl:
-                            parent_class_subways = getattr(cl, "subways", None)
-                            if parent_class_subways is not None:
-                                if isinstance(parent_class_subways, list):
-                                    parent_class_subways.append(clas)
-                                elif isinstance(parent_class_subways, set):
-                                    parent_class_subways.add(clas)
-                            else:
-                                setattr(cl, "subways", [clas])
+                subway_class(clas, new_kwargs, f"[fletfly] @subway decorator on a class must have parents as: @subway(parents=[]) | or instance as: @route_obj.subway")
             elif instance:
-                raise ValueError(f"[fletfly] Can't use @airway.{self.name} method decorating a class, use @{self.name} or @Airway.{self.name} instead.")
+                raise ValueError(f"[fletfly] Can't use @route_obj.{self.name} method decorating a class, use @{self.name} or @Airway.{self.name} instead.")
             
             setattr(clas, _fletfly_+self.name, True)
-            kwargs.pop('parents', None)
-            for key, val in kwargs.items():
+            new_kwargs.pop("parents", None)
+            if self.name in ("fly_in", "fly_out"):
+                new_kwargs.pop("inheritable", None)
+                new_kwargs.pop("apply_per_view", None)
+            for key, val in new_kwargs.items():
                 if key in ["override", "hero"]: key = f"{self.name}_{key}"
                 if val is not None:
-                    setattr(clas, key, val)  # class.layout_hero = True & 
+                    setattr(clas, key, val)  # class.layout_hero = True
                     if not callable(val):
                         setattr(clas, key+_clsattr, key)
                     else:
@@ -117,31 +288,79 @@ class _MethodHandler:
             return clas
 
         def func_inject(func, kwargs=None):
-            if kwargs is None: kwargs = {}          
-            if instance:                    # @route.layout or @Airway().layout
-                if self.set_type == "list":
-                    getattr(instance, self.set_name).append(func)               # add function to airway list
-                else:
-                    setattr(instance, self.set_name, func)                                # method to excute
-                for key, val in kwargs.items():
-                    if key in ["override", "hero"]: key = f"{self.name}_{key}"
-                    if val is not None:
-                        setattr(instance, key, val)
+            kwargs = dict(kwargs) if kwargs else {}
+            if self.name == "subway":
+                subway_func(func, kwargs)
+            elif instance:                    # @route.layout or @Airway().layout
+                _inject_instance_attr(func, kwargs)
 
             setattr(func, _fletfly_+self.name, True)                        # inject it maybe it is a method
+            kwargs.pop("parents", None)
             for key, val in kwargs.items():
                 if key in ["override", "hero"]: key = f"{self.name}_{key}"
                 if val is not None:
                     setattr(func, f"{_fletfly_}{key}", val)
             return func
         
-        
+        def _inject_instance_attr(func_or_wrapped, kwargs):
+            if self.set_type == "list":
+                getattr(instance, self.set_name).append(func_or_wrapped)               # add function to airway list
+            else:
+                old_func = getattr(instance, self.set_name, None)
+                if old_func and old_func != func_or_wrapped:
+                    raise ValueError(f"[fletfly] Airway route already has a {self.name} function")
+                else:
+                    setattr(instance, self.set_name, func_or_wrapped)                                # method to excute
+            kwargs.pop("parents", None)
+            for key, val in kwargs.items():
+                if val is not None:
+                    if self.name in ("fly_in", "fly_out") and key in self.expected: continue
+                    if key in ["override", "hero"]:
+                        key = f"{self.name}_{key}"
+                    old_val = getattr(instance, key, None)
+                    if old_val and old_val != val:
+                        raise ValueError(f"[fletfly] {key} for this route is already set to '{old_val}'")
+                    else:
+                        setattr(instance, key, val)
+
+        def func_no_decorator(func, kwargs=None):
+            not_expected_kwargs = dict(kwargs) if kwargs else {}
+            expected = {}
+            for item in kwargs:
+                if item in self.expected:
+                    not_expected_kwargs.pop(item)
+                    expected[item] = kwargs[item]
+            if self.name in ("build", "layout", "fly_in", "fly_out"):
+                if self.name in ("build", "layout"):
+                    wrapped = _BuildLayoutDict(func, not_expected_kwargs)
+                else:
+                    kwargs.pop("override", None)
+                    wrapped = _FlyInOutDict(func,
+                                        kwargs.pop("inheritable", True if self.name == "fly_in" else False),
+                                        kwargs.pop("apply_per_view", False),
+                                        not_expected_kwargs)
+                if instance:
+                    _inject_instance_attr(wrapped, expected)
+                return wrapped
+            elif self.name in ("subway"):
+                subway_func(func, kwargs, f"[fletfly] subway() must have parents arguments as: subway(parents=[]) | or instance as: route_obj.subway()")
+
         # decorating a class without calling @layout | @Airway.layout | @route.layout:
         if isinstance(first_arg, type):
-            return class_inject(first_arg)
+            if no_decorator:
+                if self.name == "subway":
+                    raise ValueError(f"[fletfly] Can't use {self.name}(class) with attributes, can't add these attributes.")
+                else:
+                    raise ValueError(f"[fletfly] Can't use {self.name}(class), a class can't be converted to a {self.name}. functions and methods only.")
+            else:
+                return class_inject(first_arg)
         # decorating a func or method without calling @layout | @Airway.layout | @route.layout:
         elif callable(first_arg):
-            return func_inject(first_arg)
+            _get_set_payload(first_arg) # inject payload meta, for faster runtime
+            if no_decorator:
+                return func_no_decorator(first_arg, config_args)
+            else:
+                return func_inject(first_arg)
         else:                                       # Decorating with calling ()
             def wrapper(func_or_class):
                 # decorating a class with calling @layout() | @Airway.layout() | @route.layout():
@@ -156,62 +375,232 @@ class _Layout(_MethodHandler):
     name = "layout"
     set_name = "_layout"
     set_type = "_"
-    def __call__(self, 
-                 hero:bool=None,
-                 override:bool=None
-                 ):
-        return self._process_core(hero, {
-            "hero": hero,
-            "override": override
-            })
+    expected_func = "func"
+    expected = {"hero": (bool, None), "override": (bool, None)}
+    def __call__(self, hero: bool = None, override: bool = None) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload
+    def __call__(self, func: Callable[..., Any], hero: bool = None, override: bool = None, **kwargs: Any) -> Any: ...
+    def __call__(self, *args, **kwargs):
+        """1/2 Decorator, as: @layout(True, False)\n\n2/2 Direct call, as: layout(my_func, par1=arg1, par2=arg2)"""
+        return self._pre_process_core(*args, **kwargs)
 class _Build(_MethodHandler):
     name = "build"
     set_name = "_build"
     set_type = "_"
-    def __call__(self, 
-                    hero:bool=None
-                    ):
-        return self._process_core(hero, {
-            "hero": hero
-            })
+    expected_func = "func"
+    expected = {"hero": (bool, None)}
+    def __call__(self, hero: bool = None) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload
+    def __call__(self, func: Callable[..., Any], hero: bool = None, **kwargs: Any) -> Any: ...
+    def __call__(self, *args, **kwargs):
+        """1/2 Decorator, as: @build(True)\n\n2/2 Direct call, as: build(my_func, par1=arg1, par2=arg2)"""
+        return self._pre_process_core(*args, **kwargs)
+
 class _FlyIn(_MethodHandler):
     name = "fly_in"
     set_name = "fly_ins"
     set_type = "list"
-    def __call__(self, 
-                 override:bool=None
-                 ):
-        return self._process_core(override, {
-            "override": override
-            })
+    expected_func = "func"
+    expected = {"inheritable": (bool, True), "apply_per_view": (bool, False), "override": (bool, None)}
+    @overload # Func decorator
+    def __call__(self, inheritable: bool = True, apply_per_view: bool = False) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload # Class decorator
+    def __call__(self, override: bool = None) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload # Func call
+    def __call__(self, func: Callable[..., bool|str], inheritable: bool = True, apply_per_view: bool = False, **kwargs: Any) -> Any: ...
+    @overload # Class call
+    def __call__(self, cls: Callable[..., bool|str], override: bool = False) -> Any: ...
+    def __call__(self, *args, **kwargs):
+        """1-2 /4 Func | Class decorator, as: @fly_in(True)\n\n
+        2-3 /4 Func | Class call, as: fly_in(my_func, True)"""
+        if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
+        return self._pre_process_core(*args, **kwargs)
+    
 class _FlyOut(_MethodHandler):
     name = "fly_out"
     set_name = "fly_outs"
     set_type = "list"
-    def __call__(self, 
-                 override:bool=None
-                 ):
-        return self._process_core(override, {
-            "override": override
-            })
+    expected_func = "func"
+    expected = {"inheritable": (bool, False), "apply_per_view": (bool, False), "override": (bool, None)}
+    @overload # Func decorator
+    def __call__(self, inheritable: bool = False, apply_per_view: bool = False) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload # Class decorator
+    def __call__(self, override: bool = None) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload # Func call
+    def __call__(self, func: Callable[..., bool|str], inheritable: bool = False, apply_per_view: bool = False, **kwargs: Any) -> Any: ...
+    @overload # Class call
+    def __call__(self, cls: Callable[..., bool|str], override: bool = False) -> Any: ...
+    def __call__(self, *args, **kwargs):
+        """1-2 /4 Func | Class decorator, as: @fly_out(True)\n\n
+        2-3 /4 Func | Class call, as: fly_out(my_func, True)"""
+        if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
+        return self._pre_process_core(*args, **kwargs)
+    
 class _Subway(_MethodHandler):
     name = "subway"
     set_name = "subways"
-    set_type = "list"
+    set_type = "list"     
+    expected_func = "func"
+    expected = {"path": (str,None), "parents": (list,None),
+                "build": (object,None), "subways": (list,None),
+                "fly_to": (str,None), "layout": (object, None), "layout_override": (bool,None),
+                "fly_ins":(list, None), "fly_ins_override": (bool,None),
+                "fly_outs":(list, None), "fly_outs_override": (bool,None),
+                "is_zone": (bool,None), "build_hero": (bool,None), "layout_hero": (bool,None),
+                "title": (str,None), "icon": (str,None), "post_fly":(object,None)}
+    @overload # Decorator on a function
     def __call__(self,
-                 path:str=None,
-                 parents:list[Airway|type]=None,
+                 path:str=None, parents:list[Airway|type]=None,
+                 subways:list[Airway]=None,
+                 fly_to:str=None, layout = None, layout_override:bool=None,
+                 fly_ins = None, fly_ins_override:bool=None, 
+                 fly_outs=None, fly_outs_override:bool=None,
+                 is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
+                 title=None, icon=None, post_fly=None, 
+                 ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload # Decorator on a class
+    def __call__(self,
+                 path:str=None, parents:list[Airway|type]=None,
                  build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_ins_override:bool=None, 
                  fly_outs=None, fly_outs_override:bool=None,
                  is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, post_fly=None, 
-                 ):
-        config = locals()
-        config.pop("self")
-        config.pop("config", None)
-        return self._process_core(path, config)
+                 ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
+    @overload # Direct call with function
+    def __call__(self, func: Callable[..., bool|str],
+                 path:str=None, parents:list[Airway|type]=None,
+                 subways:list[Airway]=None,
+                 fly_to:str=None, layout = None, layout_override:bool=None,
+                 fly_ins = None, fly_ins_override:bool=None, 
+                 fly_outs=None, fly_outs_override:bool=None,
+                 is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
+                 title=None, icon=None, post_fly=None)-> Any: ...
+
+    @overload # Direct call with a class
+    def __call__(self, cls: type,
+                 path:str=None, parents:list[Airway|type]=None,
+                 build=None, subways:list[Airway]=None,
+                 fly_to:str=None, layout = None, layout_override:bool=None,
+                 fly_ins = None, fly_ins_override:bool=None, 
+                 fly_outs=None, fly_outs_override:bool=None,
+                 is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
+                 title=None, icon=None, post_fly=None) -> Any: ...
+
+
+    def __call__(self, *args, **kwargs):
+        """1-2 /4 func | class decorator: @subway('home', [clsA, clsB])
+        \n\n3-4 /4 func | class call, as: subway(cls1, 'user', par1=arg1)"""
+        if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
+        return self._pre_process_core(*args, **kwargs)
+
+class _BuildLayoutDict(dict):
+    def __init__(self, func, func_kwargs:dict=None):
+        super().__init__({"func": func, "kwargs": func_kwargs if func_kwargs else {}})
+
+class _FlyInOutDict(dict):
+    def __init__(self, func, inheritable=True, apply_per_view=False, func_kwargs:dict=None):
+        super().__init__({
+            "func": func,
+            "kwargs": func_kwargs if func_kwargs else {},
+            "inheritable": inheritable,
+            "apply_per_view": apply_per_view })
+
+def fly_ins(*fly_ins):
+    return _fly_ins_outs("ins", *fly_ins)
+
+def fly_outs(*fly_outs):
+    return _fly_ins_outs("outs", *fly_outs)
+
+def _unwrap(arr, toList=False):
+    if isinstance(arr, (list, tuple, set)):
+        arr = list(arr)
+    else:
+        return arr
+    while isinstance(arr, (list, tuple, set)) and len(arr) == 1:
+        inner = arr[0]
+        if isinstance(inner, (list,tuple, set)):
+            arr=list(inner)
+        elif toList:
+            break
+        else:
+            arr=inner
+    return arr
+   
+def _fly_ins_outs(ins_outs, *args):
+    if not args:
+        raise ValueError(f"❌ [fletfly] fly_{ins_outs}() is used to state or gather functions, can't be without arguments.")
+
+    # items = [args]               # 1st case : len(args) > 1 and callable(args[0]) and not callable(args[1]) and not (isinstance(args[1],(list,tuple)) and args[1] and not callable(args[1][0]) )
+    #01 (      f1, a2,           )
+
+    # items = list(args[0])        # 2nd cases: len(args) == 1 and isinstance(args[0], (list, tuple)) and len(args[0])>1 and not (callable(args[0][1]) or (isinstance(args[0][1],(tuple,list)) and args[0][1] and callable(args[0][1][0])   ))
+    #02 (      [f1, f2, f3]      )
+    #03 (      [(f1), f2]        )
+    #04 (      [f1, (f2), f2]    )
+    
+    # items = list(args)
+    #05 (                        )
+    #06 (      [f1]              )
+    #07 (      [f1, a2]          )
+    #08 (      f1                )
+    #09 (      f1, f2            )
+    #10 (      f1,(f2, a2)       )
+    #11 (      (f1),(f2)         )
+    #12 (      (f1), f2          )
+    #13 (      [f1, a1], [f2, a2])
+    #14 (      []                )
+    args = _unwrap(args, True)
+    items = []
+    if len(args) > 1 and callable(args[0]) and not (callable(args[1]) or isinstance(args[1], _FlyInOutDict)) and not (isinstance(args[1],(list,tuple)) and args[1] and (callable(args[1][0]) or isinstance(args[1][0], _FlyInOutDict))):
+        items = [args]
+    else:
+        items = list(args) 
+    #adjust
+    final_items = []
+    for i, item in enumerate(items):
+        item = _unwrap(item)
+        if item is None:
+            pass
+        elif isinstance(item, _FlyInOutDict):
+            final_items.append(item)
+        elif callable(item):
+            final_items.append(_FlyInOutDict(item,
+                                             inheritable=True if ins_outs=="ins" else False,
+                                             apply_per_view=False))
+        elif isinstance(item, (tuple, list)):
+            if len(item) == 2 and callable(item[0]) and isinstance(item[1], dict):
+                my_dict = dict(item[1])
+                inheritable = my_dict.pop("inheritable", True if ins_outs == "ins" else False)
+                apply_per_view = my_dict.pop("apply_per_view", False)
+                final_items.append(_FlyInOutDict(func=item[0],
+                                                 inheritable=inheritable,
+                                                 apply_per_view=apply_per_view,
+                                                 func_kwargs=my_dict))
+            else:
+                raise TypeError(f"❌ [fletfly] Middleware tuple must be (callable, dict), but got invalid tuple structure at index {i}")
+        else:
+            raise TypeError(f"❌ [fletfly] Expected a function or a list of functions, but got '{type(item).__name__}'")
+    return final_items
+
+class _FlyList(list):
+    """Special list to mark prepared middlewares and avoid double processing."""
+    pass
+
+class _FlyInsOutsList(list):
+    def __init__(self, owner, name: str, initial_data=None):
+        self._owner = owner
+        self._name = name
+        super().__init__(_fly_ins_outs(self._name.replace("fly_", ""), *initial_data) if initial_data else [])
+        
+    def __call__(self, *funcs, override=None):
+        if override is not None:
+            setattr(self._owner, f"{self._name}_override", override)
+        new_list = _fly_ins_outs(self._name.replace("fly_", ""), *funcs)
+        self.clear()
+        self.extend(new_list)
+        return self
 
 layout = _Layout()
 build = _Build()
@@ -225,27 +614,23 @@ class Airway():
     fly_in = _FlyIn()
     fly_out = _FlyOut()
     subway = _Subway()
-
+   
     path:str=None
     subways:list[Airway]=[]
     fly_to:str=None
     layout_override:bool=None
-    fly_ins = None
     fly_ins_override:bool=None 
-    fly_outs=None
-    fly_outs_override:bool=None,
-    is_zone:bool=None,
+    fly_outs_override:bool=None
+    is_zone:bool=None
     build_hero:bool=None
     layout_hero:bool=None
     title=None
     icon=None
     post_fly=None
     
-    _airways_all = set() # every created or cloned airway
-    _airways_wild = set() # original but never adopted
-    _registered_children_classes = set()
+    _registered_children = set()
     _pending_classes = set()
-
+    _pending_airways = set()
     
     def __init__(self, path:str=None, build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
@@ -259,7 +644,6 @@ class Airway():
         self.layout_override = None
         self.path = None
         self.fly_to = None
-        self.fly_outs = None
         self.fly_ins_override = None
         self.fly_outs_override = None
         self.icon = None
@@ -270,7 +654,6 @@ class Airway():
         self.subways = None
         self.fly_ins = None
         self.fly_outs = None
-
         self._class = None
 
         self.path_clsattr = None
@@ -291,14 +674,13 @@ class Airway():
         self._adjust_locals(locals())
         #initiating lists
         if not self.subways: self.subways = []
-        if not self.fly_ins: self.fly_ins = []
-        if not self.fly_outs: self.fly_outs = []
         if not self.fly_ins_clsattr: self.fly_ins_clsattr = []
         if not self.fly_outs_clsattr: self.fly_outs_clsattr = []
+        self.fly_ins = _FlyInsOutsList(self, "fly_ins", self.fly_ins if self.fly_ins else [])
+        self.fly_outs = _FlyInsOutsList(self, "fly_outs", self.fly_outs if self.fly_outs else [])
 
         self.parent = None
-        Airway._airways_all.add(self)
-        Airway._airways_wild.add(self)
+        Airway._pending_airways.add(self)
 
     def _adjust_locals(self, params):
         del params['self']
@@ -322,7 +704,7 @@ class Airway():
         for k, v in params.get("kwargs", {}).items():
             if v is not None:
                 self.__dict__[k] = v
-        if self.path: self.path = self.path.lower()
+        if self.path: self.path = self.path.strip().lower().replace("_", "-").replace("--", "-")
         
     def __new__(cls, *args, **kwargs):
         if len(args)==1 and isinstance(args[0], type): # @Airway
@@ -350,6 +732,13 @@ class Airway():
 
             self._class = cl                              # inject class ref into instance
             return cl
+        elif callable(path): # function
+            old_build = self._build
+            if old_build and old_build != path:
+                raise ValueError(f"[fletfly] Airway route already has a build")
+            else:
+                self._build = path
+            return path
         # @obj("str", **kwargs) first call
         else:
             self._adjust_locals(locals())
@@ -371,7 +760,7 @@ class Airway():
         if name in _rev_aliases:
             name = _rev_aliases[name]
         if name == "path" and isinstance(value, str):
-            value = value.lower()
+            value = value.strip().lower().replace("_", "-")
         super().__setattr__(name, value)
 
     def __getattr__(self, name):
@@ -431,7 +820,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         airway = None
         subways = []
         if isinstance(route_node, Airway):
-            airway = route_node
+            airway = Airway._adjust_airway(route_node)
             subways = airway.subways
             airway.subways = []
         if isinstance(route_node, type):
@@ -499,8 +888,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
     def _check_similarity(cls, a1:Airway, a2:Airway, err_msg=None)->Airway:
         if (a1.path == a2.path) and (
             a1._class == a2._class) and (( # even if _class = None
-            a1.build_clsattr and a2.build_clsattr and a1.build_clsattr == a2.build_clsattr)or(
-            a1._build and a2._build and a1._build == a2._build)):
+            a1.build_clsattr == a2.build_clsattr) and (
+            a1._build == a2._build)):
             print(f"[fletfly]: Duplication Warning: Airway route with path='{a1.path}' already added. second registration ignored.")
             return True
         else:
@@ -532,25 +921,58 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             resolved.append(active_airway)
         return resolved[0] if is_single else resolved
     
+    # get inner classes and subways classes and register them all in registered_children
     @classmethod
-    def _unify_class_subways(cls, _class:type)->list:
+    def _unify_class_subways(cls, class_or_airway:type|Airway)->list:
         subways = set()
-        for attr_name, attr_value in _class.__dict__.items():
-            if attr_name.startswith("_"): continue
-            if isinstance(attr_value, type):
-                if Airline.detect_inner_classes or hasattr(attr_value, "_fletfly_subway"):
-                    subways.add(attr_value)
-            elif attr_name in aliases["subways"]:
-                if attr_value and isinstance(attr_value, (list, tuple)):
-                    subways.update(attr_value)
-        cls._registered_children_classes.update(subways)
+        if isinstance(class_or_airway, Airway):
+            subways.update(class_or_airway.subways)
+        elif isinstance(class_or_airway, type):
+            for attr_name, attr_value in class_or_airway.__dict__.items():
+                if attr_name.startswith("_"): continue
+                if isinstance(attr_value, type):
+                    if Airline.detect_inner_classes or hasattr(attr_value, "_fletfly_subway"):
+                        subways.add(attr_value)
+                elif attr_name in aliases["subways"]:
+                    if attr_value and isinstance(attr_value, (list, tuple)):
+                        subways.update(attr_value)
+            class_or_airway._unified_subways = list(subways)
 
-        _class._unified_subways = list(subways)
+        cls._registered_children.update(subways)
         for subway in subways:
             cls._unify_class_subways(subway)
         return list(subways)
     
-    # creates airway object carrying a 
+    @classmethod
+    def _adjust_airway(cls, airway: Airway) -> Airway:
+        if airway.fly_ins:
+            airway.fly_ins = fly_ins(*airway.fly_ins)
+        if airway.fly_outs:
+            airway.fly_outs = fly_outs(*airway.fly_outs)
+
+        for item in airway.fly_ins:
+            if isinstance(item, dict) and "func" in item and callable(item["func"]):
+                _get_set_payload(item["func"])
+
+        for item in airway.fly_outs:
+            if isinstance(item, dict) and "func" in item and callable(item["func"]):
+                _get_set_payload(item["func"])
+
+        if airway._build:
+            if callable(airway._build):
+                airway._build = _BuildLayoutDict(airway._build)
+            _get_set_payload(airway._build["func"])
+
+        if airway._layout:
+            if callable(airway._layout):
+                airway._layout = _BuildLayoutDict(airway._layout)
+            _get_set_payload(airway._layout["func"])
+
+        if airway.post_fly and callable(airway.post_fly):
+            _get_set_payload(airway.post_fly)
+        return airway
+    
+    # creates airway object carrying a class
     @classmethod
     def _airway_from_class(cls, _class:type):
         local_aliases = dict(_rev_aliases)
@@ -566,7 +988,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     setattr(airway, _rev_aliases[other_name]+"_clsattr", other_name)
             return airway
 
-        airway_kids = []
+        func_kids = []
         airway = Airway(_class = _class)
         normal_airway = _class.__dict__.keys().isdisjoint(["_fletfly_build","_fletfly_layout", "_fletfly_fly_in", "_fletfly_fly_out"])  
 
@@ -605,7 +1027,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                             sub.path = getattr(sub, sub.path_clsattr, None)
                         if sub.path is None and Airline.auto_path_naming:
                             sub.path = attr_name
-                        airway_kids.append(sub)
+                        func_kids.append(sub)
             
             if hasattr(attr_func, "_fletfly_static") and attr_name in local_aliases: # if function has decorator
                 flagged_attr.append(attr_name)
@@ -615,11 +1037,12 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         # second loop for any other attr
         for attr_name, attr_val in _class.__dict__.items():
             if isinstance(attr_val, type) or attr_name.startswith("_") or attr_name in flagged_attr: continue
-            
+
             # Unwrap the underlying function if wrapped in staticmethod or classmethod
             attr_func = attr_val.__func__ if isinstance(attr_val, (staticmethod, classmethod)) else attr_val
             
             if attr_name in local_aliases:
+                if callable(attr_val):_get_set_payload(attr_val)
                 official_name = local_aliases[attr_name]
                 if official_name in ["fly_ins", "fly_outs"]:
                     if not hasattr(airway, official_name+"_clsattr"):
@@ -631,7 +1054,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     remove_aliases_of(local_aliases[attr_name])
 
             elif callable(attr_val) and(normal_airway and Airline.detect_method_routes ):
-                airway_kids.append(Airway(path=attr_name, build_clsattr=attr_name, _class=_class))
+                _get_set_payload(attr_val)
+                func_kids.append(Airway(path=attr_name, build_clsattr=attr_name, _class=_class))
     
         # self.path_clsattr = "path" # now
         if getattr(airway, "path_clsattr", None):
@@ -643,38 +1067,64 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             airway.path = name.lower().replace("_", "-").replace("--", "-")
 
         class_kids = _class._unified_subways if "_unified_subways" in _class.__dict__ else cls._unify_class_subways(_class)        # returning new Airway, and potential kids of classes
-        return airway, class_kids + airway_kids
+        return airway, class_kids + func_kids
 
     @classmethod
-    def _append_classes(cls, handed_classes=None):
-        if handed_classes is None:
-            handed_classes = []
-        pending = cls._pending_classes if Airline.detect_decorated_classes else set()
-        inherited = set(Airway.__subclasses__()) if Airline.detect_airway_subclasses else set()
-        all_classes = set(handed_classes) | pending | inherited
-    
-        for pot_cls in all_classes:
-            cls._unify_class_subways(pot_cls)
+    def _create_tree(cls, handed_classes:list=None):
+        if handed_classes is None: handed_classes = []
+        pending_classes = cls._pending_classes if Airline.detect_decorated_classes else set()
+        inherited_classes = set(Airway.__subclasses__()) if Airline.detect_airway_subclasses else set()
         
-        for pot_cls in all_classes:
-            if pot_cls not in cls._registered_children_classes:
-                Airway._inject_into_tree(pot_cls)
-
-    @classmethod
-    def _auto_unwrap(cls, zone):
-        while isinstance(zone, (list, tuple, set)) and len(zone) == 1:
-            collection_type = type(zone).__name__
-
-            print(
-                f"\n[fletfly] Optimization Notice: A {collection_type} with only one element was detected. "
-                f"Fletfly automatically unpacked it to its core Airway object. ")
-            zone = zone[0]
+        pending_airways = cls._pending_airways if Airline.auto_detect_routes else set()
         
-        return zone
+        final_airways = set()
+        
+        ignore_repeated = Airline.detect_decorated_classes and Airline.auto_detect_routes
+        classes_names = []
+        for airway in pending_airways:
+            name = None
+            if Airline.auto_path_naming and airway.path is None:
+                if airway._class and callable(airway._class):
+                    name = airway._class.__name__
+                elif airway._build and callable(airway._build):
+                    name = airway._build.__name__
+                elif airway._layout and callable(airway._layout):
+                    name = airway._layout.__name__
+            if name:
+                name = re.sub(r'(?<!^)(?=[A-Z])', '-', name)
+                airway.path = name.lower().replace("_", "-").replace("--", "-")
+            if ignore_repeated and airway._class:
+                if isinstance(airway._class, type):
+                    
+                    classes_names.append(airway._class)
+                airway._class = None
+                continue
+            else:
+                airway._class = None
+            final_airways.add(airway)
+        if classes_names:
+            names = ", ".join(c.__name__ for c in set(classes_names))
+            print(f"""
+[fletfly] Warning: Auto-detected route objects used as decorations for the following classes were ignored to prevent duplication: [{names}]
+That happened because you used an Airway object decorating a class like that:
+@Airway('/user') | @route | @route('user') | @route.build | @route.layout(True)
+which caused double registration, one for the class and the other for the airway route object.
+you can set False for "detect_decorated_classes" or "auto_detect_routes" to clarify your single intention..., or:
+for pure class registration use object-less: @Airway | @layout | @layout() | @build | @subway or use: class User(Airway) 
+""")
+        all_detected = set(handed_classes) | pending_classes | inherited_classes | final_airways
     
+        for unit in all_detected:
+            cls._unify_class_subways(unit)
+        
+        for unit in all_detected:
+            if unit not in cls._registered_children:
+                Airway._inject_into_tree(unit)
+
+
     @classmethod
     def _validate_children(cls, child_ren):
-        child_ren = Airway._auto_unwrap(child_ren)
+        child_ren = _unwrap(child_ren)
         _validated_list = []
 
         if isinstance(child_ren, (tuple, list)):
@@ -800,6 +1250,7 @@ class FlyPad:
 class Airline: # singleton only 1 instance
     initial_route = ""
     auto_path_naming = True
+    auto_detect_routes = True
     detect_method_routes = True
     detect_airway_subclasses = True
     detect_decorated_classes = True
@@ -829,14 +1280,18 @@ class Airline: # singleton only 1 instance
     def __init__(self, zone_or_class_or_list = [], initial_route = "", error_path:str = "", every_level_fallback=True,
                  fly_pads:FlyPad = FlyPad.home_all_from_last_port, max_pads:int = 5,
                  auto_path_naming=True,
+                 auto_detect_routes=True,
                  detect_decorated_classes=True,
                  detect_airway_subclasses=True,
+                 detect_inner_classes=True,
                  detect_method_routes=True):
         if hasattr(self, "_initialized"):
             return
+        Airline.auto_path_naming = auto_path_naming
+        Airline.auto_detect_routes = auto_detect_routes
         Airline.detect_decorated_classes = detect_decorated_classes
         Airline.detect_airway_subclasses = detect_airway_subclasses
-        Airline.auto_path_naming = auto_path_naming
+        Airline.inner_decorated_classes = detect_inner_classes
         Airline.detect_method_routes = detect_method_routes
         Airline.initial_route = initial_route
         self.error_path = error_path
@@ -848,7 +1303,7 @@ class Airline: # singleton only 1 instance
         else:
             zone_or_class_or_list = [zone_or_class_or_list]
         
-        Airway._append_classes(zone_or_class_or_list)
+        Airway._create_tree(zone_or_class_or_list)
         self.static_map = {} 
         self.dynamic_map = {}
 
@@ -1219,7 +1674,6 @@ class Airline: # singleton only 1 instance
 
 # region Navigate
     async def _navigate(self, page, fullpath = None):
-        print(1111111111111111111)
         start = time.perf_counter()
         print(f"Time taken: {(time.perf_counter() - start) * 1000:.2f}ms")
         
@@ -2337,65 +2791,6 @@ Hint: you can use flet auto complete first for the **kwargs, then move the ) up 
     سواءا كان فيه fly_outs or not
     """
 
-class _FlyList(list):
-    """Special list to mark prepared middlewares and avoid double processing."""
-    pass
-
-def _list_middlewares(*args):
-    
-    # already handled
-    if len(args) == 1 and isinstance(args[0], _FlyList):
-        return args[0]
-    
-    # items = [args]               # 1st case : len(args) > 1 and callable(args[0]) and not callable(args[1]) and not (isinstance(args[1],(list,tuple)) and args[1] and not callable(args[1][0]) )
-    #01 (      f1, a2,           )
-
-    # items = list(args[0])        # 2nd cases: len(args) == 1 and isinstance(args[0], (list, tuple)) and len(args[0])>1 and not (callable(args[0][1]) or (isinstance(args[0][1],(tuple,list)) and args[0][1] and callable(args[0][1][0])   ))
-    #02 (      [f1, f2, f3]      )
-    #03 (      [(f1), f2]        )
-    #04 (      [f1, (f2), f2]    )
-    
-    # items = list(args)
-    #05 (                        )
-    #06 (      [f1]              )
-    #07 (      [f1, a2]          )
-    #08 (      f1                )
-    #09 (      f1, f2            )
-    #10 (      f1,(f2, a2)       )
-    #11 (      (f1),(f2)         )
-    #12 (      (f1), f2          )
-    #13 (      [f1, a1], [f2, a2])
-    #14 (      []                )
-    items = []
-    if len(args) > 1 and callable(args[0]) and not callable(args[1]) and not (isinstance(args[1],(list,tuple)) and args[1] and not callable(args[1][0]) ):
-        items = [args]
-    elif len(args) == 1 and isinstance(args[0], (list, tuple)) and len(args[0])>1 and (callable(args[0][1]) or (isinstance(args[0][1],(tuple,list)) and args[0][1] and callable(args[0][1][0])   )):
-        items = list(args[0])
-    else:
-        items = list(args) 
-    #adjust
-    final_items = []
-
-    for i in range(0, len(items)):
-        if items[i] is None:
-            pass
-        elif callable(items[i]):
-            final_items.append({"func": items[i], "args": [], "kwargs": {}})
-        elif isinstance(items[i], (tuple, list)):
-            if len(items[i])>0:
-                if callable(items[i][0]):
-                    final_items.append({"func": items[i][0], "args": items[i][1:], "kwargs": {}})
-                else:
-                    raise TypeError(
-                    f"❌ [fletfly] Middleware unit at index {i} must start with a callable function. "
-                    f"Found '{type(items[i][0]).__name__}' instead."
-                )
-        else:
-            raise TypeError(f"❌ [fletfly] Expected a function or a list of functions, but got '{type(items[i]).__name__}'")
-    #return
-    return _FlyList(final_items)
-
-
 def fly_around(name:str = None, method_name:str = None):
     class_or_func = name
     def go_class(clas, attr_name=None, inner_name=None):
@@ -2513,49 +2908,6 @@ outlet = slot
 shared = fly_around
 
 
-def fly_ins(*args, override=False, inheritable=True, apply_per_view=False, **kwargs):
-    return _fly_ins_out("in", *args, override=override, inheritable=inheritable, apply_per_view=apply_per_view, **kwargs)
-
-def fly_outs(*args, override=False, inheritable=False, apply_per_view=False, **kwargs):
-    return _fly_ins_out("out", *args, override=override, inheritable=inheritable, apply_per_view=apply_per_view, **kwargs)
-   
-def _fly_ins_out(in_out, *args, override, inheritable, apply_per_view, **kwargs):
-        
-    if not args and not override:
-        raise ValueError(f"❌ [fletfly] fly_{in_out}() cannot be empty unless fly_{in_out}_override is True.")
-    
-    prepared = _list_middlewares(*args)
-    for dic in prepared:
-        dic["inheritable"] = inheritable
-        dic["apply_per_view"] = apply_per_view
-
-    if kwargs:
-        for mw in prepared:
-            mw["kwargs"].update(kwargs)
-
-    inject = {
-        f"$fly_{in_out}_override": override,
-        f"$fly_{in_out}": prepared
-    }
-
-    def wrapper(target):
-        if isinstance(target, dict) and f"$fly_{in_out}" in target:
-            existing_mws = target[f"$fly_{in_out}"]
-            combined = list(existing_mws) + list(prepared)
-            
-            res = {**target, f"$fly_{in_out}": _FlyList(combined)}
-            
-            if override:
-                res[f"$fly_{in_out}_override"] = True
-            return res
-        
-        elif isinstance(target, dict):
-            res = {**inject, **target}
-        else:
-            res = {**inject, "": target}
-        return res
-    return wrapper
-
 def fly(page, path=None, *args, **kwargs):
     if not isinstance(page, ft.Page): # fly(ft.Page,)
         raise RuntimeError(f"""
@@ -2597,3 +2949,5 @@ airway = Airway
 route = Airway
 Route = Airway
 Router = Airline
+
+fly_ins

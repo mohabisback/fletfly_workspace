@@ -1,4 +1,4 @@
-# fletfly/tests/classes/test_flags_disabled.py
+# fletfly/tests/classes/test_classes_flags_disabled.py
 import pytest
 from fletfly import Airway, Airline, layout
 
@@ -45,7 +45,7 @@ def test_inheritance_and_decorations_disabled_inside_append_classes():
     Airline.auto_path_naming = True
 
     Airway._map.clear()
-    Airway._registered_children_classes.clear()
+    Airway._registered_children.clear()
 
     # Source 1: Handed manually (Should be processed)
     class ManuallyHandedRoute:
@@ -64,7 +64,7 @@ def test_inheritance_and_decorations_disabled_inside_append_classes():
         _build = dummy_build
 
     # Execute consolidation with only manual routes passed
-    Airway._append_classes(handed_classes=[ManuallyHandedRoute])
+    Airway._create_tree(handed_classes=[ManuallyHandedRoute])
 
     # Assertions
     # 1. Manual source must be processed and injected successfully

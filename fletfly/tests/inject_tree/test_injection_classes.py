@@ -40,8 +40,8 @@ def test_01():
     assert ChildTwo in ParentClass._unified_subways
     
     # Ensure that they are registered in the global class cache of the library
-    assert ChildOne in Airway._registered_children_classes
-    assert ChildTwo in Airway._registered_children_classes
+    assert ChildOne in Airway._registered_children
+    assert ChildTwo in Airway._registered_children
 
 
 def test_02():

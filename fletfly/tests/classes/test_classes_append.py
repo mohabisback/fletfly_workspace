@@ -1,4 +1,4 @@
-# fletfly/tests/classes/test_airway_append_mechanics.py
+# fletfly/tests/classes/test_classes_append.py
 import pytest
 from fletfly import Airway, Airline
 
@@ -33,7 +33,7 @@ def test_01():
         Sub = Deep_Shared_Leaf
 
     # Execute consolidation pool
-    Airway._append_classes(handed_classes=None)
+    Airway._create_tree(handed_classes=None)
 
     # Assertions for Scenario 1:
     # Verify both parent paths resolved correctly based on their distinct configurations
@@ -78,7 +78,7 @@ def test_02():
         Child = MidNode
 
     # Execute consolidation
-    Airway._append_classes(handed_classes=None)
+    Airway._create_tree(handed_classes=None)
 
     # Critical Assertions for Scenario 2:
     # 1. RootNode must exist as a primary root
@@ -118,7 +118,7 @@ def test_append_classes_duplicate_handling_with_mixed_subways_aliases():
         subways = [UltimateLeaf]
 
     # Execute consolidation
-    Airway._append_classes(handed_classes=None)
+    Airway._create_tree(handed_classes=None)
 
     # Assertions for Scenario 3:
     assert "/confused-parent" in Airway._map
@@ -130,4 +130,4 @@ def test_append_classes_duplicate_handling_with_mixed_subways_aliases():
 
     # Final cleanup to keep the global slate clean
     Airway._pending_classes.clear()
-    Airway._registered_children_classes.clear()
+    Airway._registered_children.clear()

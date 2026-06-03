@@ -1,4 +1,4 @@
-# fletfly/tests/classes/test_unify_subways.py
+# fletfly/tests/classes/test_classes_unify_subways.py
 from fletfly import Airway
 
 def dummy_build(page):
@@ -40,8 +40,8 @@ def test_01():
     assert LevelThree._unified_subways == []
 
     # Verify global cache registration
-    assert LevelTwo in Airway._registered_children_classes
-    assert LevelThree in Airway._registered_children_classes
+    assert LevelTwo in Airway._registered_children
+    assert LevelThree in Airway._registered_children
 
 
 def test_02():
@@ -62,7 +62,7 @@ def test_02():
     assert len(result) == 0
     assert result == []
     assert TargetClass._unified_subways == []
-    assert HiddenChild not in Airway._registered_children_classes
+    assert HiddenChild not in Airway._registered_children
 
 
 def test_03():
