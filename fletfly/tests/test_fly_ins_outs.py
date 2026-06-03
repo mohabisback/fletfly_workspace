@@ -10,7 +10,7 @@ def test_initial_data_loading():
     # Test if initial list data is loaded correctly during Airway initialization
     airway = Airway(fly_ins=[sample_middleware_1, sample_middleware_2])
     assert len(airway.fly_ins) == 2
-    assert airway.fly_ins[0] == sample_middleware_1
+    assert airway.fly_ins[0]["func"] == sample_middleware_1
 
 def test_calling_as_callable_method():
     # Test calling fly_ins() as a method and updating the override attribute
@@ -44,4 +44,4 @@ def test_fly_outs_behavior():
     airway.fly_outs(sample_middleware_3, override=False)
     
     assert airway.fly_outs_override is False
-    assert airway.fly_outs == [sample_middleware_3]
+    assert airway.fly_outs[0]["func"] == sample_middleware_3
