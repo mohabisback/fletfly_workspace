@@ -39,10 +39,12 @@ aliases = {
     "build": [ "build", "view", "builder", "component", "element", "contents", "controls",],
     # build_hero takes True or 1 for static pathes, and True or int for dynamic pathes (True means 5)
     "build_hero": [ "build_hero", "hero_view", "build_heroer", "hero_component", "hero_element", "hero_contents", "hero_controls",],
-    "fly_ins": ["fly_ins", "loader", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
-    "fly_ins_override": ["fly_ins_override", "loader_override", "canActivate_override", "beforeEnter_override", "middleware_override", "beforeLoad_override",],
-    "fly_outs": ["fly_outs", "canDeactivate", "beforeUnload",],
-    "fly_outs_override": ["fly_outs_override", "canDeactivate_override", "beforeUnload_override",],
+    "fly_in": ["fly_in", "loader", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
+    "fly_ins": ["fly_ins", "loaders", "middlewares"],
+    "fly_in_override": ["fly_in_override", "loader_override", "canActivate_override", "beforeEnter_override", "middleware_override", "beforeLoad_override",],
+    "fly_out": ["fly_out", "canDeactivate", "beforeUnload",],
+    "fly_outs": ["fly_outs",],
+    "fly_out_override": ["fly_out_override", "canDeactivate_override", "beforeUnload_override",],
     "layout": ["layout", "frame",],
     "layout_override": ["layout_override", "frame_override",],
     "layout_hero": ["layout_hero", "hero_frame",],
@@ -56,7 +58,7 @@ aliases = {
 }
 _rev_aliases = {val:k for k in aliases.keys() for val in aliases.get(k)}
 
-def _call_with_payload(func, page, availables: list[dict]):
+def _call_with_payload(func, page, availables: list[dict], params=True, query=True):
     payload = _get_set_payload(func) 
     if not payload:
         try:
@@ -68,7 +70,7 @@ def _call_with_payload(func, page, availables: list[dict]):
             raise
 
     merged_data = {}
-    for data in availables:
+    for data in availables + ([page.fly.params] if params else []) + ([page.fly.query] if query else []):
         if data:
             for k, v in data.items():
                 if k not in merged_data:
@@ -283,6 +285,7 @@ class _MethodHandler:
                     if not callable(val):
                         setattr(clas, key+_clsattr, key)
                     else:
+                        _get_set_payload(val)
                         setattr(val, _fletfly_+"static", True)
                         print(f"[fletfly] Callable function {key}=<{val.__name__}> handed in decorator will be static, can't be changed on runtime, and won't recieve 'self' argument.")
             return clas
@@ -294,9 +297,14 @@ class _MethodHandler:
             elif instance:                    # @route.layout or @Airway().layout
                 _inject_instance_attr(func, kwargs)
 
-            setattr(func, _fletfly_+self.name, True)                        # inject it maybe it is a method
             kwargs.pop("parents", None)
-            for key, val in kwargs.items():
+            wrapped, expected = _get_dict_expected(self.name, kwargs)
+
+            setattr(func, _fletfly_+self.name, wrapped)                        # inject it maybe it is a method
+            if self.name in ("fly_in", "fly_out"):
+                expected.pop("inheritable", None)
+                expected.pop("apply_per_view", None)
+            for key, val in expected.items():
                 if key in ["override", "hero"]: key = f"{self.name}_{key}"
                 if val is not None:
                     setattr(func, f"{_fletfly_}{key}", val)
@@ -323,28 +331,32 @@ class _MethodHandler:
                     else:
                         setattr(instance, key, val)
 
-        def func_no_decorator(func, kwargs=None):
-            not_expected_kwargs = dict(kwargs) if kwargs else {}
+        def _get_dict_expected(func_or_name, kwargs=None):
+            kwargs = dict(kwargs) if kwargs else {}
+            not_expected_kwargs = dict(kwargs)
             expected = {}
             for item in kwargs:
                 if item in self.expected:
                     not_expected_kwargs.pop(item)
                     expected[item] = kwargs[item]
-            if self.name in ("build", "layout", "fly_in", "fly_out"):
-                if self.name in ("build", "layout"):
-                    wrapped = _BuildLayoutDict(func, not_expected_kwargs)
-                else:
-                    kwargs.pop("override", None)
-                    wrapped = _FlyInOutDict(func,
-                                        kwargs.pop("inheritable", True if self.name == "fly_in" else False),
-                                        kwargs.pop("apply_per_view", False),
-                                        not_expected_kwargs)
+            if self.name in ("build", "layout"):
+                wrapped = _BuildLayoutDict(func=func_or_name, func_kwargs=not_expected_kwargs)
+            else:
+                kwargs.pop("override", None)
+                wrapped = _FlyInOutDict(func_or_name,
+                                    kwargs.pop("inheritable", True if self.name == "fly_in" else False),
+                                    kwargs.pop("apply_per_view", False),
+                                    not_expected_kwargs)
+            return wrapped, expected
+        def func_no_decorator(func, kwargs=None):
+            if self.name == "subway":
+                subway_func(func, kwargs, f"[fletfly] subway() must have parents arguments as: subway(parents=[]) | or instance as: route_obj.subway()")
+            else:
+                wrapped, expected = _get_dict_expected(func, kwargs)
                 if instance:
                     _inject_instance_attr(wrapped, expected)
                 return wrapped
-            elif self.name in ("subway"):
-                subway_func(func, kwargs, f"[fletfly] subway() must have parents arguments as: subway(parents=[]) | or instance as: route_obj.subway()")
-
+            
         # decorating a class without calling @layout | @Airway.layout | @route.layout:
         if isinstance(first_arg, type):
             if no_decorator:
@@ -444,8 +456,8 @@ class _Subway(_MethodHandler):
     expected = {"path": (str,None), "parents": (list,None),
                 "build": (object,None), "subways": (list,None),
                 "fly_to": (str,None), "layout": (object, None), "layout_override": (bool,None),
-                "fly_ins":(list, None), "fly_ins_override": (bool,None),
-                "fly_outs":(list, None), "fly_outs_override": (bool,None),
+                "fly_ins":(list, None), "fly_in_override": (bool,None),
+                "fly_outs":(list, None), "fly_out_override": (bool,None),
                 "is_zone": (bool,None), "build_hero": (bool,None), "layout_hero": (bool,None),
                 "title": (str,None), "icon": (str,None), "post_fly":(object,None)}
     @overload # Decorator on a function
@@ -453,8 +465,8 @@ class _Subway(_MethodHandler):
                  path:str=None, parents:list[Airway|type]=None,
                  subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                 fly_ins = None, fly_ins_override:bool=None, 
-                 fly_outs=None, fly_outs_override:bool=None,
+                 fly_ins = None, fly_in_override:bool=None, 
+                 fly_outs=None, fly_out_override:bool=None,
                  is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, post_fly=None, 
                  ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
@@ -463,8 +475,8 @@ class _Subway(_MethodHandler):
                  path:str=None, parents:list[Airway|type]=None,
                  build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                 fly_ins = None, fly_ins_override:bool=None, 
-                 fly_outs=None, fly_outs_override:bool=None,
+                 fly_ins = None, fly_in_override:bool=None, 
+                 fly_outs=None, fly_out_override:bool=None,
                  is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, post_fly=None, 
                  ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
@@ -473,8 +485,8 @@ class _Subway(_MethodHandler):
                  path:str=None, parents:list[Airway|type]=None,
                  subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                 fly_ins = None, fly_ins_override:bool=None, 
-                 fly_outs=None, fly_outs_override:bool=None,
+                 fly_ins = None, fly_in_override:bool=None, 
+                 fly_outs=None, fly_out_override:bool=None,
                  is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, post_fly=None)-> Any: ...
 
@@ -483,8 +495,8 @@ class _Subway(_MethodHandler):
                  path:str=None, parents:list[Airway|type]=None,
                  build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                 fly_ins = None, fly_ins_override:bool=None, 
-                 fly_outs=None, fly_outs_override:bool=None,
+                 fly_ins = None, fly_in_override:bool=None, 
+                 fly_outs=None, fly_out_override:bool=None,
                  is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, post_fly=None) -> Any: ...
 
@@ -597,9 +609,11 @@ class _FlyInsOutsList(list):
     def __call__(self, *funcs, override=None):
         if override is not None:
             setattr(self._owner, f"{self._name}_override", override)
-        new_list = _fly_ins_outs(self._name.replace("fly_", ""), *funcs)
-        self.clear()
-        self.extend(new_list)
+        if funcs or override is None:
+            new_list = _fly_ins_outs(self._name.replace("fly_", ""), *funcs)
+            self.clear()
+            self.extend(new_list)
+            return self
         return self
 
 layout = _Layout()
@@ -619,8 +633,8 @@ class Airway():
     subways:list[Airway]=[]
     fly_to:str=None
     layout_override:bool=None
-    fly_ins_override:bool=None 
-    fly_outs_override:bool=None
+    fly_in_override:bool=None 
+    fly_out_override:bool=None
     is_zone:bool=None
     build_hero:bool=None
     layout_hero:bool=None
@@ -634,8 +648,8 @@ class Airway():
     
     def __init__(self, path:str=None, build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                    fly_ins = None, fly_ins_override:bool=None, 
-                    fly_outs=None, fly_outs_override:bool=None,
+                    fly_ins = None, fly_in_override:bool=None, 
+                    fly_outs=None, fly_out_override:bool=None,
                     is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                     title=None, icon=None, post_fly=None, **kwargs):
 
@@ -644,8 +658,8 @@ class Airway():
         self.layout_override = None
         self.path = None
         self.fly_to = None
-        self.fly_ins_override = None
-        self.fly_outs_override = None
+        self.fly_in_override = None
+        self.fly_out_override = None
         self.icon = None
         self.title = None
         self.build_hero = None
@@ -663,8 +677,8 @@ class Airway():
         self.layout_override_clsattr = None
         self.fly_ins_clsattr = None
         self.fly_outs_clsattr = None
-        self.fly_ins_override_clsattr = None
-        self.fly_outs_override_clsattr = None
+        self.fly_in_override_clsattr = None
+        self.fly_out_override_clsattr = None
         self.title_clsattr = None
         self.icon_clsattr = None
         self.build_hero_clsattr = None
@@ -714,8 +728,8 @@ class Airway():
 
     def __call__(self, path:str=None, build=None, subways:list[Airway]=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
-                    fly_ins = None, fly_ins_override:bool=None, 
-                    fly_outs=None, fly_outs_override:bool=None,
+                    fly_ins = None, fly_in_override:bool=None, 
+                    fly_outs=None, fly_out_override:bool=None,
                     is_zone:bool=None, build_hero:bool=None, layout_hero:bool=None,
                     title=None, icon=None, post_fly=None, **kwargs):
         # @obj, @Airway("string") first call, @obj("str", **kwargs) second call
@@ -752,9 +766,21 @@ class Airway():
         subways_count = len(self.subways) if self.subways is not None else None
         _class = self._class.__name__ if self._class else 'None'
         fly_to = self.fly_to if self.fly_to else 'None'
-        bld = self._build if self._build else 'None'
-        bld_clsattr = self.build_clsattr if self.build_clsattr else 'None'
-        return f'<Airway Obj {("'"+self.path+"'"):<10} build={("'"+bld+"'"):<10} build_clsattr={("'"+bld_clsattr+"'"):<10} subways=[{subways_count:2}] _class={_class:<10}>'
+        bld = self._build
+        if isinstance(bld, _BuildLayoutDict):
+            bld = bld["func"].__name__
+        elif callable(bld):
+            bld = bld.__name__
+        elif bld is None:
+            bld = 'None'
+        bld_cls = self.build_clsattr
+        if isinstance(bld_cls, _BuildLayoutDict):
+            bld_cls = bld_cls["func"]
+        elif isinstance(bld_cls, str):
+            bld_cls = bld_cls
+        elif bld_cls is None:
+            bld_cls = 'None'
+        return f'<Airway Obj {("'"+self.path+"'"):<10} build={("'"+bld+"'"):<10} build_clsattr={("'"+bld_cls+"'"):<10} subways=[{subways_count:2}] _class={_class:<10}>'
 
     def __setattr__(self, name, value):
         if name in _rev_aliases:
@@ -960,12 +986,12 @@ Command Bunker, injection, if there is a path, then create a node in the map.
 
         if airway._build:
             if callable(airway._build):
-                airway._build = _BuildLayoutDict(airway._build)
+                airway._build = _BuildLayoutDict(func=airway._build)
             _get_set_payload(airway._build["func"])
 
         if airway._layout:
             if callable(airway._layout):
-                airway._layout = _BuildLayoutDict(airway._layout)
+                airway._layout = _BuildLayoutDict(func=airway._layout)
             _get_set_payload(airway._layout["func"])
 
         if airway.post_fly and callable(airway.post_fly):
@@ -1015,25 +1041,18 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         inject_attr(airway, kid_dict)
 
                     elif item_name in ["fly_in", "fly_out"]:
-                        if not hasattr(airway, item_name+"s_clsattr"):
-                            setattr(airway, f"{item_name}s_clsattr", [])
                         getattr(airway, f"{item_name}s_clsattr").append(attr_name)
                         inject_attr(airway, kid_dict)
 
                     elif item_name in ["subway"]: # "subway"
                         sub = Airway(build_clsattr=attr_name, _class=_class)
                         sub = inject_attr(sub, kid_dict)
-                        if hasattr(sub, "path_clsattr") and sub.path_clsattr is not None:
+                        if sub.path_clsattr is not None:
                             sub.path = getattr(sub, sub.path_clsattr, None)
                         if sub.path is None and Airline.auto_path_naming:
                             sub.path = attr_name
                         func_kids.append(sub)
             
-            if hasattr(attr_func, "_fletfly_static") and attr_name in local_aliases: # if function has decorator
-                flagged_attr.append(attr_name)
-                setattr(airway, local_aliases[attr_name], attr_val)
-                remove_aliases_of(local_aliases[attr_name])  
-
         # second loop for any other attr
         for attr_name, attr_val in _class.__dict__.items():
             if isinstance(attr_val, type) or attr_name.startswith("_") or attr_name in flagged_attr: continue
@@ -1042,21 +1061,31 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             attr_func = attr_val.__func__ if isinstance(attr_val, (staticmethod, classmethod)) else attr_val
             
             if attr_name in local_aliases:
-                if callable(attr_val):_get_set_payload(attr_val)
                 official_name = local_aliases[attr_name]
-                if official_name in ["fly_ins", "fly_outs"]:
-                    if not hasattr(airway, official_name+"_clsattr"):
-                        setattr(airway, official_name+"_clsattr", [])
-                    getattr(airway, official_name+"_clsattr").append(attr_name)
+                if callable(attr_func):_get_set_payload(attr_func)
+                if official_name in ["build", "layout"]:
+                    if hasattr(attr_func, "_fletfly_static"):
+                        setattr(airway, official_name, _BuildLayoutDict(func=attr_func))
+                    else:
+                        setattr(airway, official_name+"_clsattr", _BuildLayoutDict(func=attr_name))
+                elif official_name in ["fly_ins", "fly_outs"]:
+                    if isinstance(attr_val, (list, tuple, list)):
+                        getattr(airway, official_name+"_clsattr").append(_fly_ins_outs(official_name.replace("fly_",""),*attr_val))
+                    else:
+                        raise ValueError(f"[fletfly] {attr_name} value should be iterable (list | tuple).")
+                elif official_name in ["fly_in", "fly_out"]:
+                    if hasattr(attr_func, "_fletfly_static"):
+                        getattr(airway, official_name+"s_clsattr").append(_FlyInOutDict(func=attr_func))
+                    else:
+                        getattr(airway, official_name+"s_clsattr").append(_FlyInOutDict(func=attr_name))
                 else:
                     # For non-accumulative attributes like path
                     setattr(airway, official_name+"_clsattr", attr_name)
                     remove_aliases_of(local_aliases[attr_name])
 
-            elif callable(attr_val) and(normal_airway and Airline.detect_method_routes ):
-                _get_set_payload(attr_val)
-                func_kids.append(Airway(path=attr_name, build_clsattr=attr_name, _class=_class))
-    
+            elif callable(attr_func) and(normal_airway and Airline.detect_method_routes ):
+                _get_set_payload(attr_func)
+                func_kids.append(Airway(path=attr_name, build_clsattr=_BuildLayoutDict(func=attr_name), _class=_class))
         # self.path_clsattr = "path" # now
         if getattr(airway, "path_clsattr", None):
             airway.path = getattr(airway._class, airway.path_clsattr) # path = "/something" # now
@@ -1367,14 +1396,14 @@ class Airline: # singleton only 1 instance
          
     class FlyBox:
         def __init__(self, page):
-            self.params = {}        # المعاملات (مثل :id)
-            self.query = {}       # معاملات الاستعلام
-            self.fly_ins_radar = "/"        # المسار اللحظي للميدل وير
-            self.fly_ins_is_target = False # هل وصلنا للمحطة النهائية؟
-            self.take_off_zone = "/"     # نقطة انطلاق اليوزر
-            self.last_success_path = "/" # لعمل Rollback عند الخطأ
+            self.params = {}
+            self.query = {} 
+            self.fly_ins_radar = "/"
+            self.fly_ins_is_target = False
+            self.take_off_zone = "/"
+            self.last_success_path = "/"
             self.is_navigating = False
-            self.closing_view = None    # the view which is closing for fly_outs
+            self.closing_view = None
             self._slots_map = {}
             self._layouts = set()
             self._new_layouts = set()
@@ -1382,7 +1411,7 @@ class Airline: # singleton only 1 instance
             self._new_arounds = set()
             self._build_heros = {}
             self.page = page
-            self._temp_data = [] # list of controls to update
+            self._temp_data = [] 
 
         def __call__(self, path: str = "/"):
             target = f"{self.take_off_zone}{path.strip('/')}".replace("//", "/")
@@ -1548,7 +1577,7 @@ class Airline: # singleton only 1 instance
     # chick if children for each go to start point
     def _parse_airways(self, airway:Airway, parent_lineage=None, 
                        current_full_path="/", current_take_off_zone="/",
-                        p_fly_ins=[], p_fly_outs=[], p_layout_nodes=[]):
+                        p_fly_ins_nodes=[], p_fly_outs_nodes=[], p_layout_nodes=[]):
         true_node = airway._build or airway.build_clsattr or airway.fly_to or airway.fly_to_clsattr
         if true_node or airway.subways:
             seg = airway.path.strip("/") if airway.path else ""
@@ -1556,50 +1585,55 @@ class Airline: # singleton only 1 instance
             current_lineage = parent_lineage.copy() if parent_lineage else []
             take_off_zone = raw_path.rstrip("/") + "/" if airway.is_zone else current_take_off_zone
             # no build then absolutely no page to see
-            if airway._class:
-                over = {"_class":airway._class, "over":airway.fly_ins_override}
-                attr = {"_class":airway._class, "attr":airway.fly_ins_override}
-                local_fly_ins = [over, attr]
-                for dic in local_fly_ins: dic["take_off_zone"] = current_take_off_zone
-                fly_ins = p_fly_ins + local_fly_ins
-                over = {"_class":airway._class, "over":airway.fly_outs_override}
-                attr = {"_class":airway._class, "attr":airway.fly_outs_override}
-                local_fly_outs = [over, attr]
-                for dic in local_fly_outs: dic["take_off_zone"] = current_take_off_zone
-                fly_outs = p_fly_outs + local_fly_outs
-            else:
-                fly_ins = _FlyList([d for d in p_fly_ins if d.get("inheritable", True) or d.get("apply_per_view", False)])
-                fly_outs = _FlyList([d for d in p_fly_outs if (d.get("inheritable", False) or d.get("apply_per_view", False))])#must inherit if apply per view
-                local_fly_ins = _list_middlewares(airway.fly_ins)
-                local_fly_outs = _list_middlewares(airway.fly_outs)
-                for dic in local_fly_ins: dic["take_off_zone"] = current_take_off_zone
-                for dic in local_fly_outs: dic["take_off_zone"] = current_take_off_zone
-                fly_ins = _FlyList(local_fly_ins) if airway.fly_ins_override else _FlyList(fly_ins + list(local_fly_ins))
-                fly_outs = _FlyList(local_fly_outs) if airway.fly_outs_override else _FlyList(list(local_fly_outs) + fly_outs)
-            
+
             build_node = None
+            if airway._build or (airway._class and airway.build_clsattr):
+                build_node = Airline._BuildNode(_class=airway._class,
+                                                func=airway._build,
+                                                method_name=airway.build_clsattr,
+                                                hero_var=airway.build_hero,
+                                                hero_clsattr=airway.build_hero_clsattr,
+                                                post_fly_func=airway.post_fly,
+                                                post_fly_clsattr=airway.post_fly_clsattr
+                                                )
             layout_node = None
-            if airway._class:
-                if airway.build_clsattr and getattr(airway._class, airway.build_clsattr):
-                    build_node = Airline._BuildNode(func=None, _class=airway._class, method_name=airway.build_clsattr,
-                                                    hero_clsattr=airway.build_hero_clsattr, 
-                                                    post_fly_clsattr=airway.post_fly_clsattr)
-                if (airway.layout_clsattr and getattr(airway._class, airway.layout_clsattr)) or(
-                    airway.layout_override_clsattr and getattr(airway._class, airway.layout_override_clsattr)):
-                    layout_node = Airline._LayoutNode(func=None, _class=airway._class, method_name=airway.layout_clsattr,
-                                                      override_clsattr=airway.layout_override_clsattr,
-                                                      hero_clsattr=airway.layout_hero_clsattr, 
-                                                    post_fly_clsattr=airway.post_fly_clsattr)
-            else:
-                if airway._build:
-                    build_node = Airline._BuildNode(func=airway._build, hero_var=airway.build_hero,
-                                                    post_fly_func=airway.post_fly)
-                if airway._layout:
-                    layout_node = Airline._LayoutNode(func=airway._layout, hero_var=airway.layout_hero,
-                                                      post_fly_func=airway.post_fly, override_var = airway.layout_override)
-                
+            if airway._layout or (airway._class and (airway.layout_clsattr or airway.layout_override_clsattr)):
+                layout_node = Airline._LayoutNode(_class=airway._class,
+                                                func=airway._layout,
+                                                method_name=airway.layout_clsattr,
+                                                hero_var=airway.layout_hero,
+                                                hero_clsattr=airway.layout_hero_clsattr,
+                                                override_var=airway.layout_override,
+                                                override_clsattr=airway.layout_override_clsattr,
+                                                post_fly_func=airway.post_fly,
+                                                post_fly_clsattr=airway.post_fly_clsattr
+                                                )
             layout_nodes = list(p_layout_nodes) + ([layout_node] if layout_node else [])
 
+            fly_ins_node = None
+            if airway.fly_ins or (airway._class and (airway.fly_ins_clsattr or airway.fly_in_override_clsattr)):
+                fly_ins_node = Airline._FlyInsOutsNode(_class=airway._class,
+                                                funcs=airway.fly_ins if airway.fly_ins else [],
+                                                methods_name=airway.fly_ins_clsattr if airway.fly_ins_clsattr else [],
+                                                override_var = airway.fly_in_override,
+                                                override_clsattr= airway.fly_in_override_clsattr,
+                                                take_off=current_take_off_zone)
+                
+            fly_ins_nodes = list(p_fly_ins_nodes) + ([fly_ins_node] if fly_ins_node else [])
+            
+
+
+            fly_outs_node = None
+            if airway.fly_outs or (airway._class and (airway.fly_outs_clsattr or airway.fly_in_override_clsattr)):
+                fly_outs_node = Airline._FlyInsOutsNode(_class=airway._class,
+                                                funcs=airway.fly_outs if airway.fly_outs else [],
+                                                methods_name=airway.fly_outs_clsattr if airway.fly_outs_clsattr else [],
+                                                override_var = airway.fly_out_override,
+                                                override_clsattr= airway.fly_out_override_clsattr,
+                                                take_off=current_take_off_zone)
+                
+            fly_outs_nodes = list(p_fly_outs_nodes) + ([fly_outs_node] if fly_outs_node else [])
+                        
             if true_node:
                 node = Airline._FlightNode(
                     seg=airway.path,
@@ -1615,8 +1649,8 @@ class Airline: # singleton only 1 instance
                     is_zone=airway.is_zone,
                     layout_nodes=layout_nodes, 
                     lineage=current_lineage,
-                    fly_ins=fly_ins,
-                    fly_outs=fly_outs,
+                    fly_ins=fly_ins_nodes,
+                    fly_outs=fly_outs_nodes,
                     _class=airway._class
                 )
                 
@@ -1627,11 +1661,32 @@ class Airline: # singleton only 1 instance
                     self.static_map[raw_path] = node
                 current_lineage = (current_lineage.copy() if current_lineage else []) + [node]
 
-                
-
             if airway.subways:
+                fly_ins_nodes = list(p_fly_ins_nodes) + ([
+                                                Airline._FlyInsOutsNode(_class=airway._class,
+                                                funcs=[x for x in fly_ins_node.funcs if x["inheritable"] == True],
+                                                methods_name=[x for x in fly_ins_node.methods_name if x["inheritable"] == True],
+                                                override_var= airway.fly_in_override,
+                                                override_clsattr=airway.fly_in_override_clsattr,
+                                                take_off=current_take_off_zone)
+                                                            ] if fly_ins_node else [])
+
+                fly_outs_nodes = list(p_fly_outs_nodes) + ([
+                                                Airline._FlyInsOutsNode(_class=airway._class,
+                                                funcs=[x for x in fly_outs_node.funcs if x["inheritable"] == True],
+                                                methods_name=[x for x in fly_outs_node.methods_name if x["inheritable"] == True],
+                                                override_var= airway.fly_out_override,
+                                                override_clsattr=airway.fly_out_override_clsattr,
+                                                take_off=current_take_off_zone)
+                                                            ] if fly_outs_node else [])
                 for subway in airway.subways:
-                    self._parse_airways(subway, current_lineage, raw_path, take_off_zone, fly_ins, fly_outs, layout_nodes)
+                    self._parse_airways(airway=subway,
+                                        parent_lineage=current_lineage,
+                                        current_full_path=raw_path,
+                                        current_take_off_zone=take_off_zone,
+                                        p_fly_ins_nodes=fly_ins_nodes,
+                                        p_fly_outs_nodes=fly_outs_nodes,
+                                        p_layout_nodes=layout_nodes)
                     #self._safe_merge(self.static_map, self.dynamic_map, child_static, child_dynamic)
 
     def _safe_merge(self, main_static, main_dynamic, static, dynamic, skip_conflicts = False):
@@ -1850,33 +1905,6 @@ class Airline: # singleton only 1 instance
 
         return full_chain
     
-    async def _apply_fly_ins_checks(self, page, nodes_chain, target_node):
-        return nodes_chain
-        filtered_chain = []
-        excuted_fly_ins_out = set()
-        for current_node in nodes_chain:
-            is_final = (current_node == target_node)
-            check = self._run_node_fly_ins_out(page, "in", None, current_node, is_final, excuted_fly_ins_out)
-            
-            if inspect.isawaitable(check):
-                check = await check
-
-            if check is True:
-                filtered_chain.append(current_node)
-            
-            elif isinstance(check, str):
-                print(f'🔀 [fletfly] Redirecting from "{page.route}" to "{check}"')
-                page.run_task(page.push_route, check)
-                return None
-            else:
-                if page.route != page.fly.last_success_path:
-                    print(f"🚫 [fletfly] Access Denied. Rolling back to: {page.fly.last_success_path}")
-                    page.on_route_change = None 
-                    page.go(page.fly.last_success_path)
-                    page.on_route_change = self._handle_route_change
-                return None
-        return filtered_chain
-    
     async def _artificial_back(self,page, response, view):
         result = await response
         if result is True:
@@ -1900,7 +1928,7 @@ class Airline: # singleton only 1 instance
         
         if not node: return True # its ok to leave, can't stop you
 
-        check = self._run_node_fly_ins_out(page, in_out="out", view=view, node=node, is_building=True, excuted_fly_ins_out=set())
+        check = self._run_node_fly_ins_out(page, ins_outs="outs", view=view, node=node, is_building=True, excuted_fly_ins_out=set())
 
         if inspect.isawaitable(check):
             await page.push_route(view.route)
@@ -1917,52 +1945,64 @@ class Airline: # singleton only 1 instance
         
         return True #any other case scenario
 
-    def _run_node_fly_ins_out(self, page, in_out, view, node:_FlightNode, is_building, excuted_fly_ins_out:set):
+    async def _apply_fly_ins_checks(self, page, flight_nodes, target_node):
+        filtered_chain = []
+        excuted_fly_ins_out = set()
+        for current_node in flight_nodes:
+            is_final = (current_node == target_node)
+            check = await self._run_node_fly_ins_out(page, "ins", None, current_node, is_final, excuted_fly_ins_out)
 
-        if node._class:
-            attr = getattr(node, f"fly_{in_out}", None)
-            if attr :
-                chain = self._get_sync_layout_chain(getattr(node , f"fly_{in_out}"), in_out)
-                fly_ins_out = _list_middlewares(chain)
-        else:
-            fly_ins_out = getattr(node, f"fly_{in_out}", [])
+            if check is True:
+                filtered_chain.append(current_node)
+            
+            elif isinstance(check, str):
+                print(f'🔀 [fletfly] Redirecting from "{page.route}" to "{check}"')
+                page.run_task(page.push_route, check)
+                return None
+            else:
+                if page.route != page.fly.last_success_path:
+                    print(f"🚫 [fletfly] Access Denied. Rolling back to: {page.fly.last_success_path}")
+                    page.on_route_change = None 
+                    page.go(page.fly.last_success_path)
+                    page.on_route_change = self._handle_route_change
+                return None
+        return filtered_chain
+    
+    async def _run_node_fly_ins_out(self, page, ins_outs, view, node:_FlightNode, is_building, excuted_fly_ins_out:set):
+
+        fly_in_out_nodes = self._FlyInsOutsNode._get_not_overrided_fly_ins_nodes(getattr(node, f"fly_{ins_outs}", []))
         last_res = True
         page.fly.is_building = is_building
         page.fly.fly_ins_radar = node.path
         if view: page.fly.closing_view = view
-        
         try:
-            for mw in fly_ins_out:
-                if mw.get("apply_per_view", False) or id(mw) not in excuted_fly_ins_out:
-                    func = mw["func"]
-                    last_res = func(page, *mw["args"], **mw["kwargs"])
-                    if inspect.isawaitable(last_res):
-                        print(f"ℹ️ [fletfly] Fly_{in_out} at '{node.path}' returned awaitable response.")
-                        print(f"ℹ️ Only 1 awaitable response is allowed per View, all remaining fly_{in_out} will be ignored.")
-                        return last_res
+            for fly_in_out_node in fly_in_out_nodes:
+                for mw in fly_in_out_node.funcs:
+                    if mw.get("apply_per_view", False) or id(mw) not in excuted_fly_ins_out:
+                        func = mw["func"]
+                        last_res = _call_with_payload(func, page, mw["kwargs"])
+                        if inspect.isawaitable(last_res):
+                            last_res = await last_res
 
-                    # --- [ الحركة الشياكة المحدثة ] ---
-                    if not isinstance(last_res, (bool, str)):
-                        print(f"ℹ️ [fletfly] Fly_{in_out} at '{node.path}' returned {type(last_res).__name__} ('{last_res}').")
-                        print(f"    We treated it as {'False for security' if in_out == "in" else 'True'}. (Expected: True, False, or Redirect String)")
-                        # بنحولها لـ False عشان الـ Logic اللي بعد كدة يفهم إنها مرفوضة
-                        last_res = False if in_out == "in" else True
+                        if not isinstance(last_res, (bool, str)):
+                            print(f"ℹ️ [fletfly] Fly_{ins_outs} at '{node.path}' returned {type(last_res).__name__} ('{last_res}').")
+                            print(f"    We treated it as {'False for security' if ins_outs == 'ins' else 'True'}. (Expected: True, False, or Redirect String)")
 
-                    if isinstance(last_res, str):
-                        last_res = mw.get("take_off_zone", node.take_off_zone if node.take_off_zone else "/").rstrip("/") + "/" + last_res.lstrip("/")
-                        print(f"🔀 [fletfly] Redirect by '{mw["func"].__name__}' at '{node.path}':")
+                            last_res = False if ins_outs == "ins" else True
 
-                    if last_res is not True:
-                        break # هيخرج فوراً بالـ False أو الـ String
-                    excuted_fly_ins_out.add(id(mw))
-                else:
-                    continue
+                        if isinstance(last_res, str):
+                            last_res = mw.get("take_off", node.take_off_zone if node.take_off_zone else "").rstrip("/") + "/" + last_res.lstrip("/")
+                            print(f"🔀 [fletfly] Redirect by '{mw["func"].__name__}' at '{node.path}':")
+
+                        if last_res is not True:
+                            return last_res
+                        excuted_fly_ins_out.add(id(mw))
+                    else:
+                        continue
         except Exception as e:
-            # لو الميدل وير نفسه فيه خطأ برمجيا
             print(f"❌ [fletfly] Critical error in middleware at '{node.path}': {e}")
-            last_res = False # نمنع الدخول للأمان    
-        finally:
-            pass
+            last_res = False if ins_outs == "ins" else True   
+
         return last_res
 
     def _apply_max_pads(self, wishlist):
@@ -1985,16 +2025,12 @@ class Airline: # singleton only 1 instance
         return final_list
     
     async def _reconcile_views(self, page, final_nodes_list):
-        #if page.views: print("start of reconcile in view value:", page.views[-1].controls[0].content.controls[0].value)
-        #if page.views: print("start of reconcile in view value:", id(page.views[-1].controls[0].content.controls[0]))
         page.fly._temp_data = []
         page.fly._new_layouts = set()
         page.fly._new_arounds = set()
         
         existing_layouts = page.fly._layouts
-        #if existing_layouts: print("start of reconcile existing_layouts value:", existing_layouts[0].objs_map[''][0].content.controls[0].value)#.content.controls[0].value)
-        #if existing_layouts: print("start of reconcile existing_layouts value:", id(existing_layouts[0].objs_map[''][0].content.controls[0]))#.content.controls[0].value)
-        
+ 
         Airline._LayoutObj._dismount_obj_s(existing_layouts)
 
         final_paths = [self._get_real_path(page.route, n.path) if n.is_dynamic else n.path for n in final_nodes_list]
@@ -2107,10 +2143,10 @@ class Airline: # singleton only 1 instance
     def _get_sync_func(cls, node):
         if node is None:
             return None
+        if node.func:
+            return node.func
         if node._class and node.method_name: # dynamic func
             return getattr(node._class, node.method_name)
-        elif node.func: #
-            return node.func
         return None    
     @classmethod
     def _get_sync_hero(cls, node)->int|bool:
@@ -2122,10 +2158,11 @@ class Airline: # singleton only 1 instance
             return node.hero_var
         return None    
     class _AroundNode: # one node created for one build for all times
-        def __init__(self, func=None, _class=None, method_name=None, name=None,
+        def __init__(self, func=None, kwargs=None, _class=None, method_name=None, name=None,
                      hero_var=None, hero_clsattr=None,
                      post_fly_func=None, post_fly_clsattr=None):
             self.func = func #function
+            self.kwargs = kwargs
             self.method_name = method_name
             self._class = _class #class
             self.hero_var = hero_var #function
@@ -2212,10 +2249,14 @@ class Airline: # singleton only 1 instance
             return active_around_objs
         
     class _BuildNode: # one node created for one build for all times
-        def __init__(self, func=None, _class=None,
+        def __init__(self,
+                    _class=None,
+                    func=None,
                     method_name=None, 
-                     hero_var=None, hero_clsattr=None,
-                     post_fly_func=None, post_fly_clsattr=None,):
+                    hero_var=None,
+                    hero_clsattr=None,
+                    post_fly_func=None,
+                    post_fly_clsattr=None,):
             self.func = func #function
             self.method_name = method_name
             self._class = _class #class
@@ -2246,16 +2287,16 @@ class Airline: # singleton only 1 instance
         
         @classmethod
         def _create_build_obj(cls, page, build_node)->Airline._BuildObj:
-            build_func = Airline._get_sync_func(build_node)
+            build_dict = Airline._get_sync_func(build_node)
 
-            if not build_func: return None
+            if not build_dict: return None
 
-            func_key = f"{build_func.__code__.co_filename}::{build_func.__name__}"
+            func_key = f"{build_dict.__code__.co_filename}::{build_dict.__name__}"
             
             page.fly._slots_map[func_key] = {} # pre-execution clearance
             page.fly._slots_token = func_key
 
-            build_return = Airline._PostFly._apply_post_fly(page, build_func, build_node)
+            build_return = Airline._PostFly._apply_post_fly(page, build_dict, build_node)
             
             page.fly._slots_token = None
 
@@ -2355,7 +2396,30 @@ class Airline: # singleton only 1 instance
             else:
                 map = None
             page.fly._build_heros[view.route] = map
+    class _FlyInsOutsNode: # one node created for one layout for all times
+        def __init__(self, funcs=None,
+                     override_var=None, _class=None, 
+                     methods_name=None, override_clsattr=None,
+                     take_off=None):
+            self.funcs = funcs #function
+            self._class = _class #class
+            self.methods_name = methods_name
+            self.override_var = override_var
+            self.override_clsattr = override_clsattr
+            self.take_off=take_off
+        @classmethod
+        def _get_not_overrided_fly_ins_nodes(cls, fly_in_node_list: list[Airline._FlyInsOutsNode]):
+            slice_idx = 0
+            for i in range(len(fly_in_node_list) - 1, -1, -1):
+                n = fly_in_node_list[i]
+                if n.override_var or (n._class and n.override_clsattr and getattr(n._class, n.override_clsattr)):
+                    if n.funcs or (n._class and n.methods_name): # has fly_ins, not override only
+                        slice_idx = i
+                    else:
+                        slice_idx = i + 1  # has override only, exclude it.
+                    break
 
+            return fly_in_node_list[slice_idx:]
     class _LayoutNode: # one node created for one layout for all times
         def __init__(self, func=None, override_var=None, _class=None, 
                      method_name=None, override_clsattr=None,
@@ -2376,22 +2440,14 @@ class Airline: # singleton only 1 instance
             slice_idx = 0
             for i in range(len(layout_node_list) - 1, -1, -1):
                 n = layout_node_list[i]
-                dynamic_over = False
-                if n._class and n.override_clsattr:
-                    dynamic_over = bool(getattr(n._class, n.override_clsattr, False))
-                
-                override_var = getattr(n, 'override_var', False)
-                if dynamic_over or override_var:
-                    has_dynamic_layout = bool(getattr(n._class, n.method_name, None)) if (n._class and getattr(n, 'method_name', None)) else False
-                    has_func_layout = bool(getattr(n, "func", None))
-                    
-                    if has_dynamic_layout or has_func_layout:
+                if n.override_var or (n._class and n.override_clsattr and getattr(n._class, n.override_clsattr)):
+                    if n.func or (n._class and n.method_name): # has layout, not override only
                         slice_idx = i
                     else:
-                        slice_idx = i + 1  # حجب المسارات السابقة واستبعاد العقدة الحالية الفارغة
+                        slice_idx = i + 1  # has override only, exclude it.
                     break
-            returning = layout_node_list[slice_idx:]
-            return returning
+
+            return layout_node_list[slice_idx:]
 
 
         
@@ -2495,13 +2551,13 @@ class Airline: # singleton only 1 instance
 
         @classmethod
         def _create_layout_obj(cls, page, layout_node)->Airline._LayoutObj:
-            layout_func = Airline._get_sync_func(layout_node)
-            if not layout_func: return None
-            func_key = f"{layout_func.__code__.co_filename}::{layout_func.__name__}"
+            layout_dict = Airline._get_sync_func(layout_node)
+            if not layout_dict: return None
+            func_key = f"{layout_dict.__code__.co_filename}::{layout_dict.__name__}"
             page.fly._slots_map[func_key] = {} # pre-execution clearance
             page.fly._slots_token = func_key
             
-            layout_return = Airline._PostFly._apply_post_fly(page, layout_func, layout_node)
+            layout_return = Airline._PostFly._apply_post_fly(page, layout_dict, layout_node)
 
             page.fly._slots_token = None
             if not layout_return: return None
@@ -2589,11 +2645,12 @@ class Airline: # singleton only 1 instance
                 return node.post_fly_func
             return None    
         @classmethod
-        def _apply_post_fly(cls, page:ft.Page, layout_build_func, layout_build_node):
+        def _apply_post_fly(cls, page:ft.Page, layout_build_dict, layout_build_node:Airline._LayoutNode):
 
             post_fly_func = cls._get_sync_post_fly(layout_build_node)
             
-            controls_s = layout_build_func(page)
+            controls_s = _call_with_payload(layout_build_dict["func"], page, layout_build_dict["kwargs"])
+
             if post_fly_func is None or not callable(post_fly_func):
                 return controls_s
 

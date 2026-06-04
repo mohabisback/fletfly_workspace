@@ -100,49 +100,61 @@ def test_10():
     """ @build on function."""
     @build
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
-    assert getattr(sample_func, "_fletfly_build_hero", None) is None
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_build_hero", "not there") == "not there"
 
 def test_11():
     """ @build() on function."""
     @build()
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
-    assert getattr(sample_func, "_fletfly_build_hero", None) is None
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_build_hero", "not there") == "not there"
 
 def test_12():
     """ @build(hero=True) on function."""
-    @build(hero=True)
+    @build(hero=True, role="user", hi=None)
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"]["hi"] is None
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_build_hero", None) is True
 
 def test_13():
     """ @Airway.build on function."""
     @Airway.build
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
-    assert getattr(sample_func, "_fletfly_build_hero", None) is None
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_build_hero", "not there") == "not there"
 
 def test_14():
     """ @Airway.build() on function."""
-    @Airway.build()
+    @Airway.build(role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
-    assert getattr(sample_func, "_fletfly_build_hero", None) is None
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_build_hero", "not there") == "not there"
 
 def test_15():
     """ @Airway.build(hero=True) on function."""
-    @Airway.build(hero=True)
+    @Airway.build(hero=True, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_build_hero", None) is True
 
 def test_16():
     """ @Airway.build(hero=False) on function."""
-    @Airway.build(hero=False)
+    @Airway.build(hero=False, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build", None) is True
+    assert getattr(sample_func, "_fletfly_build", None)["func"] == "build"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_build", None)["kwargs"].get("hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_build_hero", None) is False
 
 def test_17():

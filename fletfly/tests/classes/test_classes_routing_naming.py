@@ -38,7 +38,7 @@ def test_detect_methods_routesion_extracts_callable_methods():
     # Child method auto-detection check
     assert len(kids) == 1
     assert kids[0].path == "active_sessions" or kids[0].path == "active-sessions" # depends on normalization inside constructor
-    assert kids[0].build_clsattr == "active_sessions"
+    assert kids[0].build_clsattr["func"] == "active_sessions"
     assert kids[0]._class is ControlCenter
 
 

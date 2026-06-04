@@ -114,23 +114,28 @@ def test_10():
     """ @layout on function."""
     @layout
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is None
     assert getattr(sample_func, "_fletfly_layout_override", None) is None
 
 def test_11():
     """ @layout() on function."""
-    @layout()
+    @layout(role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is None
     assert getattr(sample_func, "_fletfly_layout_override", None) is None
 
 def test_12():
     """ @layout(hero=True) on function."""
-    @layout(hero=True, override=True)
+    @layout(hero=True, override=True, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is True
     assert getattr(sample_func, "_fletfly_layout_override", None) is True
 
@@ -138,31 +143,38 @@ def test_13():
     """ @Airway.layout on function."""
     @Airway.layout
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is None
     assert getattr(sample_func, "_fletfly_layout_override", None) is None
 
 def test_14():
     """ @Airway.layout() on function."""
-    @Airway.layout()
+    @Airway.layout(role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is None
     assert getattr(sample_func, "_fletfly_layout_override", None) is None
 
 def test_15():
     """ @Airway.layout(hero=True) on function."""
-    @Airway.layout(hero=True, override=False)
+    @Airway.layout(hero=True, override=False, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is True
     assert getattr(sample_func, "_fletfly_layout_override", None) is False
 
 def test_16():
     """ @Airway.layout(hero=False) on function."""
-    @Airway.layout(hero=False, override=True)
+    @Airway.layout(hero=False, override=True, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_layout", None) is True
+    assert getattr(sample_func, "_fletfly_layout", None)["func"] == "layout"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"]["role"] == "user"
+    assert getattr(sample_func, "_fletfly_layout", None)["kwargs"].get("override", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout_hero", None) is False
     assert getattr(sample_func, "_fletfly_layout_override", None) is True
 
