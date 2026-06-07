@@ -2,9 +2,9 @@
 import flet as ft
 import fletfly as fty
 from fletfly import Airline, airway
-from HABHUB.ImageResizer.home import get_view as get_home
-from HABHUB.ImageResizer.about import get_view as get_about
-from HABHUB.ImageResizer.error import get_view as get_err
+from ImageResizer.home import get_view as get_home
+from ImageResizer.about import get_view as get_about
+from ImageResizer.error import get_view as get_err
 
 
 # صفحة بسيطة

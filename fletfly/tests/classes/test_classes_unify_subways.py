@@ -28,16 +28,16 @@ def test_01():
     # Assertions for LevelOne
     assert LevelTwo in result
     assert len(result) == 1
-    assert hasattr(LevelOne, "_unified_subways")
-    assert LevelOne._unified_subways == [LevelTwo]
+    assert hasattr(LevelOne, "_fletfly_subways")
+    assert LevelOne._fletfly_subways == {LevelTwo}
 
     # Assertions for recursive processing on LevelTwo
-    assert hasattr(LevelTwo, "_unified_subways")
-    assert LevelTwo._unified_subways == [LevelThree]
+    assert hasattr(LevelTwo, "_fletfly_subways")
+    assert LevelTwo._fletfly_subways == {LevelThree}
 
     # Assertions for recursive processing on LevelThree (Leaf node)
-    assert hasattr(LevelThree, "_unified_subways")
-    assert LevelThree._unified_subways == []
+    assert hasattr(LevelThree, "_fletfly_subways")
+    assert LevelThree._fletfly_subways == set()
 
     # Verify global cache registration
     assert LevelTwo in Airway._registered_children
@@ -61,26 +61,8 @@ def test_02():
 
     assert len(result) == 0
     assert result == []
-    assert TargetClass._unified_subways == []
+    assert TargetClass._fletfly_subways == set()
     assert HiddenChild not in Airway._registered_children
-
-
-def test_03():
-    # Scenario: If an attribute matches a name in aliases["subways_alias"],
-    # but its value is not a list or a tuple (e.g., a string or None), 
-    # the method should ignore it safely without throwing exceptions.
-    
-    class InvalidAliasClass:
-        path = "invalid-alias"
-        _build = dummy_build
-        subways = "not-a-list-or-tuple"  # Invalid type matching alias name
-        sub_routes = None  # None value matching alias name
-
-    result = Airway._unify_class_subways(InvalidAliasClass)
-
-    assert len(result) == 0
-    assert result == []
-    assert InvalidAliasClass._unified_subways == []
 
 
 def test_04():
@@ -114,4 +96,4 @@ def test_04():
     assert ComponentC in result
     
     # Ensure all are stored correctly in the list attribute
-    assert set(MixedParent._unified_subways) == {ComponentA, ComponentB, ComponentC}
+    assert set(MixedParent._fletfly_subways) == {ComponentA, ComponentB, ComponentC}

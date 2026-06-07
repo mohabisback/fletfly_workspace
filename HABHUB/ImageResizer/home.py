@@ -1,6 +1,6 @@
 #/ImageResizer/home.py
 import flet as ft
-import fletfly.fletfly as fty
+import fletfly as fty
 def get_view(page):
 
     TITLE = "Hab Image Resizer Pro"

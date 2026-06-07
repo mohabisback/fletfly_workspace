@@ -9,14 +9,12 @@ def reset_fletfly_state():
     to prevent test pollution caused by Singletons and class-level maps.
     """
     Airway._map.clear()
-    Airway._pending_classes.clear()
     Airway._pending_airways.clear()
     Airway._registered_children.clear()
     Airway._map.clear()
     Airline._instance = None
     Airline.auto_path_naming = True
-    Airline.auto_detect_routes = True
-    Airline.detect_decorated_classes = True
+    Airline.detect_path_routes = True
     Airline.detect_airway_subclasses = True
     Airline.detect_inner_classes = True
     Airline.detect_method_routes = True

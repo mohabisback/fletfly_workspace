@@ -32,15 +32,13 @@ def test_detect_methods_routes_disabled():
     airway, kids = Airway._airway_from_class(DashboardPage)
     
     # Parent path can be auto-named, but kids list must be completely empty
-    assert airway.path == "dashboard-page"
+    assert airway._class == DashboardPage
     assert len(kids) == 0
 
 def test_inheritance_and_decorations_disabled_inside_append_classes():
-    # Scenario: When detect_airway_subclasses and detect_decorated_classes are both False, 
     # _append_classes must completely ignore pending decorated queues and subclass trees,
     # processing ONLY the manually handed classes pool.
     
-    Airline.detect_decorated_classes = False
     Airline.detect_airway_subclasses = False
     Airline.auto_path_naming = True
 
@@ -73,6 +71,3 @@ def test_inheritance_and_decorations_disabled_inside_append_classes():
     # 2. Both disabled discovery source vectors must NOT bleed into the tree map
     assert "/deco-gate" not in Airway._map
     assert "/subclass-gate" not in Airway._map
-
-    # Clean global states
-    Airway._pending_classes.clear()

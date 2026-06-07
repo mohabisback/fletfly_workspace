@@ -46,7 +46,7 @@ class SampleHandler:
 
 def test_integration_basic_mapping():
     # x is required, y should fall back to its default "hi"
-    res = _call_with_payload(sample_clean_func, MOCK_PAGE, [{"x": 10}])
+    res = _call_with_payload(sample_clean_func, MOCK_PAGE, [{"x": 10}], False, False)
     assert res == (10, "hi")
 
 
@@ -56,40 +56,40 @@ def test_integration_page_injection_and_priority():
         {"user_id": 101, "theme": "light"},
         {"user_id": 202, "theme": "dark"}
     ]
-    res = _call_with_payload(sample_with_page, MOCK_PAGE, availables)
+    res = _call_with_payload(sample_with_page, MOCK_PAGE, availables, False, False)
     assert res == (MOCK_PAGE, 101)
 
 
 def test_integration_kwargs_forwarding():
     # Extra arguments should be captured by **kwargs smoothly
     availables = [{"item_id": 50, "extra_1": "val1", "extra_2": "val2"}]
-    res = _call_with_payload(sample_with_kwargs, MOCK_PAGE, availables)
+    res = _call_with_payload(sample_with_kwargs, MOCK_PAGE, availables, False, False)
     assert res == (MOCK_PAGE, 50, {"extra_1": "val1", "extra_2": "val2"})
 
 
 def test_integration_missing_argument_raises_error():
     # sample_clean_func requires 'x', providing only 'y' must raise ValueError
     with pytest.raises(ValueError) as exc_info:
-        _call_with_payload(sample_clean_func, MOCK_PAGE, [{"y": "hello"}])
+        _call_with_payload(sample_clean_func, MOCK_PAGE, [{"y": "hello"}], False, False)
     assert "Missing required argument" in str(exc_info.value)
 
 
 def test_integration_instance_method_execution():
     handler = SampleHandler()
     # Testing bound method execution through the framework pipeline
-    res = _call_with_payload(handler.method, MOCK_PAGE, [{"x": 55}])
+    res = _call_with_payload(handler.method, MOCK_PAGE, [{"x": 55}], False, False)
     assert res == (55, "hi")
 
 
 def test_integration_classmethod_execution():
     # Testing classmethod execution through the framework pipeline (cls must be omitted)
-    res = _call_with_payload(SampleHandler.class_method, MOCK_PAGE, [{"x": 77}])
+    res = _call_with_payload(SampleHandler.class_method, MOCK_PAGE, [{"x": 77}], False, False)
     assert res == (77, "hi")
 
 
 def test_integration_staticmethod_execution():
     # Testing staticmethod execution through the framework pipeline
-    res = _call_with_payload(SampleHandler.static_method, MOCK_PAGE, [{"x": 88}])
+    res = _call_with_payload(SampleHandler.static_method, MOCK_PAGE, [{"x": 88}], False, False)
     assert res == (88, "hi")
 
 

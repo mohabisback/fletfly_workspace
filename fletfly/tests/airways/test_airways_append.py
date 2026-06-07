@@ -11,8 +11,7 @@ def test_01_airway_multi_parenting():
     # All are discovered via the pending airways queue. The shared child must be mounted
     # under both parents correctly without being exposed as a standalone top-level root.
     
-    Airline.auto_detect_routes = True
-    Airline.detect_decorated_classes = False
+    Airline.detect_path_routes = True
     Airline.detect_airway_subclasses = False
 
     # Create pure airway objects (Simulating registration inside __init__)
@@ -49,8 +48,7 @@ def test_02_airway_hybrid_role():
     # Since it's picked up in the pending queue, it must be filtered from being a standalone root
     # because it is already unified and registered as a child of root_node.
     
-    Airline.auto_detect_routes = True
-    Airline.detect_decorated_classes = False
+    Airline.detect_path_routes = True
 
     Airway._pending_airways.clear()
     Airway._registered_children.clear()
@@ -86,8 +84,7 @@ def test_03_airway_duplicate_handling_in_subways_list():
     # An Airway object includes the same child Airway multiple times in its subways list.
     # The system's set-based unification must deduplicate this gracefully without double injection.
     
-    Airline.auto_detect_routes = True
-    Airline.detect_decorated_classes = False
+    Airline.detect_path_routes = True
 
     Airway._pending_airways.clear()
     Airway._registered_children.clear()
@@ -108,41 +105,3 @@ def test_03_airway_duplicate_handling_in_subways_list():
     assert "/confused-parent" in Airway._map
     assert "/confused-parent/ultimate-leaf" in Airway._map
     assert "/ultimate-leaf" not in Airway._map
-
-
-def test_04_airway_decorator_double_registration_warning(capsys):
-    # Scenario 4: Double Registration Prevention & Warning Logic
-    # Tests the newly added feature where an Airway object is used as a decorator on a class.
-    # If both detect_decorated_classes and auto_detect_routes are True, the pending airway 
-    # must be skipped (ignored) to prevent duplication, and a clean warning must be logged.
-    
-    Airline.auto_detect_routes = True
-    Airline.detect_decorated_classes = True
-
-    Airway._pending_airways.clear()
-    Airway._registered_children.clear()
-    if hasattr(Airway, "_map"): Airway._map.clear()
-
-    class DummyDecoratedClass:
-        pass
-
-    duplicated_airway = Airway("duplicated-route")
-    # Simulate the decorator binding the class context onto the Airway instance
-    duplicated_airway._class = DummyDecoratedClass
-
-    Airway._pending_airways = {duplicated_airway}
-
-    # Execute consolidation
-    Airway._create_tree(handed_classes=None)
-
-    # Assertions for Scenario 4:
-    # 1. The route from final_airways should be ignored (not mapped as a pure airway here)
-    assert "/duplicated-route" not in Airway._map
-    
-    # 2. The temporary _class attribute must be wiped clean as designed to prevent future deception
-    assert duplicated_airway._class is None
-
-    # 3. Verify the warning message was printed to stdout and contains the class name
-    captured = capsys.readouterr()
-    assert "[fletfly] Warning:" in captured.out
-    assert "DummyDecoratedClass" in captured.out

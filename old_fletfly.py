@@ -76,7 +76,6 @@ class Airway():
     _airways_all = set() # every created or cloned airway
     _airways_wild = set() # original but never adopted
     _registered_classes = None
-    _pending_classes = None
     def __setattr__(self, name, value):
         if name in _rev_clsattres:
             name = _rev_clsattres[name].replace("_clsattr", "")

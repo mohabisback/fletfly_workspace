@@ -1,10 +1,10 @@
 #main.py
 import flet as ft
 import fletfly as fty
-from HABHUB.Me.home import get_view as get_home
-from HABHUB.Me.error import get_view as get_err
-from HABHUB.ImageResizer_main import Pages as ImageResizer
-from HABHUB.ImageResizer_main import airway as ImageResizerAirzone
+from Me.home import get_view as get_home
+from Me.error import get_view as get_err
+from ImageResizer_main import Pages as ImageResizer
+from ImageResizer_main import airway as ImageResizerAirzone
 
 TITLE = "HabHub Mohab's Portal"
 Pages = {
@@ -78,7 +78,7 @@ airzone = fty.airway(path="/", builder=get_home, fly_in=fly_in1, subways=[
     fty.Airzone(ImageResizerAirzone, "/resizer") 
     ]),
 
-fty.Airline(airzone, error_build="error", max_pads = 5)
+fty.Airline(airzone, error_path="error", max_pads = 5)
 
 def main(page: ft.Page):
     

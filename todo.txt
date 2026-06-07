@@ -89,3 +89,90 @@ can i make the router not in page level? or 2 routers in the page?
 المستخدم انتقل إلى /user/settings -> الـ Layout الخاص بالكلاس لا يزال ثابتاً، ودالة الابن settings أصبحت فعالة -> الكائن حي.
 
 طالما أن المشغل (Router) يتحرك داخل نطاق روابط هذا الكلاس، فإن الـ Instance تظل محفوظة في قاموس داخلي بالراوتر يسمى مثلاً active_instances.
+
+
+ok, lets handle the cases, with: MMA=Mark Method As, MCA=Mark Class As, CB=class based, FIM=function is me, FIB=function is build, route = creates new route, ->=returns, CTBC=considered to be cancelled
+
+
+
+### 0) Airway, # no obj, register in Airway._pending_airways
+
+# 0.0) Airway('user') call, # route, -> obj
+
+# 0.1) @Airway/class # route, route, MCA child-> class
+
+# 0.2) @Airway('user')/class # route, MCA child-> class
+
+# 0.3) @Airway('user')/func # no obj, FIB route + MMA child -> func
+
+
+
+#### 1) subway, no registry in Airway._pending_routes
+
+### 1.0) subway: class & no obj
+
+# 1.0.0) subway(class, parents=[], 'user') # CB route + inject parents, -> obj
+
+# 1.0.1) subway(class)=@subway/class # MCA child-> class
+
+# 1.0.2) @subway(parents=[], 'user')/class # CB route+inject+ MCA child, -> class
+
+## 1.1) subway: class & obj
+
+# 1.1.0) obj.subway(class, parents=[], 'user') # CB route + inject, -> obj
+
+# 1.1.1) obj.subway(class)=@obj.subway/class # CB route+inject+MCA -> class
+
+# 1.1.2)@obj.subway(parents=[], 'user')/class # CB route+inject+MCA -> class
+
+## 1.2)subway: func & no obj
+
+# 1.2.0)subway(func, parents=[], 'user') # FIB route + inject-> obj, 
+
+# 1.2.1)subway(func)=@subway/func # MMA child-> func, 
+
+# 1.2.2)@subway(parents=[], 'user')/func # FIB route + inject, -> func
+
+## 1.3) subway func & obj
+
+# 1.3.0)obj.subway(func, parents=[], 'user') # FIB route + inject, -> obj
+
+# 1.3.1)obj.subway(func)=@obj.subway/func # FIB route+inject+MMA -> func
+
+# 1.3.2)@obj.subway(parents=[], 'user')/func # FIB route+inject+MMA -> func
+
+
+### 2) layout, build, fly_in, fly_out, register in Airway._pending_airways
+
+## 2.0) layout: class & no obj
+
+# 2.0.0) layout(class, 'user') # CB route (special) -> obj
+
+# 2.0.1) layout(class)=@layout/class # CB route (special) -> class
+
+# 2.0.2) @layout('user')/class # CB route (special) -> class
+
+## 2.1) layout: class & obj
+
+# 2.1.0) obj.layout(class, 'user') # -> Ambiguous, ValueError
+
+# 2.1.1) obj.layout(class)=@obj.layout/class # -> Ambiguous, ValueError
+
+# 2.1.2)@obj.layout('user')/class # -> Ambiguous, ValueError
+
+## 2.2)layout: func & no obj
+
+# 2.2.0)layout(func, 'user') # dict -> dict, 
+
+# 2.2.1)layout(func)=@layout/func # MMA me-> func, 
+
+# 2.2.2)@layout('user')/func # MMA me, -> func
+
+## 2.3) layout func & obj
+
+# 2.3.0)obj.layout(func, 'user') # set method as mine -> obj
+
+# 2.3.1)obj.layout(func)=@obj.layout/func # set method as mine & MMA me -> func
+
+# 2.3.2)@obj.layout( 'user')/func # set method as mine & MMA me -> func
+

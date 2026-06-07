@@ -59,7 +59,8 @@ def test_direct_call_positional_arguments():
     # Expected order: inheritable then apply_per_view
     # Passing False for inheritable and True for apply_per_view positionally
     result = fly_in(dummy_middleware, False, True, role="admin")
-
+    
+    print(result)
     assert result["inheritable"] is False
     assert result["apply_per_view"] is True
     assert result["kwargs"] == {"role": "admin"}

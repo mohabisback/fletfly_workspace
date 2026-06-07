@@ -38,8 +38,8 @@ def test_airway_from_class_static_decorated_method():
     
     # According to the second loop logic, static flagged sets the official_name attribute directly
     assert hasattr(airway, "layout")
-    assert isinstance(airway._layout, _BuildLayoutDict)
-    assert callable(airway._layout["func"])
+    assert isinstance(airway.layout_clsattr, _BuildLayoutDict)
+    assert airway.layout_clsattr["func"] == "layout"
 
 
 def test_airway_from_class_automated_method_routing_kids():
@@ -68,9 +68,9 @@ def test_airway_from_class_undecorated_fly_in_out_accumulation():
 
     airway, class_kids = Airway._airway_from_class(MockMiddlewareCBV)
     
-    # Verify that fly_ins_clsattr correctly accumulates the _FlyInOutDict wrapper
-    assert hasattr(airway, "fly_ins_clsattr")
-    assert isinstance(airway.fly_ins_clsattr, list)
-    assert len(airway.fly_ins_clsattr) == 1
-    assert isinstance(airway.fly_ins_clsattr[0], _FlyInOutDict)
-    assert airway.fly_ins_clsattr[0]["func"] == "fly_in"
+    # Verify that fly_ins correctly accumulates the _FlyInOutDict wrapper
+    assert hasattr(airway, "fly_ins")
+    assert isinstance(airway.fly_ins, list)
+    assert len(airway.fly_ins) == 1
+    assert isinstance(airway.fly_ins[0], _FlyInOutDict)
+    assert airway.fly_ins[0]["func"] == "fly_in"

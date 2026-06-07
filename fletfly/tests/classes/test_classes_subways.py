@@ -45,8 +45,11 @@ def test_subway_integration_in_global_map():
             pass
 
     # Execute consolidation pool processing
-    Airway._create_tree(handed_classes=None)
+    Airway._create_tree()
     
+    for k, v in Airway._map.items():
+        print(9999999999999, v, ",", k)
+
     # Assertions for complete hierarchical registration inside the routing engine map
     assert "/portal" in Airway._map
     assert "/portal/financial-reports" in Airway._map
@@ -55,6 +58,3 @@ def test_subway_integration_in_global_map():
     assert Airway._map["/portal/financial-reports"]._class is CorporatePortal
     assert Airway._map["/portal/financial-reports"].build_clsattr == "reports"
     
-    # Clean up global states to keep subsequent test layers isolated
-    Airway._pending_classes.clear()
-    Airway._map.clear()

@@ -16,7 +16,7 @@ def test_mixed_instance_class_hierarchy():
 
     # 3. Level Three: Airway Instance (Father of Class)
     level_three_airway = Airway(path="level-three-airway")
-    level_three_airway.subway(LevelFourClass)
+    level_three_airway.subways=[LevelFourClass]
 
     # 2. Level Two: Class (Father of Airway Instance)
     class LevelTwoClass:
@@ -26,10 +26,8 @@ def test_mixed_instance_class_hierarchy():
 
     # 1. Level One: Airway Instance (Root - Father of Class)
     root_airway = Airway(path="root-airway")
-    root_airway.subway(LevelTwoClass)
+    root_airway.subways=[LevelTwoClass]
 
-    Airway._map = {}
-    Airway._pending_airways = {root_airway}
     Airway._create_tree()
 
     # Assertions to verify the entire combined path resolution
@@ -53,7 +51,7 @@ def test_mixed_class_first_hierarchy():
 
     # 2. Level Two: Airway Instance (Father of Class)
     level_two_airway = Airway(path="level-two-airway")
-    level_two_airway.subway(LevelThreeClass)
+    level_two_airway.subways=[LevelThreeClass]
 
     # 1. Level One: Class (Root - Father of Airway Instance)
     class RootClass:
@@ -64,6 +62,8 @@ def test_mixed_class_first_hierarchy():
     Airway._map = {}
     Airway._create_tree(handed_classes=[RootClass])
 
+    for k, v in Airway._map.items():
+        print(v, ",", k)
     # Assertions to verify the entire combined path resolution
     assert "/root-class" in Airway._map
     assert "/root-class/level-two-airway" in Airway._map

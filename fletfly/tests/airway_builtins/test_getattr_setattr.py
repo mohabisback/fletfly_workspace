@@ -20,12 +20,12 @@ def test_getattr_resolves_protected_alias():
     aw = Airway(build=dummy_build, layout=dummy_layout)
     
     # 'builder', 'view', 'element' map to build -> stored in _build
-    assert aw.builder == dummy_build
-    assert aw.view == dummy_build
-    assert aw.element == dummy_build
+    assert aw.builder["func"] == dummy_build
+    assert aw.view["func"] == dummy_build
+    assert aw.element["func"] == dummy_build
     
     # 'frame' maps to layout -> stored in _layout
-    assert aw.frame == dummy_layout
+    assert aw.frame["func"] == dummy_layout
 
 def test_getattr_raises_attribute_error_on_missing():
     """Verify __getattr__ raises AttributeError when field or alias does not exist."""

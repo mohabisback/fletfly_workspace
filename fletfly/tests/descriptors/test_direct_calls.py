@@ -36,13 +36,13 @@ def test_fly_in_direct_call_with_class():
     
     aw = Airway()
     
-    # Each call must be validated in an isolated block
-    with pytest.raises(ValueError):
-        fly_in(cls=SampleComponent, inheritable=True, apply_per_view=True)
-        
-    with pytest.raises(ValueError):
-        fly_out(SampleComponent, True, True)
-        
+    res1 = fly_in(cls=SampleComponent, inheritable=True, apply_per_view=True)
+    assert res1._class == SampleComponent
+    assert getattr(SampleComponent, "_fletfly_subway", "not there") == "not there"
+    assert not res1.fly_ins
+    assert getattr(SampleComponent, "inheritable", "not there") == "not there"
+    assert getattr(res1, "inheritable", "not there") == "not there"
+    
     with pytest.raises(ValueError):
         aw.fly_in(cls=SampleComponent, inheritable=True, apply_per_view=True)
         
@@ -64,13 +64,13 @@ def test_fly_in_direct_call_with_cls_keyword():
     assert res1["kwargs"].get("role") == "user"
     assert res1["kwargs"].get("override", "not there") == "not there"
 
-    assert isinstance(res2, _FlyInOutDict)
-    assert res2["func"] is dummy_func
-    assert res2["inheritable"] is True
-    assert res2["apply_per_view"] is True
-    assert res2.get("override", None) is None
-    assert res2["kwargs"].get("role") == "user"
-    assert res2["kwargs"].get("override", "not there") == "not there"
+    assert isinstance(res2, Airway)
+    assert res2.fly_outs[0]["func"] is dummy_func
+    assert res2.fly_outs[0]["inheritable"] is True
+    assert res2.fly_outs[0]["apply_per_view"] is True
+    assert res2.fly_outs[0].get("override", None) is None
+    assert res2.fly_outs[0]["kwargs"].get("role") == "user"
+    assert res2.fly_outs[0]["kwargs"].get("override", "not there") == "not there"
 
 
 def test_descriptor_bound_instance_setattr():
@@ -84,12 +84,14 @@ def test_descriptor_bound_instance_setattr():
         pass
         
     # Direct call through instance triggers instance-level assignment
-    res = aw.build(target_build, hero=True, role="user")
-    assert isinstance(res, _BuildLayoutDict)
-    assert aw._build == res
+    res1 = aw.build(target_build, hero=True, role="user")
+    assert isinstance(res1, Airway)
+    res2 = build(target_build, hero=True, role="user")
+    assert isinstance(res2, _BuildLayoutDict)
+    assert aw._build["func"] == target_build
     assert aw.build_hero == True
-    assert res["kwargs"].get("hero", "not there") == "not there"
-    assert res["kwargs"].get("role") == "user"
+    assert res2["kwargs"].get("hero", "not there") == "not there"
+    assert res2["kwargs"].get("role") == "user"
     assert getattr(aw, "role", None) is None
 
 
@@ -110,12 +112,3 @@ def test_pre_process_invalid_type_raises_type_error():
     # 'hero' argument expects a boolean value
     with pytest.raises(TypeError, match="Argument.*must be of type bool"):
         build(sample_func, hero="not-a-bool")
-
-
-def test_subway_descriptor_direct_call_validation():
-    """Test that calling subway directly without parents or instance raises ValueError."""
-    def sample_route():
-        pass
-        
-    with pytest.raises(ValueError, match="subway\\(\\) must have parents arguments"):
-        subway(sample_route, path="/home")

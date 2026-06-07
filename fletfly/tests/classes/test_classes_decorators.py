@@ -19,8 +19,8 @@ def test_01():
 
     airway, kids = Airway._airway_from_class(DecoratedRoute)
     
-    assert airway.build_clsattr == "my_custom_build"
-    assert airway.layout_clsattr == "my_custom_layout"
+    assert airway.build_clsattr["func"] == "my_custom_build"
+    assert airway.layout_clsattr["func"] == "my_custom_layout"
     # Ensure nested _fletfly_ attributes are stripped and diffused to the airway object
     assert getattr(airway, "build_hero", None) is True
     assert getattr(airway, "layout_hero", None) is True
@@ -56,7 +56,7 @@ def test_accumulative_decorators_append_instead_of_overwriting():
     airway, kids = Airway._airway_from_class(GuardedRoute)
     
     assert isinstance(airway.fly_ins, list)
-    assert isinstance(airway.fly_ins_clsattr, list)
-    assert len(airway.fly_ins_clsattr) == 2
-    assert "check_auth" in airway.fly_ins_clsattr
-    assert "check_premium" in airway.fly_ins_clsattr
+    assert isinstance(airway.fly_ins, list)
+    assert len(airway.fly_ins) == 2
+    assert airway.fly_ins[0]["func"]=="check_auth"
+    assert airway.fly_ins[1]["func"]=="check_premium"

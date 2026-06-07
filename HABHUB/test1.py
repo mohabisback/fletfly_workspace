@@ -10,7 +10,6 @@ def say_bye(name, age):
     return True
 
 def main(page: ft.Page):
-    # بنبعت قائمة (List) فيها الدالتين مباشرة
     Pages = {
         "": lambda _: ft.Text("Home Page"),
         "$midwares": [(say_hi, "mohab"), (say_bye, "mohab", 44)],

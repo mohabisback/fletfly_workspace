@@ -4,10 +4,10 @@ from fletfly import Airway, Airline
 
 def dummy_build(page): pass
 
-def test_auto_detect_routes_disabled():
-    # Scenario: When auto_detect_routes is False, the pending airways queue 
+def test_detect_path_routes_disabled():
+    # Scenario: When detect_path_routes is False, the pending airways queue 
     # must be completely ignored, processing ONLY the manually handed airways pool.
-    Airline.auto_detect_routes = False
+    Airline.detect_path_routes = False
 
     # Source 1: Handed manually
     manual_airway = Airway("manual-gate", build=dummy_build)
@@ -31,11 +31,6 @@ from fletfly import Airway, Airline
 def dummy_build(page): pass
 
 def test_auto_naming_with_disabled_detection():
-    # Scenario: Even if detect_decorated_classes is False, 
-    # if auto_path_naming is True, the decorated class must 
-    # be processed and auto-named to lowercase "user".
-    
-    Airline.detect_decorated_classes = False
     Airline.auto_path_naming = True
 
     route = Airway()

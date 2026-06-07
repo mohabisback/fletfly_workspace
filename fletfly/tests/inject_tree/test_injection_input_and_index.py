@@ -18,12 +18,12 @@ def test_01():
 
     result = Airway._inject_into_tree(parent_node)
     assert Airway._map[''].path == ""
-    assert Airway._map[''].is_placeholder is True
+    assert Airway._map['']._is_placeholder is True
     assert Airway._map['/dashboard'].path == "dashboard"
-    assert getattr(Airway._map['/dashboard'], "is_placeholder", None) is None
+    assert getattr(Airway._map['/dashboard'], "_is_placeholder", None) is None
     assert Airway._map['/dashboard'] == parent_node
     assert Airway._map['/dashboard/settings'].path == "settings"
-    assert getattr(Airway._map['/dashboard/settings'], "is_placeholder", None) is None
+    assert getattr(Airway._map['/dashboard/settings'], "_is_placeholder", None) is None
     assert Airway._map['/dashboard/settings'] == child_node
     assert result is parent_node
     # The list should contain exactly the child_node once (rebuilt via recursion)
@@ -54,29 +54,28 @@ def test_04():
     
     assert "" in Airway._map
     assert Airway._map["/a"].path == "a"
-    assert Airway._map["/a"].is_placeholder is True
+    assert Airway._map["/a"]._is_placeholder is True
     assert Airway._map["/a/b"].path == "b"
-    assert Airway._map["/a/b"].is_placeholder is True
+    assert Airway._map["/a/b"]._is_placeholder is True
     assert Airway._map["/a/b/c"].path == "c"
     assert Airway._map["/a/b/c"] == airway
-    assert getattr(Airway._map["/a/b/c"], "is_placeholder", None) is None
+    assert getattr(Airway._map["/a/b/c"], "_is_placeholder", None) is None
 
 
 def test_05():
     # Test single path with many far nodes
     airway = Airway(path="//c///d//")
     Airway._inject_into_tree(airway, parent_full_path="//a/b///")
-    print(Airway._map)
     assert "" in Airway._map
     assert Airway._map["/a"].path == "a"
-    assert Airway._map["/a"].is_placeholder is True
+    assert Airway._map["/a"]._is_placeholder is True
     assert Airway._map["/a/b"].path == "b"
-    assert Airway._map["/a/b"].is_placeholder is True
+    assert Airway._map["/a/b"]._is_placeholder is True
     assert Airway._map["/a/b/c"].path == "c"
-    assert Airway._map["/a/b/c"].is_placeholder is True
+    assert Airway._map["/a/b/c"]._is_placeholder is True
     assert Airway._map["/a/b/c/d"].path == "d"
     assert Airway._map["/a/b/c/d"] == airway
-    assert getattr(Airway._map["/a/b/c/d"], "is_placeholder", None) is None
+    assert getattr(Airway._map["/a/b/c/d"], "_is_placeholder", None) is None
 
 
 def test_inject_handle_index_early_return_alive():

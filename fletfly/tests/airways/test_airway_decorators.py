@@ -17,8 +17,8 @@ def test_01_pure_airway_decorators_diffusion():
     
 
     # Verify that the pure airway instance caught the function references
-    assert route._build == my_custom_build
-    assert route._layout == my_custom_layout
+    assert route._build["func"] == my_custom_build
+    assert route._layout["func"] == my_custom_layout
     
     # Ensure nested metadata attributes are stripped and diffused directly to the airway object
     assert getattr(route, "build_hero", None) is True
@@ -58,5 +58,5 @@ def test_accumulative_airway_decorators_append_instead_of_overwriting():
     # Verify that both functions are captured sequentially inside the list
     assert isinstance(route.fly_ins, list)
     assert len(route.fly_ins) == 2
-    assert check_auth in route.fly_ins
-    assert check_premium in route.fly_ins
+    assert route.fly_ins[0]["func"] == check_auth
+    assert route.fly_ins[1]["func"] == check_premium

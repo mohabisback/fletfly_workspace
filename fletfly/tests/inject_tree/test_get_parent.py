@@ -13,7 +13,7 @@ def test_get_parent_single_segment():
     parent = Airway._get_parent("/home")
     
     assert parent is not None
-    assert parent.is_placeholder is True
+    assert parent._is_placeholder is True
     assert "" in Airway._map
     assert Airway._map[""] is parent
 
@@ -24,13 +24,13 @@ def test_get_parent_deep_path_creation():
     
     assert parent is not None
     assert "" in Airway._map
-    assert Airway._map[""].is_placeholder is True
+    assert Airway._map[""]._is_placeholder is True
     assert "/admin" in Airway._map
     assert "admin" not in Airway._map
-    assert Airway._map["/admin"].is_placeholder is True
+    assert Airway._map["/admin"]._is_placeholder is True
     assert "/admin/settings" in Airway._map
     assert "admin/settings" not in Airway._map
-    assert Airway._map["/admin/settings"].is_placeholder is True
+    assert Airway._map["/admin/settings"]._is_placeholder is True
     
     root_node = Airway._map[""]
     admin_node = Airway._map["/admin"]
@@ -64,11 +64,11 @@ def test_get_parent_reuses_existing_nodes_in_map():
     
     # It must return the pre-existing real node, not override it with a placeholder
     assert parent is real_admin_node
-    assert getattr(parent, "is_placeholder", False) is False
+    assert getattr(parent, "_is_placeholder", False) is False
 
 def test_get_parent_reuses_existing_nodes_in_subways():
     """Verify that if a node exists in subways but not yet in _map under that specific trace, it is picked up."""
-    root_node = Airway(path="", is_placeholder=True)
+    root_node = Airway(path="", _is_placeholder=True)
     existing_child = Airway(path="blog")
     root_node.subways.append(existing_child)
     

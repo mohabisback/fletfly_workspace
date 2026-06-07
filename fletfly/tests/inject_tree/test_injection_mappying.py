@@ -14,7 +14,7 @@ def test_01():
     Airway._inject_into_tree(deep_node, parent_full_path="admin")
     
     placeholder_admin = Airway._map["/admin"]
-    assert placeholder_admin.is_placeholder is True
+    assert placeholder_admin._is_placeholder is True
     assert len(placeholder_admin.subways) == 1
     assert placeholder_admin.subways[0] is deep_node
 
@@ -27,7 +27,7 @@ def test_01():
     # Assertions
     assert result is real_admin
     assert Airway._map["/admin"] is real_admin
-    assert getattr(Airway._map["/admin"], "is_placeholder", None) is None
+    assert getattr(Airway._map["/admin"], "_is_placeholder", None) is None
     
     # The real node must have inherited the deep_node from the placeholder
     assert deep_node in real_admin.subways
@@ -45,7 +45,7 @@ def test_02():
     Airway._inject_into_tree(child_node)
     
     root_placeholder = Airway._map[""]
-    assert root_placeholder.is_placeholder is True
+    assert root_placeholder._is_placeholder is True
     assert child_node in root_placeholder.subways
     
     # Inject real root
@@ -56,7 +56,7 @@ def test_02():
     
     assert result is real_root
     assert Airway._map[""] is real_root
-    assert getattr(Airway._map[""], "is_placeholder", None) is None
+    assert getattr(Airway._map[""], "_is_placeholder", None) is None
     assert child_node in real_root.subways
 
 

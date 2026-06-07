@@ -35,9 +35,9 @@ def test_01():
     assert len(result_subways) == 2
     
     # Ensure that the unified list is stored as a class attribute on the parent
-    assert hasattr(ParentClass, "_unified_subways")
-    assert ChildOne in ParentClass._unified_subways
-    assert ChildTwo in ParentClass._unified_subways
+    assert hasattr(ParentClass, "_fletfly_subways")
+    assert ChildOne in ParentClass._fletfly_subways
+    assert ChildTwo in ParentClass._fletfly_subways
     
     # Ensure that they are registered in the global class cache of the library
     assert ChildOne in Airway._registered_children
@@ -77,7 +77,7 @@ def test_03():
         build = dummy_build
         Sub = LeafClass
 
-    # Unify the class tree first to build the internal _unified_subways structure
+    # Unify the class tree first to build the internal _fletfly_subways structure
     Airway._unify_class_subways(RootClass)
 
     # Inject the main class directly into the tree

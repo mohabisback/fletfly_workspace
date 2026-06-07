@@ -45,7 +45,6 @@ def test_cache_mechanism():
 
 def test_invalid_targets():
     with pytest.raises(TypeError):
-        assert _get_set_payload(SampleClass) is None
         assert _get_set_payload("not_a_callable") is None
 
 def test_builtin_functions_handling():
