@@ -42,4 +42,4 @@ def test_fallback_naming_disabled_configuration():
     
     with pytest.raises(ValueError):
         Airway._create_tree()
-    assert airway.path is None
+    assert airway._path is None

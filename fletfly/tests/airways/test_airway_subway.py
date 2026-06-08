@@ -16,24 +16,6 @@ def test_02():
 
     assert hasattr(SampleSubway, "build")
 
-def test_subway_decorator_syntax_and_attr_recording():
-    route_obj = Airway(path="/")
-    
-    @route_obj.subway("/billing")
-    class BillingSubway:
-        build = dummy_build
-
-    @route_obj.subway(path="/invoice")
-    class InvoiceSubway:
-        build = dummy_build
-
-    assert route_obj.subways[0]._class == BillingSubway
-    assert route_obj.subways[0].path == "/billing"
-    assert getattr(BillingSubway, "_fletfly_subway")[0]["path"] == "/billing"
-    assert getattr(InvoiceSubway, "_fletfly_subway")[0]["path"] == "/invoice"
-    assert route_obj.subways[1]._class == InvoiceSubway
-    assert route_obj.subways[1].path == "/invoice"      
-
 # --- Scenario 3: Tree Consolidation & Parent-Child Path Stitching ---
 
 def test_subway_integration_in_parent_tree_consolidation():
@@ -76,10 +58,8 @@ def test_subway_multi_parent_routing_resolution():
 def test_subway_runtime_attr_loop_integrity():
     route_obj = Airway(path="/")
     
-    @route_obj.subway(path="/dynamic-endpoint")
     class RuntimeTargetSubway:
         build = dummy_build
+    route_obj.subway(RuntimeTargetSubway, path="/dynamic-endpoint")
 
     assert route_obj.subways[0].path == "/dynamic-endpoint"
-    assert getattr(RuntimeTargetSubway, "_fletfly_subway")[0]["path"]=="/dynamic-endpoint"
-    assert getattr(RuntimeTargetSubway, "_fletfly_subway")[0]["kwargs"]=={}

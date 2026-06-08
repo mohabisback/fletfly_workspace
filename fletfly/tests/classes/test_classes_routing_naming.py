@@ -36,4 +36,4 @@ def test_fallback_naming_skipped_for_non_normal_decorated_airways():
     airway, kids = Airway._airway_from_class(CustomLayoutOnly)
     
     # Path must remain None because auto-naming is explicitly gated behind normal_airway condition
-    assert airway.path is None
+    assert airway._path is None

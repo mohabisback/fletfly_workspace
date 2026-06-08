@@ -43,10 +43,6 @@ def test_cache_mechanism():
     res2 = _get_set_payload(sample_clean_func)
     assert res1 is res2
 
-def test_invalid_targets():
-    with pytest.raises(TypeError):
-        assert _get_set_payload("not_a_callable") is None
-
 def test_builtin_functions_handling():
     with pytest.raises(ValueError):
         _get_set_payload(print)

@@ -10,6 +10,7 @@ def test_initial_data_loading():
     # Test if initial list data is loaded correctly during Airway initialization
     airway = Airway(fly_ins=[sample_middleware_1, sample_middleware_2])
     assert len(airway.fly_ins) == 2
+    print(airway.fly_ins)
     assert airway.fly_ins[0]["func"] == sample_middleware_1
 
 def test_calling_as_callable_method():
@@ -18,11 +19,11 @@ def test_calling_as_callable_method():
     result = airway.fly_ins(sample_middleware_1, sample_middleware_2, override=True)
     
     # Check chaining return value
-    assert result is airway.fly_ins
+    assert result == airway
     # Check internal data update
     assert len(airway.fly_ins) == 2
     # Check attribute dynamic assignment on owner
-    assert airway.fly_ins_override is True
+    assert airway._fly_in_override is True
 
 def test_list_mutations_append_and_extend():
     # Test that standard list operations work perfectly
@@ -31,17 +32,17 @@ def test_list_mutations_append_and_extend():
     # Test append
     airway.fly_ins.append(sample_middleware_1)
     assert len(airway.fly_ins) == 1
-    assert airway.fly_ins[0] == sample_middleware_1
+    assert airway.fly_ins[0]["func"] == sample_middleware_1
     
     # Test extend
     airway.fly_ins.extend([sample_middleware_2, sample_middleware_3])
     assert len(airway.fly_ins) == 3
-    assert airway.fly_ins[2] == sample_middleware_3
+    assert airway.fly_ins[2]["func"] == sample_middleware_3
 
 def test_fly_outs_behavior():
     # Test fly_outs method call and its independent override attribute
     airway = Airway()
     airway.fly_outs(sample_middleware_3, override=False)
     
-    assert airway.fly_outs_override is False
+    assert airway._fly_out_override is False
     assert airway.fly_outs[0]["func"] == sample_middleware_3

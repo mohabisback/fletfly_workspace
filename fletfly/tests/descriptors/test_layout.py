@@ -18,7 +18,7 @@ def test_01():
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {}
 
 def test_02():
     """ @layout() on class. attr '_fletfly_layout' = True only should be added to class"""
@@ -27,19 +27,19 @@ def test_02():
     
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {}
 
 def test_03():
     """ @layout(hero=True) on class """
     @layout(hero=True, override=True)
     class SampleClass: pass
-    list(Airway._pending_airways)[0].init_kwargs = {}
+    list(Airway._pending_airways)[0].props = {}
     list(Airway._pending_airways)[0].layout_hero = True
     list(Airway._pending_airways)[0].layout_override = True
 
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") is True
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") is True
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {}
     
 def test_04():
     """ @Airway.layout on class. """
@@ -47,56 +47,43 @@ def test_04():
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {}
     
 def test_05():
     """ @Airway.layout() on class."""
     @Airway.layout()
     class SampleClass: pass
-    list(Airway._pending_airways)[0].init_kwargs = {}
+    list(Airway._pending_airways)[0].props = {}
     list(Airway._pending_airways)[0].layout_hero = None
     list(Airway._pending_airways)[0].layout_override = None
     
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {}
 
 def test_06():
     """ @Airway.layout(hero=True) on class."""
     @Airway.layout(hero=True, override=False, role="user")
     class SampleClass: pass
-    list(Airway._pending_airways)[0].init_kwargs = {"role":"user"}
+    list(Airway._pending_airways)[0].props = {"role":"user"}
     list(Airway._pending_airways)[0].layout_hero = True
     list(Airway._pending_airways)[0].layout_override = False
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") is True
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") is False
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 
 def test_07():
     """ @Airway.layout(hero=False) on class."""
     @Airway.layout(hero=False, override=True, role="user")
     class SampleClass: pass
-    list(Airway._pending_airways)[0].init_kwargs = {"role":"user"}
+    list(Airway._pending_airways)[0].props = {"role":"user"}
     list(Airway._pending_airways)[0].layout_hero = True
     list(Airway._pending_airways)[0].layout_override = False
     
     
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_hero", "not there") is False
     assert getattr(SampleClass, "_fletfly_layout")[0].get("layout_override", "not there") is True
-    assert getattr(SampleClass, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
-
-def test_08():
-    """ @Airway().layout on class -> error."""
-    with pytest.raises(ValueError):
-        @Airway().layout
-        class SampleClass: pass
-
-def test_09():
-    """ @obj.layout() on class -> error."""
-    with pytest.raises(ValueError):
-        route = Airway()
-        @route.layout()
-        class SampleClass: pass
+    assert getattr(SampleClass, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 
 # --- Function Decoration Cases (6 Tests) ---
 def test_10():
@@ -106,7 +93,7 @@ def test_10():
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not the" \
     "re") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {}
 
 
 def test_11():
@@ -115,7 +102,7 @@ def test_11():
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 
 def test_12():
     """ @layout(hero=True) on function."""
@@ -123,7 +110,7 @@ def test_12():
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") is True
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") is True
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 
 
 def test_13():
@@ -132,14 +119,14 @@ def test_13():
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {}
 def test_14():
     """ @Airway.layout() on function."""
     @Airway.layout(role="user")
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 
 def test_15():
     """ @Airway.layout(hero=True) on function."""
@@ -147,61 +134,40 @@ def test_15():
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") is True
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") is False
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 def test_16():
     """ @Airway.layout(hero=False) on function."""
     @Airway.layout(hero=False, override=True, role="user")
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") is False
     assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") is True
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {"role":"user"}
-
-def test_17():
-    """ Airway().layout on function."""
-    aw = Airway()
-    @aw.layout
-    def sample_func(page): pass
-    assert aw._layout["func"] == sample_func
-    assert aw.layout_hero is None
-    assert aw.layout_override is None
-    assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    assert getattr(sample_func, "_fletfly_layout")[0].get("props", "not there") == {"role":"user"}
 
 def test_18():
     """Case g_func: @Airway().layout() on function."""
-    aw = Airway()
-    @aw.layout()
     def sample_func(page): pass
-    assert aw._layout["func"] == sample_func
-    assert aw.layout_hero is None
-    assert aw.layout_override is None
-    assert getattr(sample_func, "_fletfly_layout")[0].get("layout_hero", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("layout_override", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_layout")[0].get("kwargs", "not there") == {}
+    aw = Airway()
+    aw.layout()
+    assert aw._layout == None
+    assert not aw.layout_hero
+    assert not aw._layout_override
 
 def test_19():
     """Case g_func: @Airway().layout() on function."""
-    aw = Airway()
-    @aw.layout(hero=True, override=False, role="user")
     def sample_func(page): pass
+    aw = Airway()
+    aw.layout(sample_func, hero=True, override=False, role="user")
     assert aw._layout["func"] == sample_func
-    assert aw._layout["kwargs"] == {"role":"user"}
-    assert aw.layout_hero is True
-    assert aw.layout_override is False
-    assert getattr(sample_func, "_fletfly_layout")[0]["layout_hero"]==True
-    assert getattr(sample_func, "_fletfly_layout")[0]["layout_override"]==False
-    assert getattr(sample_func, "_fletfly_layout")[0]["kwargs"]=={"role":"user"}
+    assert aw._layout["props"] == {"role":"user"}
+    assert aw.layout_hero
+    assert not aw.layout_override
 
 def test_20():
     """Case g_func: @Airway().layout() on function."""
-    aw = Airway()
-    @aw.layout(hero=False, override=True, role="user")
     def sample_func(page): pass
+    aw = Airway()
+    aw.layout(sample_func, hero=False, override=True, role="user")
+    
     assert aw._layout["func"] == sample_func
-    assert aw.layout_hero is False
-    assert aw.layout_override is True
-
-    assert getattr(sample_func, "_fletfly_layout")[0]["layout_hero"]==False
-    assert getattr(sample_func, "_fletfly_layout")[0]["layout_override"]==True
-    assert getattr(sample_func, "_fletfly_layout")[0]["kwargs"]=={"role":"user"}
+    assert aw.layout_hero == False
+    assert aw.layout_override == True

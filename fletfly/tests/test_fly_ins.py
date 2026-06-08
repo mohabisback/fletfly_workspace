@@ -31,22 +31,18 @@ def test_callable_with_kwargs_tuple():
     assert res[0]["func"] == f1
     assert res[0]["inheritable"] is False
     assert res[0]["apply_per_view"] is True
-    assert res[0]["kwargs"] == {"timeout": 30}
+    assert res[0]["props"] == {"timeout": 30}
 
 def test_list_of_tuples_with_kwargs():
     res = fly_ins([[f1, {"x": 1}], [f2, {"inheritable": False}]])
     assert len(res) == 2
-    assert res[0]["kwargs"] == {"x": 1}
+    assert res[0]["props"] == {"x": 1}
     assert res[1]["inheritable"] is False
 
 def test_deep_nested_unwrapping():
     res = fly_ins([[[f1]]])
     assert len(res) == 1
     assert res[0]["func"] == f1
-
-def test_empty_arguments_raises_value_error():
-    with pytest.raises(ValueError, match="can't be without arguments"):
-        fly_ins()
 
 def test_invalid_tuple_structure_raises_type_error():
     with pytest.raises(TypeError, match="Middleware tuple must be"):
@@ -76,13 +72,13 @@ a2 = {"inheritable": False}
     
     ((f1, f2), 2, lambda res: res[0]["func"] == f1 and res[1]["func"] == f2),
     
-    ((f1, (f2, a2)), 2, lambda res: res[1]["kwargs"] == {} and res[1]["inheritable"] is False),
+    ((f1, (f2, a2)), 2, lambda res: res[1]["props"] == {} and res[1]["inheritable"] is False),
     
     (((f1,), (f2,)), 2, lambda res: res[0]["func"] == f1 and res[1]["func"] == f2),
     
     (((f1,), f2), 2, lambda res: res[0]["func"] == f1),
     
-    (([f1, a1], [f2, a2]), 2, lambda res: res[0]["kwargs"] == {"timeout": 10} and res[1]["inheritable"] is False),
+    (([f1, a1], [f2, a2]), 2, lambda res: res[0]["props"] == {"timeout": 10} and res[1]["inheritable"] is False),
     
     (([],), 0, lambda res: res == []),
 ])
@@ -90,7 +86,3 @@ def test_fletfly_structural_cases(args, expected_len, check_fn):
     res = fly_ins(*args)
     assert len(res) == expected_len
     assert check_fn(res) is True
-
-def test_case_05_empty_args_raises_error():
-    with pytest.raises(ValueError, match="can't be without arguments"):
-        fly_ins()

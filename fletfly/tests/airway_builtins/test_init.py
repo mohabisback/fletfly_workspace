@@ -8,7 +8,7 @@ def test_defaults():
     
     assert aw._build is None
     assert aw._layout is None
-    assert aw.path is None
+    assert aw._path is None
     assert aw.subways == []
     assert aw.fly_ins == []
     assert aw.fly_outs == []
@@ -36,7 +36,7 @@ def test_init_with_arguments():
     assert aw._build["func"] == dummy_build
     assert aw._layout["func"] == dummy_layout
     assert aw.subways == [subway_route]
-    assert aw.build_hero is True
+    assert aw._build_hero is True
 
 def test_adjust_locals_with_clsattres():
     """Verify kwargs aliases map correctly to official fields and get popped from kwargs."""
@@ -49,9 +49,8 @@ def test_adjust_locals_with_clsattres():
     assert aw._layout["func"] == dummy_layout
     assert aw._build["func"] == dummy_build
     assert aw.icon == "company_logo.png"
-    assert aw.init_kwargs == None
-    assert "element" in aw.kwargs
-    assert "frame" not in aw.kwargs
+    assert "element" in aw.props
+    assert "frame" not in aw.props
     assert hasattr(aw, "frame") is True
     assert hasattr(aw, "element") is True
     assert hasattr(aw, "logo") is True
@@ -82,4 +81,4 @@ def test_call_reconfiguration():
     assert result is aw
     assert aw.path == "/updated"
     assert aw.title == "New Title"
-    assert aw.build_hero is True
+    assert aw._build_hero is True

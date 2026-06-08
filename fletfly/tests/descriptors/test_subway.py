@@ -32,7 +32,6 @@ def test_subway_integration_in_parent_tree_consolidation():
     class SecuritySubway:
         build = dummy_build
 
-    MainDashboard.Guard = SecuritySubway
 
     Airway._create_tree(handed_classes=[MainDashboard])
 

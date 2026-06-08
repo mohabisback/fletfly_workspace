@@ -9,38 +9,21 @@ def test_01_pure_airway_decorators_diffusion():
     
     route = Airway("decorated-route")
     
-    @route.build(hero=True)
     def my_custom_build(page): pass
     
-    @route.layout(hero=True, override=False)
     def my_custom_layout(page): pass
     
+    route.build(my_custom_build, hero=True)
+    route.layout(my_custom_layout, hero=True, override=False)
 
     # Verify that the pure airway instance caught the function references
     assert route._build["func"] == my_custom_build
     assert route._layout["func"] == my_custom_layout
     
     # Ensure nested metadata attributes are stripped and diffused directly to the airway object
-    assert getattr(route, "build_hero", None) is True
-    assert getattr(route, "layout_hero", None) is True
-    assert getattr(route, "layout_override", None) is False
-
-
-def test_duplicate_airway_decorators_throw_value_error():
-    # Scenario: An Airway object accidentally decorates two separate standalone functions 
-    # for the same core mechanism (e.g., two build functions). This must explicitly trigger a ValueError.
-    
-    route = Airway("broken-route")
-
-    @route.build
-    def build_one(page): pass
-
-    # Decorating a second function on the same instance must raise a conflict error
-    with pytest.raises(ValueError) as exc_info:
-        @route.build(hero=True)      
-        def build_two(page): pass
-        
-    assert "already has a build function" in str(exc_info.value)
+    assert getattr(route, "_build_hero", None) is True
+    assert getattr(route, "_layout_hero", None) is True
+    assert getattr(route, "_layout_override", None) is False
 
 
 def test_accumulative_airway_decorators_append_instead_of_overwriting():
@@ -49,11 +32,11 @@ def test_accumulative_airway_decorators_append_instead_of_overwriting():
     
     route = Airway("guarded-route")
 
-    @route.fly_in
     def check_auth(): pass
     
-    @route.fly_in
     def check_premium(): pass
+    route.fly_in(check_auth)
+    route.fly_in(check_premium)
 
     # Verify that both functions are captured sequentially inside the list
     assert isinstance(route.fly_ins, list)

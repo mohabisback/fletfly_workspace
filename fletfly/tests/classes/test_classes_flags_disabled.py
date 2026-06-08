@@ -16,7 +16,7 @@ def test_auto_path_naming_disabled():
     airway, kids = Airway._airway_from_class(SilentRoute)
     
     # Path must strictly remain None because auto-naming is turned off
-    assert airway.path is None
+    assert airway._path is None
 
 
 def test_detect_methods_routes_disabled():

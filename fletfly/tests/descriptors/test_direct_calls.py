@@ -20,34 +20,8 @@ def test_layout_direct_call_returns_dict():
     res = layout(sample_view, hero=True, override=False, role="user")
     assert isinstance(res, _BuildLayoutDict)
     assert res["func"] is sample_view
-    assert res["kwargs"] == {"role":"user"}
+    assert res["props"] == {"role":"user"}
 
-
-def test_fly_in_direct_call_with_class():
-    """Test that passing 'cls' as a keyword argument converts it to 'func' properly."""
-    class SampleComponent:
-        pass
-    
-    aw = Airway()
-def test_fly_in_direct_call_with_class():
-    """Test that passing a class instead of a function raises ValueError."""
-    class SampleComponent:
-        pass
-    
-    aw = Airway()
-    
-    res1 = fly_in(cls=SampleComponent, inheritable=True, apply_per_view=True)
-    assert res1._class == SampleComponent
-    assert getattr(SampleComponent, "_fletfly_subway", "not there") == "not there"
-    assert not res1.fly_ins
-    assert getattr(SampleComponent, "inheritable", "not there") == "not there"
-    assert getattr(res1, "inheritable", "not there") == "not there"
-    
-    with pytest.raises(ValueError):
-        aw.fly_in(cls=SampleComponent, inheritable=True, apply_per_view=True)
-        
-    with pytest.raises(ValueError):
-        aw.fly_out(SampleComponent, True, True)
 
 def test_fly_in_direct_call_with_cls_keyword():
     """Test that passing 'cls' as a keyword argument converts it to 'func' properly."""
@@ -61,16 +35,16 @@ def test_fly_in_direct_call_with_cls_keyword():
     assert res1["inheritable"] is True
     assert res1["apply_per_view"] is True
     assert res1.get("override", None) is None
-    assert res1["kwargs"].get("role") == "user"
-    assert res1["kwargs"].get("override", "not there") == "not there"
+    assert res1["props"].get("role") == "user"
+    assert res1["props"].get("override", "not there") == "not there"
 
     assert isinstance(res2, Airway)
     assert res2.fly_outs[0]["func"] is dummy_func
     assert res2.fly_outs[0]["inheritable"] is True
     assert res2.fly_outs[0]["apply_per_view"] is True
     assert res2.fly_outs[0].get("override", None) is None
-    assert res2.fly_outs[0]["kwargs"].get("role") == "user"
-    assert res2.fly_outs[0]["kwargs"].get("override", "not there") == "not there"
+    assert res2.fly_outs[0]["props"].get("role") == "user"
+    assert res2.fly_outs[0]["props"].get("override", "not there") == "not there"
 
 
 def test_descriptor_bound_instance_setattr():
@@ -90,8 +64,8 @@ def test_descriptor_bound_instance_setattr():
     assert isinstance(res2, _BuildLayoutDict)
     assert aw._build["func"] == target_build
     assert aw.build_hero == True
-    assert res2["kwargs"].get("hero", "not there") == "not there"
-    assert res2["kwargs"].get("role") == "user"
+    assert res2["props"].get("hero", "not there") == "not there"
+    assert res2["props"].get("role") == "user"
     assert getattr(aw, "role", None) is None
 
 

@@ -57,7 +57,7 @@ def test_02():
         subways = [UniqueChild, UniqueChild]  # Intentionally duplicating the child in the list
 
     result = Airway._unify_class_subways(DuplicateParent)
-    
+    result = list(result)
     # Internal set logic must guarantee that the list contains exactly one unique instance
     assert len(result) == 1
     assert result[0] is UniqueChild

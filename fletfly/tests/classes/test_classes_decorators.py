@@ -22,9 +22,9 @@ def test_01():
     assert airway.build_clsattr["func"] == "my_custom_build"
     assert airway.layout_clsattr["func"] == "my_custom_layout"
     # Ensure nested _fletfly_ attributes are stripped and diffused to the airway object
-    assert getattr(airway, "build_hero", None) is True
-    assert getattr(airway, "layout_hero", None) is True
-    assert getattr(airway, "layout_override", None) is False
+    assert getattr(airway, "_build_hero", None) is True
+    assert getattr(airway, "_layout_hero", None) is True
+    assert getattr(airway, "_layout_override", None) is False
 
 
 def test_duplicate_decorators_throw_value_error():

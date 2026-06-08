@@ -172,7 +172,7 @@ ok, lets handle the cases, with: MMA=Mark Method As, MCA=Mark Class As, CB=class
 
 # 2.3.0)obj.layout(func, 'user') # set method as mine -> obj
 
-# 2.3.1)obj.layout(func)=@obj.layout/func # set method as mine & MMA me -> func
+# 2.3.1)obj.layout(func)=@obj.layout/func # set method as mine & MMA me -> obj
 
-# 2.3.2)@obj.layout( 'user')/func # set method as mine & MMA me -> func
+# 2.3.2)@obj.layout( 'user')/func # set method as mine & MMA me -> obj
 

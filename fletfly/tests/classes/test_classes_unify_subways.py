@@ -60,7 +60,7 @@ def test_02():
     result = Airway._unify_class_subways(TargetClass)
 
     assert len(result) == 0
-    assert result == []
+    assert result == set()
     assert TargetClass._fletfly_subways == set()
     assert HiddenChild not in Airway._registered_children
 

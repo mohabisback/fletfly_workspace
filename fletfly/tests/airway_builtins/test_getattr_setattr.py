@@ -10,7 +10,7 @@ def test_getattr_resolves_standard_alias():
 
     # 'route' is an alias for 'path'
     aw2 = Airway(path="/profile")
-    assert aw2.route == "/profile"
+    assert aw2.path == "/profile"
 
 def test_getattr_resolves_protected_alias():
     """Verify __getattr__ routes aliases for build and layout to their underscore versions."""
