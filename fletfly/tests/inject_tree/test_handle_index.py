@@ -46,7 +46,7 @@ def test_03():
     Airway._handle_index(parent, child1, subways=[])
     
     # Second assignment must fail
-    with pytest.raises(ValueError, match="already has index. Can't duplicate"):
+    with pytest.raises(ValueError, match="already has an index"):
         Airway._handle_index(parent, child2, subways=[])
 
 
@@ -60,7 +60,7 @@ def test_04():
     result = Airway._handle_index(parent, child, subways=[])
 
     assert result is True
-    assert parent.index is child
+    assert parent._index is child
     # Core check: Attributes must NOT diffuse to the parent anymore
     assert getattr(parent, "icon", None) != "dashboard_icon"
     assert getattr(parent, "title", None) != "Dashboard Title"
@@ -78,7 +78,7 @@ def test_05():
     result = Airway._handle_index(parent, child, subways=[])
 
     assert result is True
-    assert parent.index is child
+    assert parent._index is child
 
 
 def test_06(capsys):
@@ -87,20 +87,15 @@ def test_06(capsys):
     child = Airway(path="", build=dummy_build2)
     fake_subways = ["some_subway_route"]
 
-    result = Airway._handle_index(parent, child, subways=fake_subways)
 
-    assert result is True
-    assert parent.index is child
+    with pytest.raises(ValueError):
+        Airway._handle_index(parent, child, subways=fake_subways)
     
-    captured = capsys.readouterr()
-    assert "[fletfly] WARNING:" in captured.out
-    assert f"index for path='{parent.path}' can't have subroutes. All are ignored." in captured.out
-
 
 def test_07():
     # Should raise ValueError if child has neither _build nor class build indicators
     parent = Airway(path="/dashboard")
     child = Airway(path="")
     
-    with pytest.raises(ValueError, match="can't have index with no build"):
+    with pytest.raises(ValueError, match="must have a build view"):
         Airway._handle_index(parent, child, subways=[])

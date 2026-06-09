@@ -23,19 +23,6 @@ def test_recursive_airway_attribute_detection():
     assert "/level-one/level-two" in Airway._map
     assert "/level-one/level-two/level-three" in Airway._map
 
-def test_invalid_subways_list_type_ignored():
-    # Scenario: If 'subways' attribute is not a list or tuple, 
-    # the engine should ignore it safely without throwing exceptions.
-    invalid_airway = Airway(path="invalid-alias", _build=dummy_build)
-    invalid_airway.subways = "not-a-list-or-tuple"
-
-    # Should execute smoothly without errors
-    Airway._create_tree(handed_classes=[invalid_airway])
-    
-    assert "/invalid-alias" in Airway._map
-    assert len(invalid_airway.subways) == 0
-
-
 def test_mixed_attributes_and_subways_list():
     # Scenario: Cleanly combines direct Airway instance attributes 
     # and multiple airways defined within the 'subways' list.

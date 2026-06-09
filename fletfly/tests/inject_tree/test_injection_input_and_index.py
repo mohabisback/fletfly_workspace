@@ -96,4 +96,4 @@ def test_inject_handle_index_early_return_alive():
     assert result is child
     assert "" not in Airway._map
     assert "/" not in Airway._map
-    assert parent.index is child  # Verified that explicit reference assignment happened alive
+    assert parent._index is child  # Verified that explicit reference assignment happened alive

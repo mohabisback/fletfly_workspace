@@ -45,4 +45,5 @@ def test_fly_outs_behavior():
     airway.fly_outs(sample_middleware_3, override=False)
     
     assert airway._fly_out_override is False
+    print(airway.fly_outs[0])
     assert airway.fly_outs[0]["func"] == sample_middleware_3

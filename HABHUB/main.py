@@ -19,14 +19,19 @@ Pages = {
         }
 
 
-def fly_in1(page):
+def fly_in1(page, msg):
+    print("page:", page)
+    print(msg)
+
     return True
-def fly_in2(page):
-    return False
-def fly_in2(page):
+def fly_in2():
+    print("Done once every reconcile")
+    return True
+def fly_in3(page):
     return False
 # صفحة بسيطة
 def test_view(page: ft.Page):
+
     return ft.View(
         controls=[
             ft.AppBar(title=ft.Text(f"Test View")),
@@ -64,25 +69,33 @@ def search_view(page: ft.Page):
     )
 
 
-airzone = fty.airway(path="/", builder=get_home, fly_in=fly_in1, subways=[
+airzone = fty.airway(path="/", builder=get_home, fly_ins=[
+    fty.fly_in(fly_in1, msg="done once every build of home page", inheritable=False),
+    fly_in2, # default, done once every inheriting sub
+    fty.fly_in(fly_in1, msg="repeated every sub view", apply_per_view=False),
+    ], subways=[
     
-    # simple airway(route) with path(string) and builder(callable returns a view)
-    fty.airway(path="/error", builder=get_err),
+        # simple airway(route) with path(string) and builder(callable returns a view)
+        fty.airway(path="/error", builder=get_err),
 
-    # airway with subways(subroutes)
-    fty.airway(path="/about", fly_out=fly_in2, builder=search_view, subways=[
-        fty.airway(path="/contact_details", builder=profile_view),
-        fty.airway(path="/chat", fly_out=fly_in2, builder=test_view)
+        # airway with subways(subroutes)
+        fty.airway(path="/abouts", fly_out=fly_in2, builder=search_view, subways=[
+            fty.airway(fly_to="something", subways=[
+                fty.airway(path="/contact_details", builder=profile_view),
+                fty.airway(path="/chating", fly_out=fly_in2, builder=test_view, subways=[
+                    fty.airway('hi')
+                ])
+            ])
         ]),
-   
-    fty.Airzone(ImageResizerAirzone, "/resizer") 
-    ]),
+    
+        fty.Airzone(ImageResizerAirzone, "/resizer") 
+        ]),
 
-fty.Airline(airzone, error_path="error", max_pads = 5)
+fty.Airline(airzone, error_path="error", max_pads = 2, fly_pads= "all_from_last_port", print_path_zone="/abouts/chating")
 
-def main(page: ft.Page):
+def test_main(page= ft.Page()):
     
     page.title = TITLE
     fty.fly(page)
 if __name__ == "__main__":
-    ft.run(main)
+    ft.run(test_main)
