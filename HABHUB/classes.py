@@ -1,20 +1,20 @@
 
 import flet as ft
 import fletfly as fty
-from fletfly import Airway, fly
+from fletfly import Route, General, General, fly
 
 
-@Airway('home1')
+@Route('home1')
 class page1:
     pass
-    class page11(Airway): pass
+    class page11(Route): pass
 
-@Airway()
+@Route()
 class page2:
     route = ""
     def element(page):
         return ft.Text("Home")
-    class page21(Airway): pass
+    class page21(Route): pass
 
 
 def parent(cls):
@@ -24,7 +24,7 @@ def brother(cls):
     cls.brother = "Amer"
     return cls
 
-@Airway
+@Route
 class page3:
     route = "/home3" 
     def layout(page):
@@ -34,17 +34,17 @@ class page3:
             ft.Text("FFFFFFFFFFFFFFFF")
         ])
     
-    def build(page):
+    def view(page):
         return ft.Text("home3")
     def page31(page):
         return ft.Text("page 31, A func in the class, returning ft.Control, we'll treat it as a page")
     def page32(page):
-        return ft.Text("page 32, fast page, nothing but path, build & ref to the class")
-home = Airway("home1/home4")
+        return ft.Text("page 32, fast page, nothing but path, view & ref to the class")
+home = Route("home1/home4")
 @home
 class page4: pass
 
-home = Airway()
+home = Route()
 @home("/home1/home888/home999/home5")
 class page5:
     class page51:
@@ -53,23 +53,23 @@ class page5:
             path = "home511"
     class page52:
         pass
-        class page5(Airway):
+        class page5(Route):
             path = "525"
 
-class page6(Airway):
+class page6(Route):
     route = "/home1/home888"
 
-@Airway("/home1/home888/home999")
-class page7(Airway):
-    def build(page):
+@Route("/home1/home888/home999")
+class page7(Route):
+    def view(page):
         return ft.Text("home1/home888/home999")
 
-class page8(Airway):
+class page8(Route):
     path = "/:name/[age]/{address}"
-    def build(page):
+    def view(page):
         return ft.Text(f"This is home999 of {page.fly.params.get("name", "No one")}")
     class page81: pass
-class page9(Airway):
+class page9(Route):
     url = "/home9"
     class page91():
         url = "home91"
@@ -83,10 +83,10 @@ class page9(Airway):
         url = "home93"
         class page931(page1, page2, page3):
             path = "home931"
-    subways = [page6, page7, page8]
-page9.subways.append(page8)
+    children = [page6, page7, page8]
+page9.children.append(page8)
 
-class page0(Airway):
+class page0(Route):
     def layout(page):
         return ft.Column([
             ft.Text("This is a nice header"),
@@ -104,11 +104,11 @@ class page0(Airway):
                               fty.slot(page),
                               ft.Text("21 21 21 21 21 21")
             ])
-        def build(page):
+        def view(page):
             return ft.Text("This is page21")
         class page1:
             layout_override = True
-            def build(page):
+            def view(page):
                 return ft.Text("This is page 1")
     class page02:
         pass
@@ -127,10 +127,10 @@ weird = [
     {"page76":lambda p:ft.Text("bye")},
 
 
-    Airway("mohab", land=None, subways=[
-        Airway("Bilal", land=None),
-        Airway("Omar", land=None, subways=[
-            Airway("salem", land=None)
+    Route("mohab", land=None, children=[
+        Route("Bilal", land=None),
+        Route("Omar", land=None, children=[
+            Route("salem", land=None)
 
     ])])]
     

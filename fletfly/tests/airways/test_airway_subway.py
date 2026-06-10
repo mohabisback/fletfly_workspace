@@ -1,65 +1,65 @@
-# fletfly/tests/airways/test_airway_subway.py
+# fletfly/tests/routes/test_route_child.py
 import pytest
-from fletfly import Airline, Airway, subway
+from fletfly import Router, General, Route, child
 
-def dummy_build(page):
+def dummy_view(page):
     pass
 
-# --- Scenario 1: Instance-based Subway Decoration Cases ---
+# --- Scenario 1: Instance-based Child Decoration Cases ---
 def test_02():
-    """ @route_obj.subway() on class with empty parenthesis. """
-    route_obj = Airway(path="/")
+    """ @route_obj.child() on class with empty parenthesis. """
+    route_obj = Route(path="/")
     
-    @route_obj.subway()
-    class SampleSubway:
-        build = dummy_build
+    @route_obj.child()
+    class SampleChild:
+        view = dummy_view
 
-    assert hasattr(SampleSubway, "build")
+    assert hasattr(SampleChild, "view")
 
 # --- Scenario 3: Tree Consolidation & Parent-Child Path Stitching ---
 
-def test_subway_integration_in_parent_tree_consolidation():
-    # استخدام كائن Airway كأب مباشرة بدلاً من كلاس يرث منه
-    main_dashboard = Airway(path="dashboard", _build=dummy_build)
+def test_child_integration_in_parent_tree_consolidation():
+    # استخدام كائن Route كأب مباشرة بدلاً من كلاس يرث منه
+    main_dashboard = Route(path="dashboard", _view=dummy_view)
 
-    @main_dashboard.subway("/security-gate")
-    class SecuritySubway:
-        build = dummy_build
+    @main_dashboard.child("/security-gate")
+    class SecurityChild:
+        view = dummy_view
 
-    Airway._map = {}
-    Airway._create_tree(handed_classes=[main_dashboard])
+    General._tree_map = {}
+    Route._create_tree(handed_classes=[main_dashboard])
 
-    assert "/dashboard" in Airway._map
-    assert "/dashboard/security-gate" in Airway._map
-    assert "/security-gate" not in Airway._map
+    assert "/dashboard" in General._tree_map
+    assert "/dashboard/security-gate" in General._tree_map
+    assert "/security-gate" not in General._tree_map
 
 
-# --- Scenario 4: Multi-Parenting Divergence with Airway Instances ---
+# --- Scenario 4: Multi-Parenting Divergence with Route Instances ---
 
-def test_subway_multi_parent_routing_resolution():
-    customer_portal = Airway(path="customer", build=dummy_build)
-    enterprise_portal = Airway(path="enterprise", build=dummy_build)
+def test_child_multi_parent_routing_resolution():
+    customer_portal = Route(path="customer", view=dummy_view)
+    enterprise_portal = Route(path="enterprise", view=dummy_view)
 
-    @customer_portal.subway("/profile-view")
-    class SharedProfileSubway:
-        build = dummy_build
+    @customer_portal.child("/profile-view")
+    class SharedProfileChild:
+        view = dummy_view
 
-    enterprise_portal.subways.append(SharedProfileSubway)
+    enterprise_portal.children.append(SharedProfileChild)
 
-    Airway._map = {}
-    Airway._create_tree(handed_classes=[customer_portal, enterprise_portal])
+    General._tree_map = {}
+    Route._create_tree(handed_classes=[customer_portal, enterprise_portal])
 
-    assert Airway._map["/customer/profile-view"]._class == SharedProfileSubway
-    assert Airway._map["/enterprise/shared-profile-subway"]._class == SharedProfileSubway
+    assert General._tree_map["/customer/profile-view"]._class == SharedProfileChild
+    assert General._tree_map["/enterprise/shared-profile-child"]._class == SharedProfileChild
 
 
 # --- Scenario 5: Runtime Attr Recheck Preservation Simulation ---
 
-def test_subway_runtime_attr_loop_integrity():
-    route_obj = Airway(path="/")
+def test_child_runtime_attr_loop_integrity():
+    route_obj = Route(path="/")
     
-    class RuntimeTargetSubway:
-        build = dummy_build
-    route_obj.subway(RuntimeTargetSubway, path="/dynamic-endpoint")
+    class RuntimeTargetChild:
+        view = dummy_view
+    route_obj.child(RuntimeTargetChild, path="/dynamic-endpoint")
 
-    assert route_obj.subways[0].path == "/dynamic-endpoint"
+    assert route_obj.children[0].path == "/dynamic-endpoint"

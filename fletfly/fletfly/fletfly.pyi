@@ -28,21 +28,21 @@ class _Layout:
     
 class _ObjLayout:
     @overload
-    def __call__(self, hero: bool = None, override: bool = None) -> Airway: ...
+    def __call__(self, hero: bool = None, override: bool = None) -> Route: ...
     @overload
-    def __call__(self, func: Callable[..., Any], hero: bool = None, override: bool = None, props: dict = None, **kwargs: Any) -> Airway: ...
+    def __call__(self, func: Callable[..., Any], hero: bool = None, override: bool = None, props: dict = None, **kwargs: Any) -> Route: ...
     def __call__(self, *args: Any, **kwargs: Any) -> Any:
         """
         1/2 Direct call usage:
-            airway_obj.layout(hero=True, override=False)->airway_obj
+            route_obj.layout(hero=True, override=False)->route_obj
         2/2 Direct call usage:
-            airway_obj.layout(function, hero=True, param1=arg1)->airway_obj
+            route_obj.layout(function, hero=True, param1=arg1)->route_obj
         """
         ...
 
 layout: _Layout
 
-class Airway: 
+class Route: 
     layout: _Layout
 
 @overload

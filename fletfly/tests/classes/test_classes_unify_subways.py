@@ -1,47 +1,47 @@
-# fletfly/tests/classes/test_classes_unify_subways.py
-from fletfly import Airway
+# fletfly/tests/classes/test_classes_unify_children.py
+from fletfly import Route, General
 
-def dummy_build(page):
+def dummy_view(page):
     pass
 
 def test_01():
-    # Scenario: Verify that _unify_class_subways deeply scans inner class attributes 
+    # Scenario: Verify that _unify_class_children deeply scans inner class attributes 
     # and processes the entire tree recursively down to the leaf node.
     
     class LevelThree:
         path = "level-three"
-        build = dummy_build
+        view = dummy_view
 
     class LevelTwo:
         path = "level-two"
-        build = dummy_build
+        view = dummy_view
         Child = LevelThree  # Nested inner class attribute
 
     class LevelOne:
         path = "level-one"
-        build = dummy_build
+        view = dummy_view
         Child = LevelTwo  # Outer inner class attribute
 
     # Run unification on the root of this class tree
-    result = Airway._unify_class_subways(LevelOne)
+    result = Route._unify_class_children(LevelOne)
 
     # Assertions for LevelOne
     assert LevelTwo in result
     assert len(result) == 1
-    assert hasattr(LevelOne, "_fletfly_subways")
-    assert LevelOne._fletfly_subways == {LevelTwo}
+    assert hasattr(LevelOne, "_fletfly_children")
+    assert LevelOne._fletfly_children == {LevelTwo}
 
     # Assertions for recursive processing on LevelTwo
-    assert hasattr(LevelTwo, "_fletfly_subways")
-    assert LevelTwo._fletfly_subways == {LevelThree}
+    assert hasattr(LevelTwo, "_fletfly_children")
+    assert LevelTwo._fletfly_children == {LevelThree}
 
     # Assertions for recursive processing on LevelThree (Leaf node)
-    assert hasattr(LevelThree, "_fletfly_subways")
-    assert LevelThree._fletfly_subways == set()
+    assert hasattr(LevelThree, "_fletfly_children")
+    assert LevelThree._fletfly_children == set()
 
     # Verify global cache registration
-    assert LevelTwo in Airway._registered_children
-    assert LevelThree in Airway._registered_children
+    assert LevelTwo in General._registered_children
+    assert LevelThree in General._registered_children
 
 
 def test_02():
@@ -50,19 +50,19 @@ def test_02():
     
     class HiddenChild:
         path = "hidden"
-        _build = dummy_build
+        _view = dummy_view
 
     class TargetClass:
         path = "clean-route"
-        _build = dummy_build
+        _view = dummy_view
         _secret_route = HiddenChild  # Private attribute should be completely ignored
 
-    result = Airway._unify_class_subways(TargetClass)
+    result = Route._unify_class_children(TargetClass)
 
     assert len(result) == 0
     assert result == set()
-    assert TargetClass._fletfly_subways == set()
-    assert HiddenChild not in Airway._registered_children
+    assert TargetClass._fletfly_children == set()
+    assert HiddenChild not in General._registered_children
 
 
 def test_04():
@@ -86,9 +86,9 @@ def test_04():
         RouteB = ComponentB
         
         # Alias list containing another class
-        subways = [ComponentC]
+        children = [ComponentC]
 
-    result = Airway._unify_class_subways(MixedParent)
+    result = Route._unify_class_children(MixedParent)
 
     assert len(result) == 3
     assert ComponentA in result
@@ -96,4 +96,4 @@ def test_04():
     assert ComponentC in result
     
     # Ensure all are stored correctly in the list attribute
-    assert set(MixedParent._fletfly_subways) == {ComponentA, ComponentB, ComponentC}
+    assert set(MixedParent._fletfly_children) == {ComponentA, ComponentB, ComponentC}

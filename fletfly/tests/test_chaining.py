@@ -1,13 +1,13 @@
 # fletfly/tests/test_chaining.py
-from fletfly import Airway
+from fletfly import Route, General
 
-def test_airway_full_chaining():
+def test_route_full_chaining():
     def f1(): return "f1"
     def f2(): return "f2"
     def f3(): return "f3"
     def f4(): return "f4"
     
-    aw = Airway(fly_ins=[f1, (f2, {"role":"user", "apply_per_view":True})])
+    aw = Route(fly_ins=[f1, (f2, {"role":"user", "apply_per_view":True})])
     # Chain everything
     aw.path('home')\
       .fly_to('target')\
@@ -21,16 +21,16 @@ def test_airway_full_chaining():
       .middleware(f4)\
       .fly_outs([f1, (f2, {"role":"user", "apply_per_view":True})])\
       .fly_out(f3)\
-      .subways([
-        Airway('sub1').fly_to("home"),
-        Airway('sub2').icon("my_icon"),
-        Airway('sub3').title("my_title")
+      .children([
+        Route('sub1').fly_to("home"),
+        Route('sub2').icon("my_icon"),
+        Route('sub3').title("my_title")
                 ])
-    aw.subway("sub4").fly_to("home")
+    aw.child("sub4").fly_to("home")
     aw4 = aw.child("sub4").redirect("home")
     aw4.frame = f1
     #aw.is_zone = None
-    aw.build_hero = True
+    aw.view_hero = True
     aw.layout_hero = False
 
     # Assertions
@@ -46,7 +46,7 @@ def test_airway_full_chaining():
     assert aw.fly_out_override is not None
     assert aw._fly_out_override is None
     assert aw.is_zone == None
-    assert aw.build_hero == True
+    assert aw.view_hero == True
     assert aw.layout_hero == False
     assert aw.title == 'My Title'
     assert aw.icon == 'my-icon'
@@ -62,10 +62,10 @@ def test_airway_full_chaining():
     assert aw.fly_outs[0]["func"] == f1
     assert aw.fly_outs[1]["func"] == f2
     assert len(aw.fly_outs) == 3
-    assert len(aw.subways) == 5
-    assert aw.subways[0].path == "sub1"
-    assert aw.subways[1].path == "sub2"
-    assert aw.subways[2].path == "sub3"
-    assert aw.subways[3].path == "sub4"
-    assert aw.subways[4].fly_to == "home"
-    assert aw.subways[4]._layout["func"] == f1
+    assert len(aw.children) == 5
+    assert aw.children[0].path == "sub1"
+    assert aw.children[1].path == "sub2"
+    assert aw.children[2].path == "sub3"
+    assert aw.children[3].path == "sub4"
+    assert aw.children[4].fly_to == "home"
+    assert aw.children[4]._layout["func"] == f1

@@ -6,6 +6,6 @@ import asyncio
 # Landings = {
 #     "dashboard": {
 #         "$landing": get_dashboard,
-#         "$fly_out": [confirm_exit_guard] # هنا الـ Airline هينده الحارس ويستناه
+#         "$fly_out": [confirm_exit_guard] # هنا الـ Router هينده الحارس ويستناه
 #     }
 # }

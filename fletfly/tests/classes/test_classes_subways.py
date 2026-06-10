@@ -1,60 +1,60 @@
-# fletfly/tests/classes/test_classes_subway_decorator.py
+# fletfly/tests/classes/test_classes_child_decorator.py
 import pytest
-from fletfly import Airway, Airline, subway
+from fletfly import Route, General, Router, child
 
-def dummy_build(page):
+def dummy_view(page):
     pass
 
-def test_subway_explicit_path_and_diffusion():
-    # Scenario 1: Method decorated with @subway(path="...") explicit literal string.
+def test_child_explicit_path_and_diffusion():
+    # Scenario 1: Method decorated with @child(path="...") explicit literal string.
     # The explicit path must be captured directly without triggering delayed runtime lookups,
-    # and any extra metadata attributes must diffuse into the subway airway object correctly.
+    # and any extra metadata attributes must diffuse into the child route object correctly.
     
     class Dashboard:
         path = "main-dash"
         
-        @subway(path="user-analytics")
+        @child(path="user-analytics")
         def analytics(cls, page):
             pass
 
-    airway, kids = Airway._airway_from_class(Dashboard)
+    route, kids = Route._route_from_class(Dashboard)
     
     assert len(kids) == 1
-    sub_airway = kids[0]
+    sub_route = kids[0]
     
     # Assert explicit path is locked directly from decorator arguments
-    assert sub_airway.path == "user-analytics"
+    assert sub_route.path == "user-analytics"
     
     # Assert the actual function identifier is tracked for rendering execution
-    assert sub_airway.build_clsattr == "analytics"
+    assert sub_route.view_clsattr == "analytics"
     
     # Assert attribute diffusion mechanics worked with appropriate namespacing
 
-def test_subway_integration_in_global_map():
+def test_child_integration_in_global_map():
     # Scenario 3: Complete integration testing via the consolidation pipeline.
-    # A class with a @subway decorated method must cleanly inject its child route 
+    # A class with a @child decorated method must cleanly inject its child route 
     # under the parent route tree without any data isolation issues.
 
-    @Airway
+    @Route
     class CorporatePortal:
         path = "portal"
-        build = dummy_build
+        view = dummy_view
         
-        @subway(path="financial-reports")
+        @child(path="financial-reports")
         def reports(self, page):
             pass
 
     # Execute consolidation pool processing
-    Airway._create_tree()
+    Route._create_tree()
     
-    for k, v in Airway._map.items():
+    for k, v in General._tree_map.items():
         print(9999999999999, v, ",", k)
 
     # Assertions for complete hierarchical registration inside the routing engine map
-    assert "/portal" in Airway._map
-    assert "/portal/financial-reports" in Airway._map
+    assert "/portal" in General._tree_map
+    assert "/portal/financial-reports" in General._tree_map
     
     # Verify the child execution context points back to the parent component
-    assert Airway._map["/portal/financial-reports"]._class is CorporatePortal
-    assert Airway._map["/portal/financial-reports"].build_clsattr == "reports"
+    assert General._tree_map["/portal/financial-reports"]._class is CorporatePortal
+    assert General._tree_map["/portal/financial-reports"].view_clsattr == "reports"
     

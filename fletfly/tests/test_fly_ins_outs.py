@@ -1,49 +1,49 @@
 # fletfly/tests/test_fly_ins_outs.py
 import pytest
-from fletfly import Airway
+from fletfly import Route, General
 
 def sample_middleware_1(page): pass
 def sample_middleware_2(page): pass
 def sample_middleware_3(page): pass
 
 def test_initial_data_loading():
-    # Test if initial list data is loaded correctly during Airway initialization
-    airway = Airway(fly_ins=[sample_middleware_1, sample_middleware_2])
-    assert len(airway.fly_ins) == 2
-    print(airway.fly_ins)
-    assert airway.fly_ins[0]["func"] == sample_middleware_1
+    # Test if initial list data is loaded correctly during Route initialization
+    route = Route(fly_ins=[sample_middleware_1, sample_middleware_2])
+    assert len(route.fly_ins) == 2
+    print(route.fly_ins)
+    assert route.fly_ins[0]["func"] == sample_middleware_1
 
 def test_calling_as_callable_method():
     # Test calling fly_ins() as a method and updating the override attribute
-    airway = Airway()
-    result = airway.fly_ins(sample_middleware_1, sample_middleware_2, override=True)
+    route = Route()
+    result = route.fly_ins(sample_middleware_1, sample_middleware_2, override=True)
     
     # Check chaining return value
-    assert result == airway
+    assert result == route
     # Check internal data update
-    assert len(airway.fly_ins) == 2
+    assert len(route.fly_ins) == 2
     # Check attribute dynamic assignment on owner
-    assert airway._fly_in_override is True
+    assert route._fly_in_override is True
 
 def test_list_mutations_append_and_extend():
     # Test that standard list operations work perfectly
-    airway = Airway()
+    route = Route()
     
     # Test append
-    airway.fly_ins.append(sample_middleware_1)
-    assert len(airway.fly_ins) == 1
-    assert airway.fly_ins[0]["func"] == sample_middleware_1
+    route.fly_ins.append(sample_middleware_1)
+    assert len(route.fly_ins) == 1
+    assert route.fly_ins[0]["func"] == sample_middleware_1
     
     # Test extend
-    airway.fly_ins.extend([sample_middleware_2, sample_middleware_3])
-    assert len(airway.fly_ins) == 3
-    assert airway.fly_ins[2]["func"] == sample_middleware_3
+    route.fly_ins.extend([sample_middleware_2, sample_middleware_3])
+    assert len(route.fly_ins) == 3
+    assert route.fly_ins[2]["func"] == sample_middleware_3
 
 def test_fly_outs_behavior():
     # Test fly_outs method call and its independent override attribute
-    airway = Airway()
-    airway.fly_outs(sample_middleware_3, override=False)
+    route = Route()
+    route.fly_outs(sample_middleware_3, override=False)
     
-    assert airway._fly_out_override is False
-    print(airway.fly_outs[0])
-    assert airway.fly_outs[0]["func"] == sample_middleware_3
+    assert route._fly_out_override is False
+    print(route.fly_outs[0])
+    assert route.fly_outs[0]["func"] == sample_middleware_3

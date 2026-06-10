@@ -1,10 +1,10 @@
 import flet as ft
 import fletfly as fty
-from fletfly import Airway, fly, layout
+from fletfly import Route, General, General, fly, layout
 
 
-route = Airway('/home')
-@Airway()
+route = Route('/home')
+@Route()
 class A:
 
     @layout(True, True)

@@ -11,12 +11,12 @@ slot(page),
 slot(page),
 slot(page, "footer")
 
-def build(page):
+def view(page):
 return{1:[ft.Row,ft.Column], #controls in slot controls, check the slot else inject the first in content with warning message
 #:ignore second slot
 3:ft.Something, 
 "footer":ft.Somthing}
-def build(page):
+def view(page):
 return ft.shit, [ft.shit, ft.shit], {"2":ft.shit, "footer":[ft.shit, ft.shit]}
 no dictionary needed, but if it is there, سكّن المذكورين بالنص، وبعدين لف على المتاح
 حلو كده ولا اختصار مخلّ؟
@@ -157,7 +157,7 @@ def main(page: ft.Page):
     page.title = "FletFly Ultimate Collision & Memory Isolation Test"
     print("--- [STARTING ULTIMATE ISOLATION VERIFICATION] ---")
     
-    # Trigger routing engine to build and inject both page structures independently
+    # Trigger routing engine to view and inject both page structures independently
     admin_ui = render_page(page, layout_func=AdminViews.layout, page_func=admin_home_page)
     print("--------------------------------------------------")
     user_ui = render_page(page, layout_func=UserViews.layout, page_func=user_home_page)

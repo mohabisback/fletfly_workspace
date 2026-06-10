@@ -37,8 +37,8 @@ def run_publish(filename):
 
     # 2. بناء الـ Wheel
     if os.path.exists(TEMP_DIST): shutil.rmtree(TEMP_DIST)
-    print("Building fresh wheel...")
-    subprocess.run([sys.executable, "-m", "build", LIB_PATH, "--outdir", TEMP_DIST], check=True)
+    print("Viewing fresh wheel...")
+    subprocess.run([sys.executable, "-m", "view", LIB_PATH, "--outdir", TEMP_DIST], check=True)
 
     # 3. تثبيت الـ Wheel (عشان الـ publish يراها كـ package)
     wheels = [f for f in os.listdir(TEMP_DIST) if f.endswith(".whl")]

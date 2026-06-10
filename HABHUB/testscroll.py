@@ -8,7 +8,7 @@ async def confirm_exit_guard():
     page = fty.page 
     
     if page is None:
-        print("ERROR: fty.page is None! Check if Airline initialized it.")
+        print("ERROR: fty.page is None! Check if Router initialized it.")
         return True
 
     confirm_event = asyncio.Event()
@@ -90,5 +90,5 @@ Pages = {
         }
         }
 def main(page):
-    fty.Airline(page,Pages)
+    fty.Router(page,Pages)
 ft.run(main)

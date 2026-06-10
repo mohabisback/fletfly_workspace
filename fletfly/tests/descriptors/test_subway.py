@@ -1,61 +1,61 @@
-# fletfly/tests/descriptors/test_subway.py
+# fletfly/tests/descriptors/test_child.py
 import pytest
-from fletfly import Airline, Airway, subway
+from fletfly import Router, Route, General, child
 
-class DummyParent(Airway):
+class DummyParent(Route):
     path = "dummy"
-def dummy_build(page):
+def dummy_view(page):
     pass
 
 # --- Class Decoration Cases ---
 def test_02():
-    """ @subway() on class with parents. """
-    @subway(parents=[DummyParent])
-    class SampleSubway:
-        build = dummy_build
+    """ @child() on class with parents. """
+    @child(parents=[DummyParent])
+    class SampleChild:
+        view = dummy_view
 
-    assert hasattr(SampleSubway, "build")
+    assert hasattr(SampleChild, "view")
 
 def test_06():
-    """ Ensure no '_fletfly_subway' flag is explicitly set or required. """
-    @subway("/profile", parents=[DummyParent])
-    class ProfileSubway:
-        build = dummy_build
-    assert getattr(ProfileSubway, "_fletfly_subway", None)[0]["path"] == "/profile"
+    """ Ensure no '_fletfly_child' flag is explicitly set or required. """
+    @child("/profile", parents=[DummyParent])
+    class ProfileChild:
+        view = dummy_view
+    assert getattr(ProfileChild, "_fletfly_child", None)[0]["path"] == "/profile"
 
-def test_subway_integration_in_parent_tree_consolidation():
-    class MainDashboard(Airway):
+def test_child_integration_in_parent_tree_consolidation():
+    class MainDashboard(Route):
         path = "dashboard"
-        build = dummy_build
+        view = dummy_view
 
-    @subway("/security-gate", parents=[MainDashboard])
-    class SecuritySubway:
-        build = dummy_build
-
-
-    Airway._create_tree(handed_classes=[MainDashboard])
-
-    assert "/dashboard" in Airway._map
-    assert "/dashboard/security-gate" in Airway._map
-    assert "/security-gate" not in Airway._map
+    @child("/security-gate", parents=[MainDashboard])
+    class SecurityChild:
+        view = dummy_view
 
 
-def test_subway_multi_parent_routing_resolution():
-    class CustomerPortal(Airway):
+    Route._create_tree(handed_classes=[MainDashboard])
+
+    assert "/dashboard" in General._tree_map
+    assert "/dashboard/security-gate" in General._tree_map
+    assert "/security-gate" not in General._tree_map
+
+
+def test_child_multi_parent_routing_resolution():
+    class CustomerPortal(Route):
         path = "customer"
-        build = dummy_build
+        view = dummy_view
 
-    class EnterprisePortal(Airway):
+    class EnterprisePortal(Route):
         path = "enterprise"
-        build = dummy_build
+        view = dummy_view
 
-    @subway("/profile-view", parents=[CustomerPortal, EnterprisePortal])
-    class SharedProfileSubway:
-        build = dummy_build
+    @child("/profile-view", parents=[CustomerPortal, EnterprisePortal])
+    class SharedProfileChild:
+        view = dummy_view
 
-    EnterprisePortal.subways = [SharedProfileSubway]
+    EnterprisePortal.children = [SharedProfileChild]
 
-    Airway._create_tree(handed_classes=[CustomerPortal, EnterprisePortal])
-    for key in Airway._map:
+    Route._create_tree(handed_classes=[CustomerPortal, EnterprisePortal])
+    for key in General._tree_map:
         print(1111111111111, key)
-    assert Airway._map["/customer/profile-view"]._class == Airway._map["/enterprise/profile-view"]._class
+    assert General._tree_map["/customer/profile-view"]._class == General._tree_map["/enterprise/profile-view"]._class

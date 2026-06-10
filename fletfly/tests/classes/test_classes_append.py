@@ -1,8 +1,8 @@
 # fletfly/tests/classes/test_classes_append.py
 import pytest
-from fletfly import Airway, Airline
+from fletfly import Route, General, General, Router
 
-def dummy_build(page):
+def dummy_view(page):
     pass
 
 def test_01():
@@ -13,106 +13,106 @@ def test_01():
 
     class Deep_Shared_Leaf:
         # No explicit path! Relying completely on auto-naming: "deep-shared-leaf"
-        build = dummy_build
+        view = dummy_view
 
-    # Parent One: Discovered via Pending Queue (Simulating @Airway)
+    # Parent One: Discovered via Pending Queue (Simulating @Route)
     class Explicit_Parent_One:
         path = "custom-first-gate"
-        build = dummy_build
+        view = dummy_view
         Child = Deep_Shared_Leaf
 
 
     # Parent Two: Discovered via Inheritance (Auto-named: "inherited-parent-two")
-    class Inherited_Parent_Two(Airway):
-        build = dummy_build
+    class Inherited_Parent_Two(Route):
+        view = dummy_view
         Sub = Deep_Shared_Leaf
 
     # Execute consolidation pool
-    Airway._create_tree([Explicit_Parent_One])
+    Route._create_tree([Explicit_Parent_One])
 
     # Assertions for Scenario 1:
     # Verify both parent paths resolved correctly based on their distinct configurations
-    assert "/custom-first-gate" in Airway._map
-    assert "/inherited-parent-two" in Airway._map
+    assert "/custom-first-gate" in General._tree_map
+    assert "/inherited-parent-two" in General._tree_map
 
     # Verify that the single leaf class successfully expanded its auto-generated identity 
     # under both unique parent branches simultaneously without any state leakage or overwriting
-    assert "/custom-first-gate/deep-shared-leaf" in Airway._map
-    assert "/inherited-parent-two/deep-shared-leaf" in Airway._map
+    assert "/custom-first-gate/deep-shared-leaf" in General._tree_map
+    assert "/inherited-parent-two/deep-shared-leaf" in General._tree_map
     
     # Ensure it didn't accidentally get exposed as a top-level route
-    assert "/deep-shared-leaf" not in Airway._map
+    assert "/deep-shared-leaf" not in General._tree_map
 
 
 def test_02():
     # Scenario 2: The "Hybrid Role" Edge Case (A Node being both a Parent and a Child)
     # Class MidNode is explicitly defined as a child inside RootNode.
-    # At the exact same time, MidNode inherits from Airway, making it discoverable as a Root.
+    # At the exact same time, MidNode inherits from Route, making it discoverable as a Root.
     # The system must process MidNode as a child under RootNode, but ALSO allow it to exist 
     # as a standalone Root route if it wasn't filtered, OR ensure it's locked down based on global child registration status.
     
     class LeafNode:
         path = "leaf"
-        build = dummy_build
+        view = dummy_view
 
-    # MidNode plays a dual role: Inherits from Airway (Potential Root) but is also adopted by RootNode
+    # MidNode plays a dual role: Inherits from Route (Potential Root) but is also adopted by RootNode
     
-    class MidNode(Airway):
+    class MidNode(Route):
         path = "mid-node"
-        build = dummy_build
+        view = dummy_view
         Next = LeafNode
 
-    @Airway
+    @Route
     class RootNode:
         path = "root-node"
-        build = dummy_build
+        view = dummy_view
         Child = MidNode
 
     # Execute consolidation
-    Airway._create_tree()
+    Route._create_tree()
     # Critical Assertions for Scenario 2:
     # 1. RootNode must exist as a primary root
-    assert "/root-node" in Airway._map
+    assert "/root-node" in General._tree_map
     
     # 2. MidNode must be cleanly mapped as a child under RootNode, and LeafNode mapped under MidNode deeply
-    assert "/root-node/mid-node" in Airway._map
-    assert "/root-node/mid-node/leaf" in Airway._map
+    assert "/root-node/mid-node" in General._tree_map
+    assert "/root-node/mid-node/leaf" in General._tree_map
 
     # 3. Guard Check: Because MidNode was unified as a child of RootNode, it gets added to 
     # _registered_children_classes. Therefore, _append_classes MUST skip injecting it as a standalone root path.
-    assert "/mid-node" not in Airway._map
-    assert "/leaf" not in Airway._map
+    assert "/mid-node" not in General._tree_map
+    assert "/leaf" not in General._tree_map
 
 
-def test_append_classes_duplicate_handling_with_mixed_subways_aliases():
-    # Scenario 3: Mixed Duplication Vectors via Direct Attributes and Subways Alias Lists
-    # A class defines a child directly as an attribute, and ALSO includes it inside a subways list alias.
+def test_append_classes_duplicate_handling_with_mixed_children_aliases():
+    # Scenario 3: Mixed Duplication Vectors via Direct Attributes and Children Alias Lists
+    # A class defines a child directly as an attribute, and ALSO includes it inside a children list alias.
     # The system must filter this intra-class duplication gracefully during unification without exploding or double injecting.
 
     class UltimateLeaf:
         path = "ultimate-leaf"
-        build = dummy_build
+        view = dummy_view
 
-    class ConfusedParent(Airway):
+    class ConfusedParent(Route):
         path = "confused-parent"
-        build = dummy_build
+        view = dummy_view
         
         # Duplication vector 1: Direct inner class attribute
         DirectChild = UltimateLeaf
         
         # Duplication vector 2: Inside an alias list
-        subways = [UltimateLeaf]
+        children = [UltimateLeaf]
 
     # Execute consolidation
-    Airway._create_tree(handed_classes=None)
+    Route._create_tree(handed_classes=None)
 
     # Assertions for Scenario 3:
-    assert "/confused-parent" in Airway._map
-    assert "/confused-parent/ultimate-leaf" in Airway._map
+    assert "/confused-parent" in General._tree_map
+    assert "/confused-parent/ultimate-leaf" in General._tree_map
     
     # Ensure no crash happened, and the internal tracking list is a clean distinct set/list
-    assert len(ConfusedParent._fletfly_subways) == 1
-    assert "/ultimate-leaf" not in Airway._map
+    assert len(ConfusedParent._fletfly_children) == 1
+    assert "/ultimate-leaf" not in General._tree_map
 
     # Final cleanup to keep the global slate clean
-    Airway._registered_children.clear()
+    General._registered_children.clear()

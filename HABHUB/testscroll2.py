@@ -112,5 +112,5 @@ Pages = {
         }
         }
 def main(page):
-    fty.Airline(page,Pages)
+    fty.Router(page,Pages)
 ft.run(main)

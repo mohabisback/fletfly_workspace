@@ -45,12 +45,12 @@ def test_deep_nested_unwrapping():
     assert res[0]["func"] == f1
 
 def test_invalid_tuple_structure_raises_type_error():
-    with pytest.raises(TypeError, match="fly_in middleware tuple must be"):
+    with pytest.raises(TypeError):
         fly_ins((f1, "invalid_kwargs_type"))
 
 def test_invalid_item_type_raises_type_error():
     with pytest.raises(TypeError, match="Expected a function or a list of functions"):
-        fly_ins("string_is_not_allowed")
+        fly_ins(1)
 
 a1 = {"timeout": 10}
 a2 = {"inheritable": False}

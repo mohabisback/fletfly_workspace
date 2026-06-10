@@ -1,43 +1,43 @@
-# fletfly/tests/airways/test_airway_unify_subways.py
+# fletfly/tests/routes/test_route_unify_children.py
 import pytest
-from fletfly import Airway
+from fletfly import Route, General
 
-def dummy_build(page):
+def dummy_view(page):
     pass
 
-def test_recursive_airway_attribute_detection():
-    # Scenario: Verify that the engine deeply scans Airway instances attached 
+def test_recursive_route_attribute_detection():
+    # Scenario: Verify that the engine deeply scans Route instances attached 
     # as attributes and recursively discovers the entire hierarchy.
     
-    level_three = Airway(path="level-three", _build=dummy_build)
+    level_three = Route(path="level-three", _view=dummy_view)
     
-    level_two = Airway(path="level-two", _build=dummy_build)
-    level_two.subway = level_three
+    level_two = Route(path="level-two", _view=dummy_view)
+    level_two.child = level_three
     
-    level_one = Airway(path="level-one", _build=dummy_build)
-    level_one.subway = level_two
+    level_one = Route(path="level-one", _view=dummy_view)
+    level_one.child = level_two
 
-    Airway._create_tree(handed_classes=[level_one])
+    Route._create_tree(handed_classes=[level_one])
 
-    assert "/level-one" in Airway._map
-    assert "/level-one/level-two" in Airway._map
-    assert "/level-one/level-two/level-three" in Airway._map
+    assert "/level-one" in General._tree_map
+    assert "/level-one/level-two" in General._tree_map
+    assert "/level-one/level-two/level-three" in General._tree_map
 
-def test_mixed_attributes_and_subways_list():
-    # Scenario: Cleanly combines direct Airway instance attributes 
-    # and multiple airways defined within the 'subways' list.
-    component_a = Airway(path="a")
-    component_b = Airway(path="b")
-    component_c = Airway(path="c")
+def test_mixed_attributes_and_children_list():
+    # Scenario: Cleanly combines direct Route instance attributes 
+    # and multiple routes defined within the 'children' list.
+    component_a = Route(path="a")
+    component_b = Route(path="b")
+    component_c = Route(path="c")
 
-    mixed_parent = Airway(path="mixed")
-    mixed_parent.subways = [component_c]
-    mixed_parent.subway = component_a
-    mixed_parent.subway = component_b
+    mixed_parent = Route(path="mixed")
+    mixed_parent.children = [component_c]
+    mixed_parent.child = component_a
+    mixed_parent.child = component_b
 
 
-    Airway._create_tree(handed_classes=[mixed_parent])
+    Route._create_tree(handed_classes=[mixed_parent])
 
-    assert "/mixed/a" in Airway._map
-    assert "/mixed/b" in Airway._map
-    assert "/mixed/c" in Airway._map
+    assert "/mixed/a" in General._tree_map
+    assert "/mixed/b" in General._tree_map
+    assert "/mixed/c" in General._tree_map

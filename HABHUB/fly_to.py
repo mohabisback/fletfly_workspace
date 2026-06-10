@@ -1,10 +1,10 @@
 import flet as ft
-from fletfly import airway, Airline
+from fletfly import route, Router
 import fletfly as fty
 
 def main(page: ft.Page):
     # 1. تعريف المسار الجديد (المطار النهائي)
-    new_route = airway(
+    new_route = route(
         route="/new",
         land=lambda flyBox: ft.View(
             [ft.Text("Welcome to the New Airport! ✈️"), 
@@ -13,14 +13,14 @@ def main(page: ft.Page):
     )
 
     # 2. تعريف المسار القديم (بوابة العبور)
-    old_route = airway(
+    old_route = route(
         route="/old",
         # المفروض الميدل وير ده ميتنفذش لو الـ fly_to اشتغلت
         fly_in=lambda flyBox: print("❌ Error: Middleware executed on a fly_to route!"),
         fly_to="/new" 
     )
     # 3. الصفحة الرئيسية للتجربة
-    home_route = airway(
+    home_route = route(
         route="/",
         land=lambda flyBox: ft.View(
             
@@ -33,13 +33,13 @@ def main(page: ft.Page):
         )
     )
 
-    # تجميع المطار (الـ Airline)
+    # تجميع المطار (الـ Router)
     # ملاحظة: تأكد من تمرير القائمة للمحرك بتاعك
     app_routes = [home_route, old_route, new_route]
     
     # هنا هتحط كود تشغيل الراوتر بتاعك (الـ flight_radar أو الـ engine)
     # مثال تخيلي حسب الكود اللي إنت شغال عليه:
-    # router = FletFly(page, subways=app_routes)
-    Airline(app_routes)
+    # router = FletFly(page, children=app_routes)
+    Router(app_routes)
     fty.fly(page, '/new')
 ft.run(main)

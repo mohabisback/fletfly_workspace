@@ -1,45 +1,45 @@
-# fletfly/tests/classes/test_airways_routing_naming.py
+# fletfly/tests/classes/test_routes_routing_naming.py
 import pytest
-from fletfly import Airway, Airline
+from fletfly import Route, General, Router
 
 def user_profile_page(page):
     pass
 
-def test_automatic_path_naming_for_airway_instances():
-    # Scenario: If Airline.auto_path_naming is True and the Airway instance has no explicit path,
-    # it must fall back to the normalized name of its build function during tree creation.
-    Airline.auto_path_naming = True
-    Airline.detect_path_routes = True
+def test_automatic_path_naming_for_route_instances():
+    # Scenario: If Router.auto_path_naming is True and the Route instance has no explicit path,
+    # it must fall back to the normalized name of its view function during tree creation.
+    Router.auto_path_naming = True
+    Router.detect_path_routes = True
     
-    airway = Airway(build=user_profile_page)
+    route = Route(view=user_profile_page)
     
-    Airway._create_tree([airway])
+    Route._create_tree([route])
     
-    assert airway.path == "user-profile-page"
+    assert route.path == "user-profile-page"
 
 
 def test_auto_path_naming_with_layout_fallback():
-    # Scenario: If build is not present, it should fall back to the layout function name.
+    # Scenario: If view is not present, it should fall back to the layout function name.
 
     def control_center(page):
         pass
         
-    airway = Airway(layout=control_center)
+    route = Route(layout=control_center)
     
-    Airway._create_tree([airway])
+    Route._create_tree([route])
     
-    assert airway.path == "control-center"
+    assert route.path == "control-center"
 
 
 def test_fallback_naming_disabled_configuration():
-    # Scenario: If Airline.auto_path_naming is False, the path must remain None
-    # even if a build function is provided.
-    Airline.auto_path_naming = False
-    Airline.detect_path_routes = True
+    # Scenario: If Router.auto_path_naming is False, the path must remain None
+    # even if a view function is provided.
+    Router.auto_path_naming = False
+    Router.detect_path_routes = True
     
-    airway = Airway(_build=user_profile_page)
-    Airway._pending_airways = {airway}
+    route = Route(_view=user_profile_page)
+    Route._pending_routes = {route}
     
     with pytest.raises(ValueError):
-        Airway._create_tree()
-    assert airway._path is None
+        Route._create_tree()
+    assert route._path is None

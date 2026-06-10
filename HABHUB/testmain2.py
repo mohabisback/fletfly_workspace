@@ -1,6 +1,6 @@
 import flet as ft
 
-class Airline:
+class Router:
     def __init__(self):
         # محاكاة للمابز بتاعتك
         self.static_map = {"/": "Home Page", "/about": "About Page"}
@@ -48,7 +48,7 @@ class Airline:
         p.update()
 
 # --- التشغيل ---
-router = Airline()
+router = Router()
 
 def main(page: ft.Page):
     router.ticket(page)

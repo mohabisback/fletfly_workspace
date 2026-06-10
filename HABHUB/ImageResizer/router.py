@@ -69,7 +69,7 @@ def router(page, baseRoute:str="/", firstRun = False): #baseRoute = "/" | "/resi
             Pages[baseRoute.strip("/")]["error"](page, baseRoute.rstrip("/")+"/" + "error", Pages)
             break
 
-        do_build = False
+        do_view = False
         if len(page.views)> anchor_index+i: #maybe similarity
                 vw_segments:list = page.views[anchor_index+i].route.rstrip("/").split("/")
                 if vw_segments[-1] == target_segments[i]:      #similarity
@@ -79,12 +79,12 @@ def router(page, baseRoute:str="/", firstRun = False): #baseRoute = "/" | "/resi
                 else:                                          #no similarity
                     while len(page.views) > anchor_index+i:    #clean views
                         page.views.pop()
-                    do_build = True
+                    do_view = True
         else:
-            do_build = True
+            do_view = True
         currentRoute = currentRoute.rstrip("/")+"/"+seg
-        if do_build:    
-            if isinstance(currentDictOrVal[seg], dict):     #build current view
+        if do_view:    
+            if isinstance(currentDictOrVal[seg], dict):     #view current view
                 currentDictOrVal[seg][""](page, currentRoute, Pages)
             else:
                 currentDictOrVal[seg](page, currentRoute, Pages)

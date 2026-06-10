@@ -21,7 +21,7 @@ def main(page: ft.Page):
         }
     }
     
-    fty.Airline(page, Pages)
+    fty.Router(page, Pages)
 
 if __name__ == "__main__":
     ft.run(main)

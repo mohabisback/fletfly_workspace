@@ -17,7 +17,7 @@ def shared_card_deck1(page):
         border=ft.Border.all(2, ft.Colors.AMBER_400)
     )
 
-@fty.airway
+@fty.route
 class H:
     """الطبقة الخارجية - الغلاف الكلي باستخدام نظام الـ Slots الجديد المؤمن بالـ page session"""
     is_root = True
@@ -85,7 +85,7 @@ class H:
         layout_override = False 
         
         @staticmethod
-        def build(page):
+        def view(page):
             return ft.Container(
                 content=ft.Column([
                     ft.Row([
@@ -190,7 +190,7 @@ def belal_view(page):
     
 
 page_dict = {"path": 'Bilal', "view": belal_view, "layout": belal_layout2, 'hero_view':True}
-fty.Airline([page_dict, H])    
+fty.Router([page_dict, H])    
 
 def main(page: ft.Page):
     page.theme_mode = ft.ThemeMode.DARK

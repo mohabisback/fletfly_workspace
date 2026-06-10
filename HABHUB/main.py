@@ -4,12 +4,12 @@ import fletfly as fty
 from Me.home import get_view as get_home
 from Me.error import get_view as get_err
 from ImageResizer_main import Pages as ImageResizer
-from ImageResizer_main import airway as ImageResizerAirzone
+from ImageResizer_main import route as ImageResizerZone
 
 TITLE = "HabHub Mohab's Portal"
 Pages = {
         "":get_home,
-        "resizer": fty.Airzone(ImageResizer), # get you a sub home page
+        "resizer": fty.Zone(ImageResizer), # get you a sub home page
         "error":get_err,
         "contact":{
             "":get_home, #temp
@@ -69,33 +69,61 @@ def search_view(page: ft.Page):
     )
 
 
-airzone = fty.airway(path="/", builder=get_home, fly_ins=[
-    fty.fly_in(fly_in1, msg="done once every build of home page", inheritable=False),
+zone = fty.route(path="/", viewer=get_home, fly_ins=[
+    fty.fly_in(fly_in1, msg="done once every view of home page", inheritable=False),
     fly_in2, # default, done once every inheriting sub
     fty.fly_in(fly_in1, msg="repeated every sub view", apply_per_view=False),
-    ], subways=[
+    ], children=[
     
-        # simple airway(route) with path(string) and builder(callable returns a view)
-        fty.airway(path="/error", builder=get_err),
+        # simple route(route) with path(string) and viewer(callable returns a view)
+        fty.route(path="/error", viewer=get_err),
 
-        # airway with subways(subroutes)
-        fty.airway(path="/abouts", fly_out=fly_in2, builder=search_view, subways=[
-            fty.airway(fly_to="something", subways=[
-                fty.airway(path="/contact_details", builder=profile_view),
-                fty.airway(path="/chating", fly_out=fly_in2, builder=test_view, subways=[
-                    fty.airway('hi')
+        # route with children(subroutes)
+        fty.route(path="/:id", fly_out=fly_in2, viewer=search_view, children=[
+            fty.route(fly_to="something", children=[
+                fty.route(fly_to="something2"),
+                fty.route(path="/[chat]", fly_out=fly_in2, viewer=test_view, children=[
+                    fty.route('hi', layout=test_view, children=[
+                        fty.route("bye", view=test_view),
+                        fty.route("", view=test_view)
+                    ])
                 ])
             ])
         ]),
     
-        fty.Airzone(ImageResizerAirzone, "/resizer") 
+        fty.Zone(ImageResizerZone, "/resizer") 
         ]),
 
-fty.Airline(airzone, error_path="error", max_pads = 2, fly_pads= "all_from_last_port", print_path_zone="/abouts/chating")
+fty.Router(zone, error_path="error", max_pads = 2, fly_pads= "all_from_last_port", print_path_zone="/")
 
+
+
+class Flyer:
+    name = "fixed"
+    def __init__(self, name):
+        self.name = name
+    @staticmethod
+    def fly_to(destination):
+        return f"{Flyer.name} is fly_ing to {destination}!"
+    bare_func = fly_to.__func__ if isinstance(fly_to, (staticmethod, classmethod)) else fly_to
+    
+    bare_func._info = "at 10 am"
+
+# 1. Create an instance
+plane = Flyer("Boeing 747")
+
+# 2. Get the bound method dynamically
+a = getattr(plane, "fly_to")
+# 3. Call it
+result = a("Cairo")
+print(result, a.__func__._info if isinstance(a, (staticmethod, classmethod)) else a._info) 
+# Output:
+# 11111111111111111111 True
+# fixed is fly_ing to Cairo!
 def test_main(page= ft.Page()):
     
     page.title = TITLE
     fty.fly(page)
 if __name__ == "__main__":
     ft.run(test_main)
+

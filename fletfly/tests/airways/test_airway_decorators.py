@@ -1,36 +1,36 @@
-# fletfly/tests/airways/test_airway_decorators.py
+# fletfly/tests/routes/test_route_decorators.py
 import pytest
-from fletfly import Airway
+from fletfly import Route, General
 
-def test_01_pure_airway_decorators_diffusion():
-    # Scenario: Standalone functions decorated with Airway object methods (@route.build, @route.layout).
-    # The function references must be recorded in pure airway fields (_build, _layout), 
-    # and extra attributes must diffuse directly to the airway instance.
+def test_01_pure_route_decorators_diffusion():
+    # Scenario: Standalone functions decorated with Route object methods (@route.view, @route.layout).
+    # The function references must be recorded in pure route fields (_view, _layout), 
+    # and extra attributes must diffuse directly to the route instance.
     
-    route = Airway("decorated-route")
+    route = Route("decorated-route")
     
-    def my_custom_build(page): pass
+    def my_custom_view(page): pass
     
     def my_custom_layout(page): pass
     
-    route.build(my_custom_build, hero=True)
+    route.view(my_custom_view, hero=True)
     route.layout(my_custom_layout, hero=True, override=False)
 
-    # Verify that the pure airway instance caught the function references
-    assert route._build["func"] == my_custom_build
+    # Verify that the pure route instance caught the function references
+    assert route._view["func"] == my_custom_view
     assert route._layout["func"] == my_custom_layout
     
-    # Ensure nested metadata attributes are stripped and diffused directly to the airway object
-    assert getattr(route, "_build_hero", None) is True
+    # Ensure nested metadata attributes are stripped and diffused directly to the route object
+    assert getattr(route, "_view_hero", None) is True
     assert getattr(route, "_layout_hero", None) is True
     assert getattr(route, "_layout_override", None) is False
 
 
-def test_accumulative_airway_decorators_append_instead_of_overwriting():
+def test_accumulative_route_decorators_append_instead_of_overwriting():
     # Scenario: fly_ins and fly_outs can have multiple decorators/guards on different functions.
-    # For pure Airway objects, they should accumulate inside the fly_ins list rather than overwriting.
+    # For pure Route objects, they should accumulate inside the fly_ins list rather than overwriting.
     
-    route = Airway("guarded-route")
+    route = Route("guarded-route")
 
     def check_auth(): pass
     

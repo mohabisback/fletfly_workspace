@@ -1,144 +1,144 @@
-# fletfly/tests/descriptors/test_build.py
+# fletfly/tests/descriptors/test_view.py
 import pytest
-from fletfly import Airway, build, _Build
+from fletfly import Route, General, view, _View
 
 # --- Case a: Instance setting ---
 def test_00():
     """Verify setting value on instance updates private attr while class descriptor remains intact."""
-    aw = Airway()
+    aw = Route()
     def dummy_func(page): pass
-    aw.build = dummy_func
-    assert isinstance(Airway.build, _Build)
-    assert aw._build["func"] == dummy_func
+    aw.view = dummy_func
+    assert isinstance(Route.view, _View)
+    assert aw._view["func"] == dummy_func
 
 # --- Class Decoration Cases (6 Tests) ---
 def test_01():
-    """ @build on class. attr '_fletfly_build' = True only should be added to class"""
-    @build
+    """ @view on class. attr '_fletfly_view' = True only should be added to class"""
+    @view
     class SampleClass: pass
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {}
 
 def test_02():
-    """ @build() on class. attr '_fletfly_build' = True only should be added to class"""
-    @build()
+    """ @view() on class. attr '_fletfly_view' = True only should be added to class"""
+    @view()
     class SampleClass: pass
     
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {}
 
 def test_03():
-    """ @build(hero=True) on class """
-    @build(hero=True)
+    """ @view(hero=True) on class """
+    @view(hero=True)
     class SampleClass: pass
-    list(Airway._pending_airways)[0].props = {}
-    list(Airway._pending_airways)[0].build_hero = True
+    list(Route._pending_routes)[0].props = {}
+    list(Route._pending_routes)[0].view_hero = True
  
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") is True
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") is True
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {}
     
 def test_04():
-    """ @Airway.build on class. """
-    @Airway.build
+    """ @Route.view on class. """
+    @Route.view
     class SampleClass: pass
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {}
     
 def test_05():
-    """ @Airway.build() on class."""
-    @Airway.build()
+    """ @Route.view() on class."""
+    @Route.view()
     class SampleClass: pass
-    list(Airway._pending_airways)[0].props = {}
-    list(Airway._pending_airways)[0].build_hero = None
+    list(Route._pending_routes)[0].props = {}
+    list(Route._pending_routes)[0].view_hero = None
     
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {}
 
 def test_06():
-    """ @Airway.build(hero=True) on class."""
-    @Airway.build(hero=True, role="user")
+    """ @Route.view(hero=True) on class."""
+    @Route.view(hero=True, role="user")
     class SampleClass: pass
-    list(Airway._pending_airways)[0].props = {"role":"user"}
-    list(Airway._pending_airways)[0].build_hero = True
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") is True
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    list(Route._pending_routes)[0].props = {"role":"user"}
+    list(Route._pending_routes)[0].view_hero = True
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") is True
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 def test_07():
-    """ @Airway.build(hero=False) on class."""
-    @Airway.build(hero=False, role="user")
+    """ @Route.view(hero=False) on class."""
+    @Route.view(hero=False, role="user")
     class SampleClass: pass
-    list(Airway._pending_airways)[0].props = {"role":"user"}
-    list(Airway._pending_airways)[0].build_hero = True
+    list(Route._pending_routes)[0].props = {"role":"user"}
+    list(Route._pending_routes)[0].view_hero = True
   
     
-    assert getattr(SampleClass, "_fletfly_build")[0].get("build_hero", "not there") is False
-    assert getattr(SampleClass, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    assert getattr(SampleClass, "_fletfly_view")[0].get("view_hero", "not there") is False
+    assert getattr(SampleClass, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 # --- Function Decoration Cases (6 Tests) ---
 def test_10():
-    """ @build on function."""
-    @build
+    """ @view on function."""
+    @view
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {}
 
 
 def test_11():
-    """ @build() on function."""
-    @build(role="user")
+    """ @view() on function."""
+    @view(role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 def test_12():
-    """ @build(hero=True) on function."""
-    @build(hero=True, role="user")
+    """ @view(hero=True) on function."""
+    @view(hero=True, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") is True
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") is True
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 
 def test_13():
-    """ @Airway.build on function."""
-    @Airway.build
+    """ @Route.view on function."""
+    @Route.view
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {}
 
 def test_14():
-    """ @Airway.build() on function."""
-    @Airway.build(role="user")
+    """ @Route.view() on function."""
+    @Route.view(role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") == "not there"
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") == "not there"
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 def test_15():
-    """ @Airway.build(hero=True) on function."""
-    @Airway.build(hero=True, role="user")
+    """ @Route.view(hero=True) on function."""
+    @Route.view(hero=True, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") is True
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") is True
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 def test_16():
-    """ @Airway.build(hero=False) on function."""
-    @Airway.build(hero=False, role="user")
+    """ @Route.view(hero=False) on function."""
+    @Route.view(hero=False, role="user")
     def sample_func(page): pass
-    assert getattr(sample_func, "_fletfly_build")[0].get("build_hero", "not there") is False
-    assert getattr(sample_func, "_fletfly_build")[0].get("props", "not there") == {"role":"user"}
+    assert getattr(sample_func, "_fletfly_view")[0].get("view_hero", "not there") is False
+    assert getattr(sample_func, "_fletfly_view")[0].get("props", "not there") == {"role":"user"}
 
 def test_19():
-    """Case g_func: @Airway().build() on function."""
+    """Case g_func: @Route().view() on function."""
     def sample_func(page): pass
-    aw = Airway()
-    aw.build(sample_func, hero=True, role="user")
-    assert aw._build["func"] == sample_func
-    assert aw._build["props"] == {"role":"user"}
-    assert aw._build_hero is True
+    aw = Route()
+    aw.view(sample_func, hero=True, role="user")
+    assert aw._view["func"] == sample_func
+    assert aw._view["props"] == {"role":"user"}
+    assert aw._view_hero is True
 
 def test_20():
-    """Case g_func: @Airway().build() on function."""
+    """Case g_func: @Route().view() on function."""
     def sample_func(page): pass
-    aw = Airway()
-    aw.build(sample_func, hero=False, role="user")
-    assert aw._build["func"] == sample_func
-    assert aw._build_hero is False
+    aw = Route()
+    aw.view(sample_func, hero=False, role="user")
+    assert aw._view["func"] == sample_func
+    assert aw._view_hero is False

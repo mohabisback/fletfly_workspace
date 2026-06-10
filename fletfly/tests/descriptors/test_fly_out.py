@@ -1,14 +1,14 @@
 # fletfly/tests/descriptors/test_fly_out.py
 import pytest
-from fletfly import Airway, fly_out, _FlyOut
+from fletfly import Route, General, fly_out, _FlyOut
 
 # --- Case a: Instance setting ---
 def test_fly_out_set_value_on_instance():
     """Verify setting value on instance updates private list while class descriptor remains intact."""
-    aw = Airway()
+    aw = Route()
     def dummy_func(page): pass
     aw.fly_out = dummy_func
-    assert isinstance(Airway.fly_out, _FlyOut)
+    assert isinstance(Route.fly_out, _FlyOut)
     assert aw.fly_outs[0]["func"] == dummy_func
 
 # --- Class Decoration Cases (6 Tests) ---
@@ -30,8 +30,8 @@ def test_fly_out_decorator_with_args_on_class():
     assert getattr(SampleClass, "_fletfly_fly_out")[0].get("props", "not there") == {}
 
 def test_fly_out_via_class_attribute_on_class():
-    """Case d: @Airway.item on class."""
-    @Airway.fly_out
+    """Case d: @Route.item on class."""
+    @Route.fly_out
     class SampleClass: pass
     assert getattr(SampleClass, "_fletfly_fly_out")[0].get("inheritable", "not there") is False
     assert getattr(SampleClass, "_fletfly_fly_out")[0].get("apply_per_view", "not there") is False
@@ -39,15 +39,15 @@ def test_fly_out_via_class_attribute_on_class():
 
 
 def test_fly_out_via_class_attribute_with_args_on_class():
-    """Case e: @Airway.fly_out(arg, arg) on class."""
-    @Airway.fly_out(inheritable=True, role="user")
+    """Case e: @Route.fly_out(arg, arg) on class."""
+    @Route.fly_out(inheritable=True, role="user")
     class SampleClass: pass
 
     assert getattr(SampleClass, "_fletfly_fly_out")[0].get("inheritable", "not there") is True
     assert getattr(SampleClass, "_fletfly_fly_out")[0].get("apply_per_view", "not there") is False
     assert getattr(SampleClass, "_fletfly_fly_out")[0].get("props", "not there") == {"role":"user"}
 
-    list(Airway._pending_airways)[0].props == {"role":"user"}
+    list(Route._pending_routes)[0].props == {"role":"user"}
 
 # --- Function Decoration Cases (6 Tests) ---
 def test_fly_out_decorator_on_function():
@@ -71,8 +71,8 @@ def test_fly_out_decorator_with_args_on_function():
 
     
 def test_fly_out_via_class_attribute_on_function():
-    """Case d_func: @Airway.item on function."""
-    @Airway.fly_out
+    """Case d_func: @Route.item on function."""
+    @Route.fly_out
     def sample_func(page): pass
     assert getattr(sample_func, "_fletfly_fly_out")[0].get("inheritable", "not there") is False
     assert getattr(sample_func, "_fletfly_fly_out")[0].get("apply_per_view", "not there") is False
@@ -80,8 +80,8 @@ def test_fly_out_via_class_attribute_on_function():
 
 
 def test_fly_out_via_class_attribute_with_args_on_function():
-    """Case e_func: @Airway.fly_out(arg, arg) on function."""
-    @Airway.fly_out(inheritable=True, role="user")
+    """Case e_func: @Route.fly_out(arg, arg) on function."""
+    @Route.fly_out(inheritable=True, role="user")
     def sample_func(page): pass
 
     assert getattr(sample_func, "_fletfly_fly_out")[0].get("inheritable", "not there") is True
@@ -89,9 +89,9 @@ def test_fly_out_via_class_attribute_with_args_on_function():
     assert getattr(sample_func, "_fletfly_fly_out")[0].get("props", "not there") == {"role":"user"}
 
 def test_fly_out_via_instance_attribute_with_args_on_function():
-    """Case g_func: @Airway().item() on function."""
+    """Case g_func: @Route().item() on function."""
     def sample_func(page): pass
-    aw = Airway()
+    aw = Route()
     aw.fly_out(sample_func, inheritable=True, role="user")
     assert aw.fly_outs[0]["func"] == sample_func
     assert aw.fly_outs[0]["inheritable"] == True

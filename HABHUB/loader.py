@@ -2,10 +2,10 @@ import flet as ft
 import time
 import threading
 
-def _apply_lazy_loader(page, layout_build_func, lazy_loader_func=None):
+def _apply_lazy_loader(page, layout_view_func, lazy_loader_func=None):
 
     page.fly._temp_data = []
-    controls_s = layout_build_func(page)
+    controls_s = layout_view_func(page)
 
     captured = page.fly._temp_data.copy()
 
@@ -168,8 +168,8 @@ Hint: you can use flet auto complete first for the **kwargs, then move the ) up 
 import time
 import fletfly as fty
 
-def mock_lazy_loader():
-    # محاكاة لطلب داتا من قاعدة البيانات (تأخير 5 ثواني)
+def loader():
+
     time.sleep(3)
     
     # بناء الديكشنري بـ 100 منتج
@@ -181,10 +181,10 @@ def mock_lazy_loader():
         })
     
     return data
+     
 
 
-
-def build(page): 
+def view(page): 
 
     grid = ft.GridView(expand=True, max_extent=200, spacing=10)
     
@@ -199,11 +199,11 @@ def build(page):
         grid.controls.append( 
             ft.Card(content=ft.Column([name_txt, price_txt], alignment=ft.Alignment.CENTER))
         )
-    return grid
+    return grid  
+  
 
-
-fty.Airline({"path":"/", "build":build, "post_fly":mock_lazy_loader})
-def main(page):
+fty.Router(fty.Route("/", view, loader=loader))
+def main(page):   
     fty.fly(page, "/")
-
-ft.run(main=main)
+     
+ft.run(main=main) 

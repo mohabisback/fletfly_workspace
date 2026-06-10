@@ -100,5 +100,5 @@ def test_integration_fallback_mechanism(monkeypatch):
     monkeypatch.setattr(fletfly, "_get_set_payload", lambda func: None)
     
     # Should safely invoke functions based on their ability to accept the page argument
-    assert _call_with_payload(sample_fallback_no_args, fallback_page, []) == "no_args_fallback"
-    assert _call_with_payload(sample_fallback_with_page, fallback_page, []) == fallback_page
+    assert _call_with_payload(sample_fallback_no_args, fallback_page, [], False, False) == "no_args_fallback"
+    assert _call_with_payload(sample_fallback_with_page, fallback_page, [], False, False) == fallback_page

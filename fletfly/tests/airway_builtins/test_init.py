@@ -1,53 +1,53 @@
-# fletfly/tests/airway_builtins/test_init.py
+# fletfly/tests/route_builtins/test_init.py
 import pytest
-from fletfly import Airway
+from fletfly import Route, General
 
 def test_defaults():
-    """Verify Airway sets up correct defaults and registers itself globally."""
-    aw = Airway()
+    """Verify Route sets up correct defaults and registers itself globally."""
+    aw = Route()
     
-    assert aw._build is None
+    assert aw._view is None
     assert aw._layout is None
     assert aw._path is None
-    assert aw.subways == []
+    assert aw.children == []
     assert aw.fly_ins == []
     assert aw.fly_outs == []
     assert aw.fly_ins == []
     assert aw.fly_outs == []
     assert aw._class is None
     
-    assert aw in Airway._pending_airways
+    assert aw in General._pending_routes
 
 def test_init_with_arguments():
     """Verify explicit arguments are properly processed and stored."""
-    def dummy_build(page): pass
+    def dummy_view(page): pass
     def dummy_layout(page): pass
-    subway_route = Airway(path="/sub")
+    child_route = Route(path="/sub")
 
-    aw = Airway(
+    aw = Route(
         path="/HOME", 
-        build=dummy_build, 
+        view=dummy_view, 
         layout=dummy_layout, 
-        subways=[subway_route],
-        build_hero=True
+        children=[child_route],
+        view_hero=True
     )
 
     assert aw.path == "/home"
-    assert aw._build["func"] == dummy_build
+    assert aw._view["func"] == dummy_view
     assert aw._layout["func"] == dummy_layout
-    assert aw.subways == [subway_route]
-    assert aw._build_hero is True
+    assert aw.children == [child_route]
+    assert aw._view_hero is True
 
 def test_adjust_locals_with_clsattres():
     """Verify kwargs aliases map correctly to official fields and get popped from kwargs."""
-    def dummy_build(page): pass
+    def dummy_view(page): pass
     def dummy_layout(page): pass
-    def useless_build(page): pass
+    def useless_view(page): pass
     
-    # 'frame' maps to layout, 'element' maps to build, 'logo' maps to icon
-    aw = Airway(frame=dummy_layout, element=useless_build, build=dummy_build, logo="company_logo.png")
+    # 'frame' maps to layout, 'element' maps to view, 'logo' maps to icon
+    aw = Route(frame=dummy_layout, element=useless_view, view=dummy_view, logo="company_logo.png")
     assert aw._layout["func"] == dummy_layout
-    assert aw._build["func"] == dummy_build
+    assert aw._view["func"] == dummy_view
     assert aw.icon == "company_logo.png"
     assert "element" in aw.props
     assert "frame" not in aw.props
@@ -56,16 +56,16 @@ def test_adjust_locals_with_clsattres():
     assert hasattr(aw, "logo") is True
 
 def test_new_class_decorator_without_parentheses():
-    """Verify @Airway directly on a class registers it in pending classes."""
-    @Airway
+    """Verify @Route directly on a class registers it in pending classes."""
+    @Route
     class TargetClass:
         pass
-    list(Airway._pending_airways)[0].path = "target-class"
+    list(General._pending_routes)[0].path = "target-class"
 
 def test_call_as_class_decorator():
-    """Verify @obj on a class injects values and strips underscores from build/layout."""
-    def dummy_build(page): pass
-    aw = Airway(path="/dashboard", build=dummy_build, title="Dashboard")
+    """Verify @obj on a class injects values and strips underscores from view/layout."""
+    def dummy_view(page): pass
+    aw = Route(path="/dashboard", view=dummy_view, title="Dashboard")
 
     @aw
     class DashboardView:
@@ -75,10 +75,10 @@ def test_call_as_class_decorator():
 
 def test_call_reconfiguration():
     """Verify calling an existing instance updates its attributes via _adjust_locals."""
-    aw = Airway(path="/initial", title="Old Title")
-    result = aw(path="/updated", title="New Title", build_hero=True)
+    aw = Route(path="/initial", title="Old Title")
+    result = aw(path="/updated", title="New Title", view_hero=True)
     
     assert result is aw
     assert aw.path == "/updated"
     assert aw.title == "New Title"
-    assert aw._build_hero is True
+    assert aw._view_hero is True

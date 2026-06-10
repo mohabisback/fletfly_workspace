@@ -21,13 +21,13 @@ Pages = {
     
     # البورت راكب هنا
     "dashboard": {
-        "app": fty.Airzone(SubProject)
+        "app": fty.Zone(SubProject)
     },
     "redirected_main": fty.fly_in(mw_redirector)( lambda p: ft.Text("Main redirected"))
 }
 
 def main(page: ft.Page):
-    fty.Airline(page, Pages)
+    fty.Router(page, Pages)
 
 if __name__ == "__main__":
     ft.run(main)

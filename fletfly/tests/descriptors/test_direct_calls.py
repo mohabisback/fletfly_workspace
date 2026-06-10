@@ -3,22 +3,22 @@
 import pytest
 from fletfly import (
     layout, 
-    build, 
+    view, 
     fly_in, 
     fly_out, 
-    subway, 
-    Airway, 
-    _BuildLayoutDict, 
-    _FlyInOutDict
+    child, 
+    Route, 
+    _FuncDict, 
+    _FuncDict
 )
 
 def test_layout_direct_call_returns_dict():
-    """Test that calling layout directly returns a _BuildLayoutDict with correct config."""
+    """Test that calling layout directly returns a _FuncDict with correct config."""
     def sample_view():
         pass
         
     res = layout(sample_view, hero=True, override=False, role="user")
-    assert isinstance(res, _BuildLayoutDict)
+    assert isinstance(res, _FuncDict)
     assert res["func"] is sample_view
     assert res["props"] == {"role":"user"}
 
@@ -26,11 +26,11 @@ def test_layout_direct_call_returns_dict():
 def test_fly_in_direct_call_with_cls_keyword():
     """Test that passing 'cls' as a keyword argument converts it to 'func' properly."""
     def dummy_func(): pass
-    aw = Airway()
+    aw = Route()
     res1 = fly_in(cls=dummy_func, inheritable=True, apply_per_view=True, role="user")
     res2 = aw.fly_out(dummy_func, True, True, role="user")
  
-    assert isinstance(res1, _FlyInOutDict)
+    assert isinstance(res1, _FuncDict)
     assert res1["func"] is dummy_func
     assert res1["inheritable"] is True
     assert res1["apply_per_view"] is True
@@ -38,7 +38,7 @@ def test_fly_in_direct_call_with_cls_keyword():
     assert res1["props"].get("role") == "user"
     assert res1["props"].get("override", "not there") == "not there"
 
-    assert isinstance(res2, Airway)
+    assert isinstance(res2, Route)
     assert res2.fly_outs[0]["func"] is dummy_func
     assert res2.fly_outs[0]["inheritable"] is True
     assert res2.fly_outs[0]["apply_per_view"] is True
@@ -48,22 +48,22 @@ def test_fly_in_direct_call_with_cls_keyword():
 
 
 def test_descriptor_bound_instance_setattr():
-    """Test that calling a descriptor on an Airway instance attaches the wrapped dict."""
-    class CustomAirway(Airway):
+    """Test that calling a descriptor on an Route instance attaches the wrapped dict."""
+    class CustomRoute(Route):
         pass
         
-    aw = CustomAirway()
+    aw = CustomRoute()
     
-    def target_build():
+    def target_view():
         pass
         
     # Direct call through instance triggers instance-level assignment
-    res1 = aw.build(target_build, hero=True, role="user")
-    assert isinstance(res1, Airway)
-    res2 = build(target_build, hero=True, role="user")
-    assert isinstance(res2, _BuildLayoutDict)
-    assert aw._build["func"] == target_build
-    assert aw.build_hero == True
+    res1 = aw.view(target_view, hero=True, role="user")
+    assert isinstance(res1, Route)
+    res2 = view(target_view, hero=True, role="user")
+    assert isinstance(res2, _FuncDict)
+    assert aw._view["func"] == target_view
+    assert aw.view_hero == True
     assert res2["props"].get("hero", "not there") == "not there"
     assert res2["props"].get("role") == "user"
     assert getattr(aw, "role", None) is None
@@ -85,4 +85,4 @@ def test_pre_process_invalid_type_raises_type_error():
         
     # 'hero' argument expects a boolean value
     with pytest.raises(TypeError, match="Argument.*must be of type bool"):
-        build(sample_func, hero="not-a-bool")
+        view(sample_func, hero="not-a-bool")

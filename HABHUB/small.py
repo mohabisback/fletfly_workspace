@@ -32,7 +32,7 @@ def fly_around(*args, **kwargs):
             # The Runtime Inception Wrapper
             def func(page: ft.Page, *run_args, **run_kwargs):
                 if not page or not isinstance(page, ft.Page):
-                    raise ValueError("[fletfly] A build, shared or layout function must have a page:ft.Page argument")
+                    raise ValueError("[fletfly] A view, shared or layout function must have a page:ft.Page argument")
                 print(f"   ==> [Runtime Success] Inside '{cls_or_func.__name__}' execution! ft.Page validated successfully.")
                 return cls_or_func(page, *run_args, **run_kwargs)
                 
@@ -57,7 +57,7 @@ class MainLayoutClass:
 
 # --- Test Case 2 ---
 @fly_around
-def main_build_func(page: ft.Page):
+def main_view_func(page: ft.Page):
     pass
 
 # --- Test Case 3 ---
