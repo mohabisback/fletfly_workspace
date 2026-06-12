@@ -12,32 +12,36 @@ Look at this single block of code. It demonstrates auto-pathing (static & dynami
 from fletfly import Route, slot, fly
 import flet as ft
 
-class Home(Route):                           # Route detection: path auto named to "/home"
-    def layout(page):                        # Auto-detected layout by names (layout, frame)
+class Home(Route):             # Route detection: path auto named to "/home"
+    def layout(self, page):          # Auto-detected layout by names (layout, frame)
         return ft.Column([
             ft.Text("Header"),
-            slot(page),                      # Anonymous slot (auto-injected)
-            slot(page),                      # Anonymous slot (auto-injected)
+            slot(page),        # Anonymous slot (auto-injected)
+            slot(page),        # Anonymous slot (auto-injected)
             ft.Text("Footer")
         ])
 
-    class Index:
-        def view(data):                         # Auto-detected view by names (view, content, component, element)
-            return (
-                ft.Text("Hi"),                   # Binds to first available slot
-                ft.Text("Welcome home")          # Binds to second available slot
+    class Index:               # Auto-detected index
+        def view(self, data):        # Auto-detected view by names:
+            return (           # (build, content, component, element)
+                ft.Text("Hi"), # Binds to first available slot
+                ft.Text("Sir") # Binds to second available slot
             )
     
-    class _Helper: pass                     # Private scope (ignored by router)
+    class _Helper: pass        # Private scope (ignored by router)
 
-    @Route(":id")                           # Sub route detection, path: "/home/:id"
+    @child(":id")              # Sub route detection, path: "/home/:id"
     class User:
-        def view(page):                     # Injected into self or inheritable layout
+        def view(self, page):        # Injected into self or inheritable layout
             return (
-                ft.Text(f"{page.fly.params['id']}"),        # Accesses resolved URL params
-                ft.Text(f"{page.fly.query['favourites']}")  # Accesses resolved URL query
+                ft.Text(f"{page.fly.params['id']}"),        # URL params
+                ft.Text(f"{page.fly.query['favourites']}")  # URL query
             )
-ft.run(fly)                                 # Start the router immediately, with auto detecion of routes.
+ft.run(fly)                    # Start Router, with auto detecion of routes.
+```
+```terminal
+
+
 ```
 * **[Understand State Persistence & Overriding](docs/class/ATTRIBUTES.md)** *
 

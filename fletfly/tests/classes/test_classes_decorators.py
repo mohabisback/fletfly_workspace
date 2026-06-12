@@ -1,5 +1,5 @@
 # fletfly/tests/classes/test_decorators.py
-import pytest
+
 from fletfly import Route, General, General, view, layout, fly_in, fly_out
 
 def dummy_view(page): pass
@@ -19,15 +19,19 @@ def test_01():
 
     route, kids = Route._route_from_class(DecoratedRoute)
     
-    assert route.view_clsattr["func"] == "my_custom_view"
-    assert route.layout_clsattr["func"] == "my_custom_layout"
+    assert route._view["func"] == "my_custom_view"
+    assert route._layout["func"] == "my_custom_layout"
+    
+    for item in route.__dict__:
+        print(item)
+    
     # Ensure nested _fletfly_ attributes are stripped and diffused to the route object
     assert getattr(route, "_view_hero", None) is True
     assert getattr(route, "_layout_hero", None) is True
     assert getattr(route, "_layout_override", None) is False
 
 
-def test_duplicate_decorators_throw_value_error():
+def test_duplicate_decorators_throw_value_error(capsys):
     # Scenario: A class accidentally defines two separate functions for the same core mechanism
     # (e.g., two view functions). This must explicitly trigger a ValueError.
     
@@ -37,11 +41,12 @@ def test_duplicate_decorators_throw_value_error():
         @view(hero=True)      
         def view_two(page): pass
 
-    with pytest.raises(ValueError) as exc_info:
-        Route._route_from_class(BrokenRoute)
-        
-    assert "already has a view function named" in str(exc_info.value)
-
+    Route._route_from_class(BrokenRoute)
+    
+    captured = capsys.readouterr()
+    
+    assert "[fletfly] WARNING: second re-setting of view"  in captured.out
+    
 
 def test_accumulative_decorators_append_instead_of_overwriting():
     # Scenario: fly_ins and fly_outs can have multiple decorators/guards on different functions.

@@ -34,6 +34,7 @@ def test_route_full_chaining():
     aw.layout_hero = False
 
     # Assertions
+    assert aw.props == {'a': 1}
     assert aw.path == 'home'
     assert aw.fly_to == 'target'
     assert aw.layout_override == True
@@ -50,7 +51,6 @@ def test_route_full_chaining():
     assert aw.layout_hero == False
     assert aw.title == 'My Title'
     assert aw.icon == 'my-icon'
-    assert aw.props == {'a': 1}
     assert len(aw.fly_ins) == 4
     assert aw.fly_ins[0]["func"] == f1
     assert aw.fly_ins[0]["inheritable"] is True

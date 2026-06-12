@@ -29,7 +29,7 @@ def test_02():
     # Should raise ValueError if parent already has both class and view_clsattr
     parent_cls = Route(path="/dashboard")
     parent_cls._class = DummyClass1
-    parent_cls.view_clsattr = "parent_attr"
+    parent_cls.view = "parent_attr"
     
     child_cls = Route(path="", view=dummy_view2)
     with pytest.raises(ValueError, match="Parent already has a view view"):
@@ -73,7 +73,7 @@ def test_05():
 
     child = Route(path="")
     child._class = DummyClass2  # Distinct classes are now allowed
-    child.view_clsattr = "custom_class_view"
+    child.view = "custom_class_view"
 
     result = Route._handle_index(parent, child, children=[])
 

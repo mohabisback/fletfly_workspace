@@ -37,8 +37,8 @@ def test_01():
 
     # Verify that the single leaf class successfully expanded its auto-generated identity 
     # under both unique parent branches simultaneously without any state leakage or overwriting
-    assert "/custom-first-gate/deep-shared-leaf" in General._tree_map
     assert "/inherited-parent-two/deep-shared-leaf" in General._tree_map
+    assert "/custom-first-gate/deep-shared-leaf" in General._tree_map
     
     # Ensure it didn't accidentally get exposed as a top-level route
     assert "/deep-shared-leaf" not in General._tree_map

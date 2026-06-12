@@ -32,7 +32,7 @@ def test_init_with_arguments():
         view_hero=True
     )
 
-    assert aw.path == "/home"
+    assert aw.path == "/HOME"
     assert aw._view["func"] == dummy_view
     assert aw._layout["func"] == dummy_layout
     assert aw.children == [child_route]

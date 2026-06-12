@@ -26,7 +26,7 @@ def test_child_explicit_path_and_diffusion():
     assert sub_route.path == "user-analytics"
     
     # Assert the actual function identifier is tracked for rendering execution
-    assert sub_route.view_clsattr == "analytics"
+    assert sub_route.view["func"] == "analytics"
     
     # Assert attribute diffusion mechanics worked with appropriate namespacing
 
@@ -46,9 +46,6 @@ def test_child_integration_in_global_map():
 
     # Execute consolidation pool processing
     Route._create_tree()
-    
-    for k, v in General._tree_map.items():
-        print(9999999999999, v, ",", k)
 
     # Assertions for complete hierarchical registration inside the routing engine map
     assert "/portal" in General._tree_map
@@ -56,5 +53,5 @@ def test_child_integration_in_global_map():
     
     # Verify the child execution context points back to the parent component
     assert General._tree_map["/portal/financial-reports"]._class is CorporatePortal
-    assert General._tree_map["/portal/financial-reports"].view_clsattr == "reports"
+    assert General._tree_map["/portal/financial-reports"]._view["func"] == "reports"
     

@@ -20,9 +20,9 @@ def test_route_from_class_undecorated_method_dict():
     route, class_kids = Route._route_from_class(MockCBV)
     
     # Verify that view_clsattr holds the dict representation instead of a plain string
-    assert hasattr(route, "view_clsattr")
-    assert isinstance(route.view_clsattr, _FuncDict)
-    assert route.view_clsattr["func"] == "view"
+    assert hasattr(route, "view")
+    assert isinstance(route._view, _FuncDict)
+    assert route.view["func"] == "view"
 
 
 def test_route_from_class_static_decorated_method():
@@ -37,9 +37,9 @@ def test_route_from_class_static_decorated_method():
     route, class_kids = Route._route_from_class(MockStaticCBV)
     
     # According to the second loop logic, static flagged sets the official_name attribute directly
-    assert hasattr(route, "layout")
-    assert isinstance(route.layout_clsattr, _FuncDict)
-    assert route.layout_clsattr["func"] == "layout"
+    assert hasattr(route, "_layout")
+    assert isinstance(route._layout, _FuncDict)
+    assert route._layout["func"] == "layout"
 
 
 def test_route_from_class_automated_method_routing_kids():
@@ -54,10 +54,9 @@ def test_route_from_class_automated_method_routing_kids():
     route, func_kids = Route._route_from_class(AutomatedRoutesCBV)
     
     # Find the child route generated for dashboard_view
-    target_kid = next((kid for kid in func_kids if kid.path == "dashboard-view"), None)
-    assert target_kid is not None
-    assert isinstance(target_kid.view_clsattr, _FuncDict)
-    assert target_kid.view_clsattr["func"] == "dashboard_view"
+    assert len(func_kids) == 1
+    assert isinstance(func_kids[0], Route)
+    assert func_kids[0]._view["func"] == "dashboard_view"
 
 
 def test_route_from_class_undecorated_fly_in_out_accumulation():

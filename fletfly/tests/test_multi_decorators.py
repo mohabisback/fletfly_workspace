@@ -85,14 +85,14 @@ def test_inject_method():
     res2 = layout(my_func, override=True, role="user")
     assert res2.get("func", "not there") == my_func
     assert res2.get("props", "not there") == {"role":"user"}
-    assert res2.get("override", "not there") is True
+    assert res2.get("layout_override", "not there") is True
     assert res2.get("hero", "not there") == "not there"
     
     
     res3 = view(True, my_func, role="user")
     assert res3.get("func", "not there") == my_func
     assert res3.get("props", "not there") == {"role":"user"}
-    assert res3.get("hero", "not there") is True
+    assert res3.get("view_hero", "not there") is True
     
     res4 = Route('home').layout(override=False).view(my_func).view(hero=True).layout(my_func).fly_in(my_func).fly_in(my_func)
     res4.fly_in(my_func, apply_per_view=True, override=True, props={"a":1}, b=2)
@@ -253,15 +253,14 @@ def test_inject_class():
     
     assert res2.get("func", "not there") == MyClass
     assert res2.get("props", "not there") == {"role":"user"}
-    assert res2.get("layout_override", "not there") == "not there"
-    assert res2.get("override", "not there") is True
+    assert res2.get("layout_override", "not there") == True
     assert res2.get("hero", "not there") == "not there"
     
     print('wwwwwwwwwwwww')
     res3 = view(True, MyClass, role="user")
     assert res3.get("func", "not there") == MyClass
     assert res3.get("props", "not there") == {"role":"user"}
-    assert res3.get("hero", "not there") is True
+    assert res3.get("view_hero", "not there") is True
     
     res4 = Route('home').layout(override=False).view(MyClass).view(hero=True).layout(MyClass).fly_in(MyClass).fly_in(MyClass)
     res4.fly_in(MyClass, apply_per_view=True, override=True, props={"a":1}, b=2)

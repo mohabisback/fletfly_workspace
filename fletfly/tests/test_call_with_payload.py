@@ -30,15 +30,16 @@ def sample_fallback_with_page(page):
 class SampleHandler:
     def method(self, x, y="hi"):
         return x, y
+    #_get_set_payload(method)
 
     @classmethod
     def class_method(cls, x, y="hi"):
         return x, y
-
+    #_get_set_payload(class_method)
     @staticmethod
     def static_method(x, y="hi"):
         return x, y
-
+    #_get_set_payload(static_method)
 
 # ---------------------------------------------------------
 # Test Cases (Integration)
