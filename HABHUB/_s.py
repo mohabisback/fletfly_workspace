@@ -1,7 +1,6 @@
 import sys, os, subprocess, shutil, http.server, socketserver, webbrowser
 from threading import Timer
 
-# الكلاس الخاص بـ Caching
 class CachedHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header('Cache-Control', 'max-age=31536000, immutable')

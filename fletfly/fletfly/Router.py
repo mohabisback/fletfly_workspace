@@ -2,7 +2,7 @@ from __future__ import annotations
 import flet as ft
 import re, sys, inspect, asyncio, os, importlib.util, time, builtins
 from .route import aliases, Route, _call_with_payload, _page_err_msg, General
-class FlyPad:
+class NavigateStyle:
     all_views = "all_views" # all views are active and built
     home_target = "home_target" # main home only & target
     home_ports_target = "home_ports_target" # main and all sub homes & target
@@ -11,12 +11,19 @@ class FlyPad:
     home_last_port_target = "home_last_port_target" # home , last port & target
     home_all_from_last_port = "home_all_from_last_port" # default, which view all views from last port or home to the target
     target_only = "target_only"
-# max_pads when <= 0 then every view is allowed.
-# max_pads is a periority, and it saves target then main home then nearest parent to target then nearest view to target
+# max_views when <= 0 then every view is allowed.
+# max_views is a periority, and it saves target then main home then nearest parent to target then nearest view to target
+
+_check_time_var = time.perf_counter()
+
+def _check_time(msg):
+    if General.print_debugs:
+        global _check_time_var
+        now = time.perf_counter()
+        print(f"[fletfly Debug] Time taken during [ {msg} ]: {(now - _check_time_var) * 1000:.2f}ms")
+        _check_time_var = now
 
 class Router: # singleton only 1 instance
-
-    
     def __new__(cls, *args, **kwargs):
         if General._router_instance is None:
             General._router_instance = super(Router, cls).__new__(cls)
@@ -38,7 +45,7 @@ class Router: # singleton only 1 instance
         return General._router_instance
     
     def __init__(self, zone_or_class_or_list = [], initial_route = "", error_path:str = "", every_level_fallback=True,
-                 fly_pads:FlyPad = FlyPad.home_all_from_last_port, max_pads:int = 5,
+                 navigate_style:NavigateStyle = NavigateStyle.home_all_from_last_port, max_views:int = 5,
                  auto_path_naming=True,
                  detect_path_routes=True,
                  detect_route_subclasses=True,
@@ -48,7 +55,7 @@ class Router: # singleton only 1 instance
                  print_path_zone='/',
                  print_static_pages=True,
                  print_dynamic_pages=True,
-                 print_debug_counts=True,):
+                 print_debugs=True,):
         if hasattr(self, "_initialized"):
             return
         General.auto_path_naming = auto_path_naming
@@ -58,18 +65,21 @@ class Router: # singleton only 1 instance
         General.detect_method_routes = detect_method_routes
         General.detect_method_ordinaries = detect_method_ordinaries
         General.initial_route = initial_route
-        General.print_debug_counts = print_debug_counts
+        General.print_debugs = print_debugs
         
         self.error_path = error_path
         self.every_level_fallback = every_level_fallback
-        self.fly_pads = fly_pads
-        self.max_pads = max_pads
+        self.navigate_style = navigate_style
+        self.max_views = max_views
         if isinstance(zone_or_class_or_list, (list, tuple, set)):
             zone_or_class_or_list = list(zone_or_class_or_list)
         else:
             zone_or_class_or_list = [zone_or_class_or_list]
         
+        _check_time("importing all modules till start of router")
         Route._create_tree(zone_or_class_or_list)
+        _check_time("creating initial tree")
+
         final_route = General._tree_map.get("", None)
         if not final_route:
             raise ValueError(f"[fletfly] There are no routes to handle...")
@@ -77,14 +87,17 @@ class Router: # singleton only 1 instance
         self.static_map = {} 
         self.dynamic_map = {}
         self._parse_routes(final_route)
+        _check_time("parsing static & dynamic nodes maps")
+        
         if print_path_zone is not None:
+            print("-------------------- fletfly -- tree branch ---------------------")
             print(Route._format_route_tree(print_path_zone, self.static_map, self.dynamic_map))
         if print_static_pages:
             print("--------------------- fletfly -- static map ---------------------")
             for item in self.static_map.values(): print(item)
         
         if print_dynamic_pages:
-            print("--------------------- fletfly -- dynamic map ---------------------")
+            print("-------------------- fletfly -- dynamic map ---------------------")
             for item in self.dynamic_map.values(): print(item)
         self._initialized = True
     
@@ -245,7 +258,15 @@ class Router: # singleton only 1 instance
                     main_obj.children.append(sub_child)
         return main_obj
 
+    _first_run = True
     def _handle_route_change(self, e):
+        global _check_time_var
+        if Router._first_run:
+            _check_time("triggering initial _handle_route_change by flet")
+            Router._first_run = False 
+        else:
+            _check_time_var = time.perf_counter()
+
         if not e.page.views or (e.page and e.page.route and e.page.views[-1].route and e.page.route != e.page.views[-1].route):
             e.page.run_task(self._navigate, e.page)
 
@@ -310,7 +331,7 @@ class Router: # singleton only 1 instance
                                                 _class_props=route._props,
                                                 func=route._view,
                                                 hero=route._view_hero,
-                                                loader_func=route.loader,
+                                                loader_func=route._loader,
                                                 )
             layout_node = None
             if route._layout or route.layout_override:
@@ -320,7 +341,7 @@ class Router: # singleton only 1 instance
                                                 func=route._layout,
                                                 hero=route._layout_hero,
                                                 override=route._layout_override,
-                                                loader_func=route.loader,
+                                                loader_func=route._loader,
                                                 )
             layout_nodes = list(p_layout_nodes) + ([layout_node] if layout_node else [])
 
@@ -439,8 +460,6 @@ class Router: # singleton only 1 instance
 # region Navigate
     async def _navigate(self, page, fullpath = None):
         if fullpath is None: fullpath = page.route
-        start = time.perf_counter()
-        print(f"Time taken: {(time.perf_counter() - start) * 1000:.2f}ms")
         
         path, query = self._get_path_query(page, fullpath)
         
@@ -460,24 +479,25 @@ class Router: # singleton only 1 instance
         page.fly.params = params if params else {}
         page.fly.query = query if query else {}
 
-        step1 = self._apply_fly_pads(node) 
+        step1 = self._apply_navigate_style(node) 
         
         step2 = await self._check_fly_ins(page, step1, node)
 
         if not step2: return
         
-        step3 = self._apply_max_pads(step2)
-
+        step3 = self._apply_max_views(step2)
+        _check_time("navigation preparation for reconciling")
         await self._reconcile_views(page, step3)
+        _check_time("reconciling views")
         page.update()
+        _check_time("page update")
+        
         self._clean_instances(page)
-        if General.print_debug_counts:
-            print(f"[fletfly Debug] Time taken: to end of _navigate before page.update {(time.perf_counter() - start) * 1000:.2f}ms")
+        if General.print_debugs:
             print(f"[fletfly Debug] Number of active views:", len(page.views))
             print(f"[fletfly Debug] Number of active instances:", len(page.fly._instances))
             print(f"[fletfly Debug] Number of active layouts:", len(page.fly._layouts))
             print(f"[fletfly Debug] Number of active shared views:", len(page.fly._arounds))
-        
 
     def _get_path_query(self, page, fullpath = None):
 
@@ -517,7 +537,7 @@ class Router: # singleton only 1 instance
                 if not node.fly_to.startswith(General._attr_prefix):
                     to = node.fly_to
                 else:
-                    instance = self._get_active_instance(page, node)
+                    instance = self._get_active_class_instance(page, node)
                     val = getattr(instance, node.fly_to.replace(General._attr_prefix, ""), "not there")
                     if val != "not there" and isinstance(val, str):
                         to = val
@@ -586,39 +606,39 @@ class Router: # singleton only 1 instance
         """
         
 
-    def _apply_fly_pads(self, node:_FlightNode):
-        if self.fly_pads == FlyPad.target_only or node.path == "/":
+    def _apply_navigate_style(self, node:_FlightNode):
+        if self.navigate_style == NavigateStyle.target_only or node.path == "/":
             return [node]
         
         full_chain = node.lineage + [node]
         home_node = full_chain[0]
 
-        if self.fly_pads == FlyPad.home_target:
+        if self.navigate_style == NavigateStyle.home_target:
             return [home_node, node]
 
-        if self.fly_pads == FlyPad.last_port_target:
+        if self.navigate_style == NavigateStyle.last_port_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
             return [last_port, node] if last_port else [home_node, node]
 
-        if self.fly_pads == FlyPad.home_last_port_target:
+        if self.navigate_style == NavigateStyle.home_last_port_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
             if last_port and last_port != home_node:
                 return [home_node, last_port, node]
             return [home_node, node]
 
-        if self.fly_pads == FlyPad.home_ports_target:
+        if self.navigate_style == NavigateStyle.home_ports_target:
             wishlist = [n for n in full_chain if n.is_zone]
             if node not in wishlist: wishlist.append(node)
             return wishlist
 
-        if self.fly_pads == FlyPad.all_from_last_port:
+        if self.navigate_style == NavigateStyle.all_from_last_port:
             last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
             if last_port_idx is not None:
                 actual_idx = len(full_chain) - 1 - last_port_idx
                 return full_chain[actual_idx:]
             return full_chain
 
-        if self.fly_pads == FlyPad.home_all_from_last_port:
+        if self.navigate_style == NavigateStyle.home_all_from_last_port:
             last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
             if last_port_idx is not None:
                 actual_idx = len(full_chain) - 1 - last_port_idx
@@ -731,20 +751,20 @@ class Router: # singleton only 1 instance
 
         return last_res, last_func_name
 
-    def _apply_max_pads(self, wishlist):
-        if self.max_pads <= 0 or len(wishlist) <= self.max_pads:
+    def _apply_max_views(self, wishlist):
+        if self.max_views <= 0 or len(wishlist) <= self.max_views:
             return wishlist
 
         target = wishlist[-1]
         home = wishlist[0]
         
-        remaining_slots = self.max_pads - 2 
+        remaining_slots = self.max_views - 2 
         middle_candidates = wishlist[1:-1]
         survivors = middle_candidates[-remaining_slots:] if remaining_slots > 0 else []
 
         final_list = [home] + survivors + [target]
         
-        if self.max_pads == 1:
+        if self.max_views == 1:
             return [target]
         return final_list
     
@@ -879,7 +899,7 @@ class Router: # singleton only 1 instance
         return "/" + "/".join(result_path)
     
     @staticmethod
-    def _get_active_instance(page, partial_real_path, level_node):
+    def _get_active_class_instance(page, partial_real_path, level_node):
         instance = page.fly._instances.get(partial_real_path, None)
         if not isinstance(instance, level_node._class):  
             instance = _call_with_payload(level_node._class, page, level_node._class_props)
@@ -899,7 +919,7 @@ class Router: # singleton only 1 instance
         if callable(func):
             final_func = func
         elif isinstance(func, str) and level_node._class:
-            instance = Router._get_active_instance(page, partial_real_path, level_node)
+            instance = Router._get_active_class_instance(page, partial_real_path, level_node)
             final_func = getattr(instance, func, None)
             if not final_func or not callable(final_func): return None
         final_func_dict = {"func":final_func, "props": func_dict.get("props", {}), "path":partial_real_path}
@@ -907,6 +927,7 @@ class Router: # singleton only 1 instance
         loader_dict = getattr(level_node, "loader_func", {})
         if loader_dict:
             loader_func = loader_dict.get("func", None)
+            
             if loader_func:
                 final_loader_func = None
                 if callable(loader_func):
@@ -1027,7 +1048,7 @@ class Router: # singleton only 1 instance
                     if isinstance(view_node.hero, bool):
                         self.hero = True
                     elif isinstance(view_node.hero, str):
-                        instance = Router._get_active_instance(page, view_node)
+                        instance = Router._get_active_class_instance(page, view_node)
                         val = getattr(instance, view_node.hero, "not there")
                         if val != "not there":
                             self.hero = val
@@ -1143,7 +1164,7 @@ class Router: # singleton only 1 instance
                 if isinstance(hero, bool):
                     final_hero = hero
                 elif isinstance(hero, str):
-                    instance = Router._get_active_instance(page, view_obj.path, view_node)
+                    instance = Router._get_active_class_instance(page, view_obj.path, view_node)
                     hero = getattr(instance, hero, None)
                     if hero is not None:
                         final_hero = hero
@@ -1183,7 +1204,7 @@ class Router: # singleton only 1 instance
                     if isinstance(n.override, bool):
                         override = True
                     elif isinstance(n.override, str):
-                        instance = Router._get_active_instance(page, n)
+                        instance = Router._get_active_class_instance(page, n)
                         val = getattr(instance, n.override, "not there")
                         if val != "not there":
                             override = val
@@ -1221,7 +1242,7 @@ class Router: # singleton only 1 instance
                     if isinstance(n.override, bool):
                         override = True
                     elif isinstance(n.override, str):
-                        instance = Router._get_active_instance(page, n)
+                        instance = Router._get_active_class_instance(page, n)
                         val = getattr(instance, n.override, "not there")
                         if val != "not there":
                             override = val
@@ -1254,7 +1275,7 @@ class Router: # singleton only 1 instance
                 if isinstance(layout_node.hero, bool):
                     self.hero = True
                 elif isinstance(layout_node.hero, str):
-                    instance = Router._get_active_instance(page, layout_node)
+                    instance = Router._get_active_class_instance(page, layout_node)
                     val = getattr(instance, layout_node.hero, "not there")
                     if val != "not there":
                         self.hero = val
@@ -1590,7 +1611,7 @@ fty.data(page,
     value=("user.name", "loading..."), # with default, extracted from data {"{'user':{'name':'your_name'}}"}  
     color=("user.0")                   # without default, extracted from data {"{'user':['red']}"}
 )
-Hint: you can use flet auto complete first for the **kwargs, then move the ) up to separate the control
+Hint: you can use flet auto complete first for the control properties, then move the ) up to separate the control
 """
     if not control or not kwargs:
         print(data_msg)

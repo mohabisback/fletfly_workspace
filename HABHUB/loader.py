@@ -191,10 +191,11 @@ def view(page):
     for i in range(200):
 
         name_txt = ft.Text(size=16, weight="bold")
-        price_txt = ft.Text(size=14, color="green")
+        price_txt = ft.Text("loading...", size=14, color="green")
         
         data(page, name_txt, value=f"products.{i}.name")
-        data(page, price_txt, value=f"products.{i}.price")
+        # or this
+        price_txt = data(page, price_txt, value=f"products.{i}.price")
         
         grid.controls.append( 
             ft.Card(content=ft.Column([name_txt, price_txt], alignment=ft.Alignment.CENTER))

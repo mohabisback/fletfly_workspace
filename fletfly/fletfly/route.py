@@ -33,7 +33,7 @@ class General:
     detect_method_ordinaries = True
     detect_route_subclasses = True
     detect_inner_classes = True
-    print_debug_counts = True
+    print_debugs = True
     _shared_map = {}
     _router_instance = None
 
@@ -118,8 +118,15 @@ def _call_with_payload(func, page, availables: list[dict], params=True, query=Tr
         for k, v in merged_data.items():
             if k not in run_args:
                 run_args[k] = v
-    return func(**run_args)
-
+    
+    try:
+        return func(**run_args)
+    except TypeError as e:
+        if "argument" in str(e) or "takes" in str(e):
+            func_name = getattr(func, "__name__", type(func).__name__)
+            raise TypeError(f"[fletfly] {e} - maybe you forgot 'self' or 'cls' parameter in <{func_name}>?") from e
+        raise
+    
 def _get_set_payload(func) -> dict | None:
     bare_func = getattr(func, "__func__", func)
     payload = getattr(bare_func, "_payload_fletfly", None)
@@ -274,7 +281,6 @@ class _MethodHandler:
             else:
                 raise TypeError(f"❌ [fletfly] Child tuple must be (callable, props_dict), but got invalid tuple structure.")
         else:
-            print(111111111111111111, item)
             raise TypeError(f"❌ [fletfly] Expected Route | callable | (callable, props_dict) tuple | list of the above, but got '{type(item).__name__}'")
     
     def _get_func_dict(self, func, expected_not):
@@ -331,6 +337,9 @@ class _MethodHandler:
                 raise ValueError(f"[fletfly] Argument '{self.expected_func}' must be callable.")
             remaining_args = ()
         if func and (remaining_args or kwargs): no_decorator = True
+        
+        # get not bounded bare func
+        func = getattr(func, "__func__", func)
 
         if len(remaining_args) > len(keys):
             raise ValueError(f"[fletfly] Function expected {len(keys)} arguments but got {len(remaining_args)}")    
@@ -541,6 +550,8 @@ class _MethodHandler:
                 
         else:
             def wrapper(func_or_class):
+                # get real function not bounded by @classmethod or shit
+                func_or_class = getattr(func_or_class, "__func__", func_or_class)
                 _get_set_payload(func_or_class)
                 _inject_details_into_class_or_method(func_or_class, config_args)
                 if isinstance(func_or_class, type):
@@ -1066,27 +1077,25 @@ class Route():
     def __init__(self, *args, **kwargs):
         self._layout=None
         self._view=None
-        self.layout_override = None
-        self.path = None
-        self.fly_to = None
-        self.fly_in_override = None
-        self.fly_out_override = None
-        self.icon = None
-        self.title = None
-        self.view_hero = None
-        self.layout_hero = None
-        self.loader = None
-        self.children = None
-        self.index = None
-        self.fly_ins = None
-        self.fly_outs = None
-        self.is_zone = None
-        
-        self.props = None
+        self._loader = None
+        self._index = None
+        self._layout_override = None
+        self._path = None
+        self._fly_to = None
+        self._fly_in_override = None
+        self._fly_out_override = None
+        self._icon = None
+        self._title = None
+        self._view_hero = None
+        self._layout_hero = None
+        self._is_zone = None
+        self._fly_ins = None
+        self._fly_outs = None
+        self._children = None
+        self._props = None
         self._class = None
 
         self._adjust_locals(args, kwargs)
-        
         self.parent = None
         General._pending_routes.add(self)
 
@@ -1104,6 +1113,7 @@ class Route():
                     setattr(self, official_name, params.pop(alias))
                     break       
         self.props = (params.pop("props", {}) or {}) | params
+        
 
     @overload
     def __call__(self, path:str=None, view=None, children:list[Route]=None, index:Route=None, 
@@ -1444,7 +1454,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             if attr_name.startswith("_"): continue
 
             # Unwrap the underlying function if wrapped in staticmethod or classmethod
-            attr_func = attr_val.__func__ if isinstance(attr_val, (staticmethod, classmethod)) else attr_val
+            attr_func = getattr(attr_val, "__func__", attr_val)
 
             for item_name in ["view", "layout", "fly_in", "fly_out", "child", "index"]:
                 if hasattr(attr_func, f"_fletfly_{item_name}"): # if function or class has decorator
@@ -1480,7 +1490,9 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             if attr_name.startswith("_") or attr_name in flagged_attr: continue
 
             # Unwrap the underlying function if wrapped in staticmethod or classmethod
-            attr_func = attr_val.__func__ if isinstance(attr_val, (staticmethod, classmethod)) else attr_val
+            attr_func = getattr(attr_val, "__func__", attr_val)
+            # attr = func, not func directly
+            static = attr_name != getattr(attr_func, "__name__", attr_func)
 
             # Find the matching prefix key from the dictionary
             matched_alias = next((k for k in local_aliases if attr_name.lower().startswith(k)), None)
@@ -1490,12 +1502,11 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     _get_set_payload(attr_func)
                     if General.detect_method_ordinaries:
                         if official_name in ["view", "layout", "loader"]:
-                            setattr(route, official_name, _FuncDict(func=attr_name))
+                            setattr(route, official_name, _FuncDict(func=attr_func if static else attr_name))
                         elif official_name in ("fly_in", "fly_out"):
-                            getattr(route, f"{official_name}s", []).append(_FuncDict(func=attr_name))
+                            getattr(route, f"{official_name}s", []).append(_FuncDict(func=attr_func if static else attr_name))
                         elif official_name in ("index", "child"):
                             sub = create_index_child(attr_name, attr_func, {}, official_name)
-                            
                 else:
                     if official_name == "path": # actual value
                         route.path = attr_val
@@ -1510,6 +1521,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     elif official_name in ["title", "icon"]:
                         setattr(route, official_name, General._attr_prefix+attr_name)
                         remove_aliases_of(local_aliases[attr_name])
+                    elif official_name in ["fly_in", "fly_out"]:
+                        getattr(route, f"{official_name}s", []).append(attr_val)
                     elif official_name !="path": # booleans
                         setattr(route, official_name, attr_name)
                         remove_aliases_of(local_aliases[attr_name])
@@ -1612,7 +1625,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         cls_ = '<'+Route.cut(route._class.__name__,14)+'>' if route._class else ''
         
         view = route._view["func"] if route._view and isinstance(route._view, _FuncDict) else route._view
-        v = '<'+ Route.cutcut(view.__name__,12)+'>' if callable(view) else ('"'+ Route.cut(view,12)+'"' if isinstance(view,str) else '')
+        v = '<'+ Route.cut(view.__name__,12)+'>' if callable(view) else ('"'+ Route.cut(view,12)+'"' if isinstance(view,str) else '')
 
         lay = route._layout["func"] if route._layout and isinstance(route._layout, _FuncDict) else route._layout
         l = '<'+ Route.cut(lay.__name__,12)+'>' if callable(lay) else ('"'+ Route.cut(lay,12)+'"' if isinstance(lay,str) else '')
@@ -1620,8 +1633,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
 
         to = "'"+Route.cut(route._fly_to, 12)+"'" if route._fly_to else ''
 
-        ins = len(route._fly_ins)
-        outs = len(route._fly_ins)
+        ins = len(route.fly_ins)
+        outs = len(route.fly_outs)
         return f"view:{v:<14} lay:{l:<14} cls:{cls_:<14} to:{to:<14} ins:{ins:1} outs:{outs:1}"
     
     @classmethod
@@ -1662,7 +1675,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         
         marker = "" if is_root else ("└─" if is_last else "├─")
         marker2 = " " if is_root else (" " if is_last else "│")
-        dashes = " - " * 46 + "\n"
+        dashes = " - " * 36 + "\n"
         output = f"{prefix}{marker}{Route.cut(path,17, True, "─")} {Route._format_route_with_no_path(route)}{tag}\n"
         output += f"{prefix}{marker2}"
         if not route.children:
@@ -1670,7 +1683,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         else:
             output += "   │" + dashes
             child_prefix = prefix + ("    " if is_last else "│   ")
-            child_list = ([route._index] if route._index else []) + route._children
+            child_list = ([route._index] if route._index else []) + route.children
             for i, child in enumerate(child_list):
                 is_child_last = (i == len(child_list) - 1)
                 child_path = current_path.strip("/")+"/"+ (child._path.strip("/") if child._path else "")
