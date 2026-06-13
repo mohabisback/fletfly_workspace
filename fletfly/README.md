@@ -121,32 +121,32 @@ def main(page):
 ft.run(main)    
 ```
 
-**[Understand State Persistence & Overriding](docs/class/ATTRIBUTES.md)**
-
-
 ---
-## Persistent Engine: Intelligent Reconciliation & Overriding
+## Persistent Engine: Intelligent Reconciliation & Hero contents
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
 ```Python
+import flet as ft
+from fletfly import Route, slot, fly
 class Home(Route):
-    layout_hero = False                                # layout deleted once no view uses it(default)
-    def layout(page):                                  # layout initialized once till no use
-        return ft.Column([Header(), slot(page)])
-
-    view_hero = True                                   # view persistant for re-use (True for static path)
-    def view(page):
-        return AnalyticsDashboard()
+    path = "{category}"               # dynamic page
+    layout_hero = False               # layout deleted once no view uses it(default)                         # False is preffered(no dynamic details)
+    def layout(self, page):           
+        return ft.Column([
+            ft.Text("Header"),        
+            slot(page)
+            ])
+    view_hero = True                  # True means 5 in dynamic, 1 in static
+    def view(self):
+        return ft.Text("Main view")
     class User:
-        path = ":id"                                   # dynamic page
-        layout_override = True                         # parent layouts cleared
-
-        view_hero = 10                                 # max 10 pages are saved for different params (default = 5)
-        def view(page):
-            return ft.View(ft.Text("Complete page"))   # no layout, direct page injection
+        path = ":id"                  # dynamic page
+        view_hero = 2                 # max 2 pages are saved for different params
+        def view(self, id):
+            return ft.Text(f"page: {id}")
+ft.run(fly)
 ```
-
-**[Understand State Persistence & Overriding](docs/class/LAYOUT.md)**
+**[Understand State Persistence & Hero](docs/class/HERO.md)**
 
 ---
 

@@ -26,9 +26,9 @@ def test_01():
         print(item)
     
     # Ensure nested _fletfly_ attributes are stripped and diffused to the route object
-    assert getattr(route, "_view_hero", None) is True
-    assert getattr(route, "_layout_hero", None) is True
-    assert getattr(route, "_layout_override", None) is False
+    assert route._view_hero == True
+    assert route._layout_hero == True
+    assert route._layout_override == False
 
 
 def test_duplicate_decorators_throw_value_error(capsys):

@@ -36,7 +36,7 @@ def test_init_with_arguments():
     assert aw._view["func"] == dummy_view
     assert aw._layout["func"] == dummy_layout
     assert aw.children == [child_route]
-    assert aw._view_hero is True
+    assert aw._view_hero == True
 
 def test_adjust_locals_with_clsattres():
     """Verify kwargs aliases map correctly to official fields and get popped from kwargs."""
@@ -81,4 +81,4 @@ def test_call_reconfiguration():
     assert result is aw
     assert aw.path == "/updated"
     assert aw.title == "New Title"
-    assert aw._view_hero is True
+    assert aw._view_hero == True

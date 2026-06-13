@@ -133,7 +133,7 @@ def test_19():
     aw.view(sample_func, hero=True, role="user")
     assert aw._view["func"] == sample_func
     assert aw._view["props"] == {"role":"user"}
-    assert aw._view_hero is True
+    assert aw._view_hero == True
 
 def test_20():
     """Case g_func: @Route().view() on function."""
@@ -141,4 +141,4 @@ def test_20():
     aw = Route()
     aw.view(sample_func, hero=False, role="user")
     assert aw._view["func"] == sample_func
-    assert aw._view_hero is False
+    assert aw._view_hero == False

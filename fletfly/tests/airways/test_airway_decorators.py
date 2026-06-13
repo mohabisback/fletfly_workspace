@@ -21,9 +21,9 @@ def test_01_pure_route_decorators_diffusion():
     assert route._layout["func"] == my_custom_layout
     
     # Ensure nested metadata attributes are stripped and diffused directly to the route object
-    assert getattr(route, "_view_hero", None) is True
-    assert getattr(route, "_layout_hero", None) is True
-    assert getattr(route, "_layout_override", None) is False
+    assert route._view_hero == True
+    assert route._layout_hero == True
+    assert route._layout_override == False
 
 
 def test_accumulative_route_decorators_append_instead_of_overwriting():

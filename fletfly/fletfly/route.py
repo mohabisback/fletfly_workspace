@@ -57,17 +57,17 @@ def layout(page):
 """
 aliases = {
     "path": ["path", "url", "route"],
-    "view": [ "view", "build", "viewer", "component", "element", "contents", "controls",],
     "view_hero": [ "view_hero", "build_hero", "component_hero", "element_hero", "contents_hero", "controls_hero",],
-    "fly_in": ["fly_in", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
+    "view": [ "view", "build", "viewer", "component", "element", "contents", "controls",],
     "fly_ins": ["fly_ins"],
     "fly_in_override": ["fly_in_override", "loader_override", "canActivate_override", "beforeEnter_override", "middleware_override", "beforeLoad_override",],
-    "fly_out": ["fly_out", "canDeactivate", "beforeUnload",],
-    "fly_outs": ["fly_outs"],
+    "fly_in": ["fly_in", "canActivate", "beforeEnter", "middleware", "beforeLoad",],
     "fly_out_override": ["fly_out_override", "canDeactivate_override", "beforeUnload_override",],
-    "layout": ["layout", "frame",],
+    "fly_outs": ["fly_outs"],
+    "fly_out": ["fly_out", "canDeactivate", "beforeUnload",],
     "layout_override": ["layout_override", "frame_override",],
     "layout_hero": ["layout_hero", "hero_frame",],
+    "layout": ["layout", "frame",],
     "fly_to": ["fly_to", "redirect", "redirectTo",],
     "title": ["title", ],
     "icon": ["icon", "logo",],
@@ -126,7 +126,7 @@ def _call_with_payload(func, page, availables: list[dict], params=True, query=Tr
             func_name = getattr(func, "__name__", type(func).__name__)
             raise TypeError(f"[fletfly] {e} - maybe you forgot 'self' or 'cls' parameter in <{func_name}>?") from e
         raise
-    
+
 def _get_set_payload(func) -> dict | None:
     bare_func = getattr(func, "__func__", func)
     payload = getattr(bare_func, "_payload_fletfly", None)
@@ -582,6 +582,7 @@ class _Layout(_MethodHandler):
     def __call__(self, *args, **kwargs):
         """1/2 Decorator, as: @layout(True, False)\n\n2/2 Direct call, as: layout(my_func, par1=arg1, par2=arg2)"""
         return self._pre_process_core(*args, **kwargs)
+
 class _View(_MethodHandler):
     name = "view"
     set_name = "_view"
@@ -624,6 +625,7 @@ class _FlyIn(_MethodHandler):
         2-3 /4 Func | Class call, as: fly_in(my_func, True)"""
         if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
         return self._pre_process_core(*args, **kwargs)
+
 class _FlyOut(_MethodHandler):
     name = "fly_out"
     set_name = "fly_outs"
@@ -642,6 +644,7 @@ class _FlyOut(_MethodHandler):
         2-3 /4 Func | Class call, as: fly_out(my_func, True)"""
         if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
         return self._pre_process_core(*args, **kwargs)
+
 class _Child(_MethodHandler):
     name = "child"
     set_name = "children"
@@ -697,6 +700,7 @@ class _Child(_MethodHandler):
         \n\n3-4 /4 func | class call, as: child(cls1, 'user', par1=arg1)"""
         if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
         return self._pre_process_core(*args, **kwargs)
+
 class _Index(_MethodHandler):
     name = "index"
     set_name = "_index"
@@ -740,9 +744,6 @@ class _Index(_MethodHandler):
         if "cls" in kwargs: kwargs = {"func": kwargs.pop("cls"), **kwargs}
         return self._pre_process_core(*args, **kwargs)
 
-class _FlyList(list):
-    """Special list to mark prepared middlewares and avoid double processing."""
-    pass
 class _StrAttr(str):
     def __new__(cls, name: str, value=None, ctx=None):
         # Pass a string representation to str.__new__
@@ -772,6 +773,7 @@ class _StrAttr(str):
             setattr(instance, self.set_name, actual_val)
             return instance
         return actual_val
+
 class _BoolAttr:
     def __init__(self, name: str, value=None, ctx=None):
         self.name = name
@@ -804,6 +806,39 @@ class _BoolAttr:
         if isinstance(other, bool):
             return bool(self) == other
         return self.value == other
+
+class _HeroAttr:
+    def __init__(self, name: str, value=None, ctx=None):
+        self.name = name
+        self.set_name = f"_{name}"
+        self.value = value  
+        self.ctx = ctx
+    def __get__(self, instance, owner):
+        if instance is None:
+            return self
+        val = getattr(instance, self.set_name, self.value)
+        # Return a new wrapper instance with the current value and context
+        return self.__class__(self.name, value=val, ctx=instance)
+    def __set__(self, instance, value):
+        if instance is not None:
+            setattr(instance, self.set_name, value)
+    def __call__(self, value=None):
+        if instance := self.ctx:
+            setattr(instance, self.set_name, value)
+            return instance
+        return value
+    def __bool__(self):
+        return bool(self.value)
+    def __str__(self):
+        return str(self.value)
+    def __repr__(self):
+        return str(self.value)
+    def __eq__(self, other):
+        if isinstance(other, (bool, int)):
+            return int(self.value or 0) == int(other)
+        return self.value == other
+    def __int__(self):
+        return int(self.value or 0)
 class _DictAttr(dict):
     def __init__(self, name: str, value=None, ctx=None):
         # Convert None to an empty dictionary as the default initial state
@@ -1061,8 +1096,8 @@ class Route():
     fly_in_override = _BoolAttr("fly_in_override")
     fly_out_override = _BoolAttr("fly_out_override")
     is_zone = _BoolAttr("is_zone")
-    view_hero = _BoolAttr("view_hero")
-    layout_hero = _BoolAttr("layout_hero")
+    view_hero = _HeroAttr("view_hero")
+    layout_hero = _HeroAttr("layout_hero")
     title = _StrAttr("title")
     icon = _StrAttr("icon")
     props= _DictAttr("props")
@@ -1494,6 +1529,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             # attr = func, not func directly
             static = attr_name != getattr(attr_func, "__name__", attr_func)
 
+            print(44444444444444, attr_name, attr_val)
             # Find the matching prefix key from the dictionary
             matched_alias = next((k for k in local_aliases if attr_name.lower().startswith(k)), None)
             if matched_alias:
@@ -1524,6 +1560,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     elif official_name in ["fly_in", "fly_out"]:
                         getattr(route, f"{official_name}s", []).append(attr_val)
                     elif official_name !="path": # booleans
+                        print(555555555555555, official_name, attr_name, attr_val)
                         setattr(route, official_name, attr_name)
                         remove_aliases_of(local_aliases[attr_name])
                         
