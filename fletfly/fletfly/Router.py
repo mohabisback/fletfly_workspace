@@ -17,13 +17,36 @@ class NavigateStyle:
 _check_time_var = time.perf_counter()
 
 def _check_time(msg):
+
     if General.print_debugs:
         global _check_time_var
         now = time.perf_counter()
         print(f"[fletfly Debug] Time taken during [ {msg} ]: {(now - _check_time_var) * 1000:.2f}ms")
         _check_time_var = now
 
+def _is_flet_instance(value, or_class = False) -> bool:
+    """
+    Globally validates if a given value (Class or Instance) is a valid Flet component
+    for shared injection, while strictly excluding full page Views.
+    """
+    if not or_class and isinstance(value, type): return False
+
+    cls = value if isinstance(value, type) else type(value)
+        
+    if issubclass(cls, ft.Control):
+        return True
+
+    # not accepted, allows all my work fletfly inside    
+    #if any("flet" in getattr(base, "__module__", "").lower() for base in getattr(cls, "__mro__", [])):
+    #    return True
+        
+    return False
+
 class Router: # singleton only 1 instance
+    static_map = {} 
+    dynamic_map = {}
+    shared_map = {}
+    _signatures_map = {}
     def __new__(cls, *args, **kwargs):
         if General._router_instance is None:
             General._router_instance = super(Router, cls).__new__(cls)
@@ -45,7 +68,7 @@ class Router: # singleton only 1 instance
         return General._router_instance
     
     def __init__(self, zone_or_class_or_list = [], initial_route = "", error_path:str = "", every_level_fallback=True,
-                 navigate_style:NavigateStyle = NavigateStyle.home_all_from_last_port, max_views:int = 5,
+                 navigation_style:NavigateStyle = NavigateStyle.home_all_from_last_port, max_views:int = 5,
                  auto_path_naming=True,
                  detect_path_routes=True,
                  detect_route_subclasses=True,
@@ -55,6 +78,7 @@ class Router: # singleton only 1 instance
                  print_path_zone='/', 
                  print_static_pages=True,
                  print_dynamic_pages=True,
+                 print_shared_views=True,
                  print_debugs=True,):
         if hasattr(self, "_initialized"):
             return
@@ -69,7 +93,7 @@ class Router: # singleton only 1 instance
         
         self.error_path = error_path
         self.every_level_fallback = every_level_fallback
-        self.navigate_style = navigate_style
+        self.navigation_style = navigation_style
         self.max_views = max_views
         if isinstance(zone_or_class_or_list, (list, tuple, set)):
             zone_or_class_or_list = list(zone_or_class_or_list)
@@ -84,21 +108,28 @@ class Router: # singleton only 1 instance
         if not final_route:
             raise ValueError(f"[fletfly] There are no routes to handle...")
 
-        self.static_map = {} 
-        self.dynamic_map = {}
         self._parse_routes(final_route)
-        _check_time("parsing static & dynamic nodes maps")
+        self._parse_shared(General._shared_map)
+
+        _check_time("parsing static, dynamic & shared nodes maps")
         
         if print_path_zone is not None:
             print("-------------------- fletfly -- tree branch ---------------------")
-            print(Route._format_route_tree(print_path_zone, self.static_map, self.dynamic_map))
+            print(Route._format_route_tree(print_path_zone, Router.static_map, Router.dynamic_map))
+
         if print_static_pages:
             print("--------------------- fletfly -- static map ---------------------")
-            for item in self.static_map.values(): print(item)
+            for item in Router.static_map.values(): print(item)
         
         if print_dynamic_pages:
             print("-------------------- fletfly -- dynamic map ---------------------")
-            for item in self.dynamic_map.values(): print(item)
+            for item in Router.dynamic_map.values(): print(item)
+        
+        if print_shared_views:
+            print("-------------------- fletfly -- shared map ---------------------")
+            for item in General._shared_map.values(): print(item)
+            
+            for item in Router.shared_map.values(): print(item.func, item.path)
         self._initialized = True
     
     class _FlightNode:
@@ -164,8 +195,9 @@ class Router: # singleton only 1 instance
             self._layout_actives = {}
             self._layout_news = {}
             self._layout_heros = {}
-            self._around_actives = {}
-            self._around_news = {}
+            self._shared_actives = {}
+            self._shared_news = {}
+            self._shared_heros = {}
             self._view_heros = {}
             self.page = page
             self._instance_actives = {}
@@ -267,8 +299,7 @@ class Router: # singleton only 1 instance
             Router._first_run = False 
         else:
             _check_time_var = time.perf_counter()
-
-        if not e.page.views or (e.page and e.page.route and e.page.views[-1].route and e.page.route != e.page.views[-1].route):
+        if not e.page.views or (e.page and e.page.route and hasattr(e.page.views[-1],"route") and e.page.route != e.page.views[-1].route):
             e.page.run_task(self._navigate, e.page)
 
     async def _handle_view_pop(self, e):
@@ -317,7 +348,7 @@ class Router: # singleton only 1 instance
     def _parse_routes(self, route:Route, parent_lineage=None, 
                        current_full_path="/", current_take_off_zone="/",
                         p_fly_ins_nodes=[], p_fly_outs_nodes=[], p_layout_nodes=[]):
-        true_node = route._view or route._fly_to
+        true_node = route._view or route._layout or route._fly_to
 
         if true_node or route._index or  route._children:
             seg = route._path.strip("/") if route._path else ""
@@ -387,9 +418,9 @@ class Router: # singleton only 1 instance
                 )
                 if node.is_dynamic:
                     node.regex = self._generate_regex(raw_path)
-                    self.dynamic_map[node.regex] = node
+                    Router.dynamic_map[node.regex] = node
                 else:
-                    self.static_map[raw_path] = node
+                    Router.static_map[raw_path] = node
                 current_lineage = (current_lineage.copy() if current_lineage else []) + [node]
 
             if route._index or route._children:
@@ -418,7 +449,23 @@ class Router: # singleton only 1 instance
                                         p_fly_ins_nodes=fly_ins_nodes,
                                         p_fly_outs_nodes=fly_outs_nodes,
                                         p_layout_nodes=layout_nodes)
-                    #self._safe_merge(self.static_map, self.dynamic_map, child_static, child_dynamic)
+                    #self._safe_merge(Router.static_map, Router.dynamic_map, child_static, child_dynamic)
+
+    def _parse_shared(self, shared_map):
+        for shared in shared_map.values():
+            if shared._view:
+                node = Router._SharedNode(
+                    path=shared._name,
+                    _class=shared._class,
+                    _class_props=shared._props,
+                    func=shared._view,
+                    hero=shared._hero,
+                    loader_func=shared._loader,
+                )
+                if Router.shared_map.get(shared._name, None) is None:
+                    Router.shared_map[shared._name] = node
+                else:
+                    raise ValueError(f"[fletfly] shared content with name {self.path} is already registered")
 
     def _safe_merge(self, main_static, main_dynamic, static, dynamic, skip_conflicts = False):
         
@@ -459,20 +506,21 @@ class Router: # singleton only 1 instance
 # endregion
 
 # region Navigate
-    async def _navigate(self, page, fullpath = None):
-        if fullpath is None: fullpath = page.route
-        
-        path, query = self._get_path_query(page, fullpath)
-        
-        node, params = self.match_path(path)
+    async def _navigate(self, page, path = None, fallback=False):
+        node = None
+        if not fallback:
+            if path is None: path = page.route
+            
+            path, query = self._get_path_query(page, path)
+            
+            node, params = self.match_path(path)
 
-        if self._check_fly_to(page, node): return None
+            if self._check_fly_to(page, node): return None
 
         if not node:
-            node, params = self._handle_fallback(page, node, path) 
+            node, params = self._handle_fallback(page, path) 
         if not node:
             return None
-
         if self._check_fly_to(page, node): return None
         
         #await self._apply_animation(page, node)
@@ -480,30 +528,49 @@ class Router: # singleton only 1 instance
         page.fly.params = params if params else {}
         page.fly.query = query if query else {}
 
-        step1 = self._apply_navigate_style(node) 
+        step1 = self._apply_navigation_style(node) 
         
         step2 = await self._check_fly_ins(page, step1, node)
 
         if not step2: return
         
         step3 = self._apply_max_views(step2)
+        
         _check_time("navigation preparation for reconciling")
-        await self._reconcile_views(page, step3)
+        
+        step4 = await self._reconcile_views(page, step3)
+        
+        if not step4: return None
+
         _check_time("reconciling views")
         page.update()
         _check_time("page update")
 
         if General.print_debugs:
-            print(f"[fletfly Debug] Active views:", len(page.views))
-            print(f"[fletfly Debug] Active layouts:", len(page.fly._layout_actives))
-            print(f"[fletfly Debug] Active shared views:", len(page.fly._around_actives))
-            print(f"[fletfly Debug] Active instances:", len(page.fly._instance_actives))
-            
-            view_heros_count = sum(len(v) if isinstance(v, dict) else 1 for v in page.fly._view_heros.values())
-            print(f"[fletfly Debug] Hero views:", view_heros_count)
-            layout_heros_count = sum(len(v) if isinstance(v, dict) else 1 for v in page.fly._layout_heros.values())
-            print(f"[fletfly Debug] Hero layouts:", layout_heros_count)
+            v_segs = [r.strip('/').split('/')[-1] if (r := getattr(v, "route", None)) is not None else None for v in page.views]            
+            print(f"[fletfly Debug] Active views:", len(page.views), v_segs if v_segs else '')
 
+            l_segs = [k.strip('/').split('/')[-1] for k in page.fly._layout_actives]            
+            print(f"[fletfly Debug] Active layouts:", len(page.fly._layout_actives), l_segs if l_segs else '')
+
+            s_segs = [k.strip('/').split('/')[-1] for k in page.fly._shared_actives]
+            print(f"[fletfly Debug] Active shared views:", len(page.fly._shared_actives), s_segs if s_segs else '')
+
+            i_segs = [k.strip('/').split('/')[-1] for k in page.fly._instance_actives]
+            print(f"[fletfly Debug] Active instances:", len(page.fly._instance_actives), i_segs if i_segs else '')
+
+            vh_segs = [f"{k.strip('/').split('/')[-1]}{f'({len(v)})' if isinstance(v, dict) else ''}" for k, v in page.fly._view_heros.items()]
+            view_heros_count = sum(len(v) if isinstance(v, dict) else 1 for v in page.fly._view_heros.values())
+            print(f"[fletfly Debug] Hero views:", view_heros_count, vh_segs if vh_segs else '')
+
+            lh_segs = [f"{k.strip('/').split('/')[-1]}{f'({len(v)})' if isinstance(v, dict) else ''}" for k, v in page.fly._layout_heros.items()]
+            layout_heros_count = sum(len(v) if isinstance(v, dict) else 1 for v in page.fly._layout_heros.values())
+            print(f"[fletfly Debug] Hero layouts:", layout_heros_count, lh_segs if lh_segs else '')
+            
+            sh_segs = [f"{k.strip('/').split('/')[-1]}{f'({len(v)})' if isinstance(v, dict) else ''}" for k, v in page.fly._shared_heros.items()]
+            shared_heros_count = sum(len(v) if isinstance(v, dict) else 1 for v in page.fly._shared_heros.values())
+            print(f"[fletfly Debug] Hero shared:", shared_heros_count, sh_segs if sh_segs else '')
+    
     def _get_path_query(self, page, fullpath = None):
 
         query = {}
@@ -523,14 +590,14 @@ class Router: # singleton only 1 instance
         print(f"---------- match path = {path} ----------")
         
         path = path.rstrip("/")
-        if path in self.static_map:
-            node:Router._FlightNode = self.static_map[path]
+        if path in Router.static_map:
+            node:Router._FlightNode = Router.static_map[path]
             return node, {}
 
-        for pattern in reversed(list(self.dynamic_map.keys())):
+        for pattern in reversed(list(Router.dynamic_map.keys())):
             match = pattern.match(path)
             if match:
-                node:Router._FlightNode = self.dynamic_map[pattern]
+                node:Router._FlightNode = Router.dynamic_map[pattern]
                 return node, match.groupdict()
 
         return None, {}
@@ -553,23 +620,21 @@ class Router: # singleton only 1 instance
                 return True
         return False
 
-    def _handle_fallback(self, page, node=None, path=None, view_failed=False):
+    def _handle_fallback(self, page, path=None):
         params = {}
-        if not node or view_failed:
-            if view_failed: print(f"[fletfly] Failed to create a view for route {path}")
-            if self.every_level_fallback:
-                temp_path = path.rstrip("/")
-                while True:
-                    if "/" in temp_path:
-                        temp_path = temp_path.rsplit("/", 1)[0]
-                    else:
-                        temp_path = ""
-                    
-                    fallback_path = (temp_path + "/*") if temp_path else "/*"
-                    node, params = self.match_path(fallback_path)
-                    
-                    if node or not temp_path:
-                        break
+        if self.every_level_fallback:
+            temp_path = path.rstrip("/")
+            while True:
+                if "/" in temp_path:
+                    temp_path = temp_path.rsplit("/", 1)[0]
+                else:
+                    temp_path = ""
+                
+                fallback_path = (temp_path + "/*") if temp_path else "/*"
+                node, params = self.match_path(fallback_path)
+                
+                if node or not temp_path:
+                    break
             if not node and self.error_path:
                 current_zone_error = (page.fly.take_off_zone.rstrip("/") + "/" + self.error_path.strip("/"))
                 node, params = self.match_path(current_zone_error)
@@ -611,39 +676,39 @@ class Router: # singleton only 1 instance
         """
         
 
-    def _apply_navigate_style(self, node:_FlightNode):
-        if self.navigate_style == NavigateStyle.target_only or node.path == "/":
+    def _apply_navigation_style(self, node:_FlightNode):
+        if self.navigation_style == NavigateStyle.target_only or node.path == "/":
             return [node]
         
         full_chain = node.lineage + [node]
         home_node = full_chain[0]
 
-        if self.navigate_style == NavigateStyle.home_target:
+        if self.navigation_style == NavigateStyle.home_target:
             return [home_node, node]
 
-        if self.navigate_style == NavigateStyle.last_port_target:
+        if self.navigation_style == NavigateStyle.last_port_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
             return [last_port, node] if last_port else [home_node, node]
 
-        if self.navigate_style == NavigateStyle.home_last_port_target:
+        if self.navigation_style == NavigateStyle.home_last_port_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
             if last_port and last_port != home_node:
                 return [home_node, last_port, node]
             return [home_node, node]
 
-        if self.navigate_style == NavigateStyle.home_ports_target:
+        if self.navigation_style == NavigateStyle.home_ports_target:
             wishlist = [n for n in full_chain if n.is_zone]
             if node not in wishlist: wishlist.append(node)
             return wishlist
 
-        if self.navigate_style == NavigateStyle.all_from_last_port:
+        if self.navigation_style == NavigateStyle.all_from_last_port:
             last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
             if last_port_idx is not None:
                 actual_idx = len(full_chain) - 1 - last_port_idx
                 return full_chain[actual_idx:]
             return full_chain
 
-        if self.navigate_style == NavigateStyle.home_all_from_last_port:
+        if self.navigation_style == NavigateStyle.home_all_from_last_port:
             last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
             if last_port_idx is not None:
                 actual_idx = len(full_chain) - 1 - last_port_idx
@@ -774,10 +839,10 @@ class Router: # singleton only 1 instance
         return final_list
     
     async def _reconcile_views(self, page, final_nodes_list):
+
         page.fly._temp_data = []
         page.fly._layout_news = {}
-        page.fly._around_news = {}
-        
+        page.fly._shared_news = {}
         Router._LayoutObj._dismount_obj_s(list(page.fly._layout_actives.values())) # dismount existing layouts
 
         final_paths = [Router._get_real_path(page.route, n.path) if n.is_dynamic else n.path for n in final_nodes_list]
@@ -788,7 +853,7 @@ class Router: # singleton only 1 instance
                 view_obj = getattr(vi, "_fletfly_view_obj", None)
                 if view_obj: Router._save_hero(page, view_obj, "view")
                 page.views.pop(i)
-        
+
         for index, flight_node in enumerate(final_nodes_list):
             if not flight_node.view_node and not flight_node.layout_nodes: continue
 
@@ -806,8 +871,8 @@ class Router: # singleton only 1 instance
                 view_obj = Router._ViewObj._get_view_obj(page, flight_node, final_paths[index])
 
             all_objs = ([view_obj] if view_obj else []) + (list(reversed(layout_objs)) if layout_objs else [])
-            #inject fly_arounds and record them
-            active_arounds = Router._AroundObj._inject_around_objs(page, all_objs)            
+            
+            Router._SharedObj._inject_shared_objs(page, all_objs)            
 
             final_obj = None
             for i, obj in enumerate(all_objs):
@@ -841,7 +906,8 @@ class Router: # singleton only 1 instance
                 if index < len(final_nodes_list) - 1:
                     continue
                 else:
-                    self._handle_fallback(page, None, flight_node.path, True)             
+                    print(f"[fletfly] Failed to create a view for route {flight_node.path}")
+                    self._navigate(page=page, path=flight_node.path, fallback=True)      
                     return None
                 
             #if not top-view
@@ -864,19 +930,23 @@ class Router: # singleton only 1 instance
             final_view._fletfly_view_obj = view_obj
         print(f"Layouts before clean: {len(page.fly._layout_actives)}")
         Router._LayoutObj._clean_layouts(page)
+
+        for k, v in page.fly._shared_actives:
+            if k not in page.fly._shared_news and v.hero:
+                page.fly._shared_heros[k] = v
+        page.fly._shared_actives = page.fly._shared_news
+        page.fly._shared_news = {}
         self._clean_instances(page)
-        page.fly._around_actives = {k: v for k, v in page.fly._around_actives.items() if v.hero} | page.fly._around_news
         page.fly.last_success_path = page.route
-    
+        return True
 
     def _clean_instances(self, page):
         used_instances_pathes = set()
         used_instances_pathes.update(page.fly._layout_actives.keys())
-        used_instances_pathes.update(page.fly._around_actives.keys())
+        used_instances_pathes.update(page.fly._shared_actives.keys())
         for view in page.views:
             if hasattr(view, "route"):
                 used_instances_pathes.add(view.route)
-
         for v in page.fly._view_heros.values():
             if isinstance(v, dict):
                 used_instances_pathes.update(v.keys())
@@ -924,7 +994,10 @@ class Router: # singleton only 1 instance
         func = func_dict.get("func", None)
         if not func:
             return None
-        partial_real_path = Router._get_real_path(page.route, level_node.path)
+        if isinstance(level_node, Router._SharedNode):
+            partial_real_path = level_node.path
+        else:
+            partial_real_path = Router._get_real_path(page.route, level_node.path)
         if callable(func):
             final_func = func
         elif isinstance(func, str) and level_node._class:
@@ -949,12 +1022,12 @@ class Router: # singleton only 1 instance
 
         if not final_func: return None
         return final_func_dict
+    
     @classmethod
     def _save_hero(cls, page, obj, view_or_layout):
         node = obj.node
         final_hero = None
         hero = node.hero
-        print(77777777777777, hero)
         if hero:
             if isinstance(hero, (bool, int)):
                 final_hero = hero
@@ -976,84 +1049,140 @@ class Router: # singleton only 1 instance
         else:
             getattr(page.fly, f"_{view_or_layout}_heros", {}).pop(node.path, None)
         
-    class _AroundNode: # one node created for one view for all times
-        def __init__(self, func=None, props=None, _class=None, name=None,
-                     hero=None,
-                     loader_func=None):
+    @staticmethod
+    def _create_slots_token(func):
+        # 4-way inspection logic to extract the exact code object
+        if isinstance(func, type):  # Full class component
+            target_code = getattr(func.__init__, "__code__", None)
+            if not target_code: raise TypeError(f"[fletfly] class <{func}> was set as a callable view or layout, but it has no __init__ function")
+        elif hasattr(func, '__call__') and not hasattr(func, '__code__'):  # Callable instance
+            target_code = getattr(func.__call__, "__code__", None)
+            if not target_code: raise TypeError(f"[fletfly] instance <{func}> was set as a callable view or layout, but it has no __call__ function")
+        else:
+            target_code = getattr(func, '__func__', func).__code__  # Bound method (instance.method)
+
+
+        # Generate the unified key matching the slot frame output
+        return f"{target_code.co_filename}::{target_code.co_qualname}"
+
+    class _SharedNode: # one node created for one view for all times
+        def __init__(self,path,
+                    _class,
+                    _class_props,
+                    func,
+                    hero,
+                    loader_func):
+            self.path = path
             self.func = func #function
-            self.props = props
-            self._class = _class #class
-            self.hero = hero
+            self._class = _class
+            self._class_props = _class_props #class
+            self.hero = hero #function
             self.loader_func = loader_func
-            if name:
-                self.path = name
-            else: 
-                if not Router.detect_methods_routes:
-                    raise ValueError("[fletfly] shared view must have a name, or you can turn on auto_func_naming")
-                else:
-                    if func and callable(func):
-                        self.path = func.__name__
-                    elif func and isinstance(func, str):
-                        self.path = func
-                    else:
-                        raise ValueError("[fletfly] shared view must have a name")
-                    print(f"[fletfly] fly_around shared function auto named to {self.path}")
-            if self.path in General._shared_map:
-                raise ValueError(f"[fletfly] shared content with name {self.path} is already registered")
-            else:
-                General._shared_map[self.path] = self   
         @classmethod
         def _get_node(cls, name):
             if not isinstance(name, str):
-                print(f"[fletfly] fly_around expects string name as first argument, but got '{type(name)}'")
-            elif name in General._shared_map:
-                return General._shared_map[name]
+                print(f"[fletfly] shared expects string name as first argument, but got '{type(name)}'")
+            elif name in Router.shared_map:
+                return Router.shared_map[name]
             else:
-                print(f"[fletfly] can't find fly_around shared component with name '{name}'")
+                print(f"[fletfly] can't find shared shared component with name '{name}'")
 
-    class _AroundObj:# carrying views (multiple) views info about the view
-        def __init__(self, obj:ft.Control, around_node:Router._AroundNode=None, hero:bool=None):
+    class _SharedObj:
+        def __init__(self, path:str,
+                     obj,
+                     shared_holders,
+                     shared_nodes,
+                      node:Router._ViewNode,
+                      hero:bool):
+            self.path = path
             self.obj = obj
-            self.around_node = around_node
+            self.node = node
+            self.shared_holders = shared_holders
+            self.shared_nodes = shared_nodes
+            self.hero = hero
+            if hero is None:
+                if node.hero:
+                    if isinstance(node.hero, bool):
+                        self.hero = True
+                    elif isinstance(node.hero, str):
+                        instance = Router._get_active_class_instance(page, node)
+                        val = getattr(instance, node.hero, "not there")
+                        if val != "not there":
+                            self.hero = val
+        @classmethod
+        def _create_shared_obj(cls, page, shared_node:Router._SharedNode):
+            shared_loader_dict = Router._get_sync_func_props_path_loader_loader_props(page, shared_node)
+            if not shared_loader_dict: return None
+            
+            func_key = Router._create_slots_token(shared_loader_dict['func'])
 
+            page.fly._slots_map[func_key] = {} # pre-execution clearance
+            page.fly._slots_token = func_key
+
+            shared_return = Router._Loader._apply_loader(page, shared_loader_dict)
+            
+            page.fly._slots_token = None
+
+            if not shared_return: return None
+
+            slots = page.fly._slots_map.get(func_key, {})
+            
+            shared_str = "shared_"
+            shared_holders = []
+            shared_nodes = []
+            for sl in slots:
+                control = slots.get(sl)
+                if control:
+                    if isinstance(sl, str) and sl.startswith(shared_str):
+                        sl = sl.replace(shared_str, "")
+                        shared_node = Router.shared_map.get(sl, None)
+                        if shared_node:
+                            shared_holders.append(control)
+                            shared_nodes.append(shared_node)
+                        else:
+                            print(f"[fletfly] WARNING: shared slot found with name '{sl}' but NO shared content is registered with this name!")
+                    else:
+                        print(f"[fletfly] WARNING: Only layouts (not views) can have free (not shared) slots. "
+                            f"Free slot with the name '{sl}' will be ignored.")
+
+            page.fly._slots_map.pop(func_key, None) # post-execution clearance
+            shared_obj = Router._SharedObj(path=shared_node.path,
+                                        obj=shared_return,
+                                        shared_holders=shared_holders,
+                                        shared_nodes=shared_nodes,
+                                        node=shared_node,
+                                        hero=shared_node.hero
+                                    )
+            return shared_obj
         @classmethod
-        def _create_around(cls, page, around_node:Router._AroundNode):
-            func = Router._get_sync_func_props_path_loader_loader_props(page, around_node)
+        def _get_shared_obj(cls, page, shared_node:Router._SharedNode):
+            path = shared_node.path
+            shared_obj = page.fly._shared_actives.get(path, None) or\
+                        page.fly._shared_news.get(path, None) or\
+                        page.fly._shared_heros.get(path, None)
             
-            if not func: return None
-            if not callable(func):
-                raise ValueError(_page_err_msg)
-            obj = func(page)
-            if not isinstance(obj, ft.Control):
-                print(f"[fletfly] A fly_around shared view must be a function taking page argument and returning ft.Control")
-                return None
-            return Router._AroundObj(obj, around_node)
-        @classmethod
-        def _get_active_around(cls, page, around_node:Router._AroundNode):
+            if shared_obj is None:
+                shared_obj = Router._SharedObj._create_shared_obj(page, shared_node)
             
-            around_obj = (page.fly.arounds | page.fly._around_news).get(around_node.path, None)
-            if around_obj is None:
-                around_obj = Router._AroundObj._create_around(page, around_node)
-            
-            if around_obj:
-                page.fly._around_news[around_node.path] = around_obj
-                around_obj.path = around_node.path
-                return around_obj
+            if shared_obj:
+                page.fly._shared_news[shared_node.path] = shared_obj
+                shared_obj.path = shared_node.path
+                return shared_obj
             return None
         @classmethod
-        def _inject_around_objs(cls, page, objs:list[Router._LayoutObj|Router._ViewObj]):
-            active_around_objs = []
+        def _inject_shared_objs(cls, page, objs:list[Router._LayoutObj|Router._ViewObj]):
+            active_shared_objs = []
             for obj in objs:
-                if obj.around_holders and obj.around_nodes:
-                    for holder, node in zip(obj.around_holders, obj.around_nodes):
+                if obj.shared_holders and obj.shared_nodes:
+                    for holder, node in zip(obj.shared_holders, obj.shared_nodes):
                         if holder and node:
-                            active_around_obj = cls._get_active_around(page, node)
+                            active_shared_obj = cls._get_shared_obj(page, node)
                                                         
-                            if active_around_obj:
-                                holder.content = active_around_obj.obj
-                                if active_around_obj not in active_around_objs:
-                                    active_around_objs.append(active_around_obj)
-            return active_around_objs
+                            if active_shared_obj:
+                                holder.content = active_shared_obj.obj
+                                if active_shared_obj not in active_shared_objs:
+                                    active_shared_objs.append(active_shared_obj)
+            return active_shared_objs
         
     class _ViewNode: # one node created for one view for all times
         def __init__(self,path,
@@ -1070,13 +1199,13 @@ class Router: # singleton only 1 instance
             self.loader_func = loader_func
 
     class _ViewObj:# carrying views (multiple) views info about the view
-        def __init__(self, path:str, objs_map, around_holders, around_nodes,
+        def __init__(self, path:str, objs_map, shared_holders, shared_nodes,
                       node:Router._ViewNode, hero:bool):
             self.path = path
-            self.objs_map = objs_map # {"named1":controloraroundnode, "":[unnamed1, unnamed2]}
+            self.objs_map = objs_map # {"named1":controlorsharednode, "":[unnamed1, unnamed2]}
             self.node = node
-            self.around_holders = around_holders
-            self.around_nodes = around_nodes
+            self.shared_holders = shared_holders
+            self.shared_nodes = shared_nodes
             self.hero = hero
             if hero is None:
                 if node.hero:
@@ -1089,7 +1218,7 @@ class Router: # singleton only 1 instance
                             self.hero = val
         @classmethod
         def _dismount_view(cls, view:Router._ViewObj):
-            for holder in view.around_holders:
+            for holder in view.shared_holders:
                 holder.content = None
             return view
         @classmethod
@@ -1100,7 +1229,7 @@ class Router: # singleton only 1 instance
                 view_obj = page.fly._view_heros.get(flight_node.path, None)
             if not view_obj or not isinstance(view_obj, Router._ViewObj):
                 view_obj = Router._ViewObj._create_view_obj(page, flight_node.view_node )
-                view_obj.path=path
+                if view_obj: view_obj.path=path
             return view_obj
         
         @classmethod
@@ -1108,12 +1237,12 @@ class Router: # singleton only 1 instance
             view_loader_dict = Router._get_sync_func_props_path_loader_loader_props(page, node)
 
             if not view_loader_dict: return None
-            func_key = f"{view_loader_dict['func'].__code__.co_filename}::{view_loader_dict['func'].__name__}"
+            func_key = Router._create_slots_token(view_loader_dict['func'])
             
             page.fly._slots_map[func_key] = {} # pre-execution clearance
             page.fly._slots_token = func_key
 
-            view_return = Router._PostFly._apply_loader(page, view_loader_dict)
+            view_return = Router._Loader._apply_loader(page, view_loader_dict)
             
             page.fly._slots_token = None
 
@@ -1121,22 +1250,22 @@ class Router: # singleton only 1 instance
 
             slots = page.fly._slots_map.get(func_key, {})
             
-            fly_around_str = "fly_around_"
-            around_holders = []
-            around_nodes = []
+            shared_str = "shared_"
+            shared_holders = []
+            shared_nodes = []
             for sl in slots:
                 control = slots.get(sl)
                 if control:
-                    if isinstance(sl, str) and sl.startswith(fly_around_str):
-                        sl = sl.replace(fly_around_str, "")
-                        node = General._shared_map.get(sl, None)
-                        if node:
-                            around_holders.append(control)
-                            around_nodes.append(node)
+                    if isinstance(sl, str) and sl.startswith(shared_str):
+                        sl = sl.replace(shared_str, "")
+                        shared_node = Router.shared_map.get(sl, None)
+                        if shared_node:
+                            shared_holders.append(control)
+                            shared_nodes.append(shared_node)
                         else:
-                            print(f"[fletfly] WARNING: fly_around slot found with name '{sl}' but NO shared content is registered with this name!")
+                            print(f"[fletfly] WARNING: shared slot found with name '{sl}' but NO shared content is registered with this name!")
                     else:
-                        print(f"[fletfly] WARNING: Only layouts (not views) can have free (not fly_around) slots. "
+                        print(f"[fletfly] WARNING: Only layouts (not views) can have free (not shared) slots. "
                             f"Free slot with the name '{sl}' will be ignored.")
 
             objs_map = Router._ViewObj._explore_return(view_return)
@@ -1144,8 +1273,8 @@ class Router: # singleton only 1 instance
             page.fly._slots_map.pop(func_key, None) # post-execution clearance
             view_obj = Router._ViewObj(path=page.route,
                                         objs_map=objs_map,
-                                        around_holders=around_holders,
-                                        around_nodes=around_nodes,
+                                        shared_holders=shared_holders,
+                                        shared_nodes=shared_nodes,
                                         node=node,
                                         hero=node.hero
                                     )
@@ -1169,12 +1298,10 @@ class Router: # singleton only 1 instance
                     if len(objs_map[""]) > 0 or len(list(objs_map.keys())) > 1:
                         raise ValueError(view_err_msg)
                     return value
-                elif isinstance(value, ft.Control):
-                    return value
-                elif hasattr(value, "__module__") and "flet_charts" in value.__module__:
+                elif _is_flet_instance(value):
                     return value
                 else:
-                    print(f"[fletfly] Return of layout or view functions must be of ft.Control type or flet_charts type or fly_around shared control")
+                    print(f"[fletfly] Return of layout or view functions must be of ft.Control type or flet_charts type or shared shared control")
                     print(f"[fletfly] Value of type {type(value)} is detected and ignored.")
                     return None
             for item in view_return:
@@ -1195,7 +1322,7 @@ class Router: # singleton only 1 instance
                 else:
                     item = check_val(item)
                     if item: objs_map[""].append(item)
-            # objs_map {"named1":controloraroundnode, "":[unnamed1, unnamed2]}
+            # objs_map {"named1":controlorsharednode, "":[unnamed1, unnamed2]}
             return objs_map
             
     class _FlyInsOutsNode: # one node created for one layout for all times
@@ -1276,16 +1403,16 @@ class Router: # singleton only 1 instance
                         path:str,
                         objs_map:dict,
                         holders:list[ft.Control],
-                        around_holders:list[ft.Control],
-                        around_nodes: list[Router._AroundNode],
+                        shared_holders:list[ft.Control],
+                        shared_nodes: list[Router._SharedNode],
                         node:Router._LayoutNode,
                         hero:bool
                     ):
             self.path = path
-            self.objs_map = objs_map # {"named1":control_or_around_node, "":[unnamed1, unnamed2]}
+            self.objs_map = objs_map # {"named1":control_or_shared_node, "":[unnamed1, unnamed2]}
             self.holders = holders if holders else []
-            self.around_holders = around_holders if around_holders else []
-            self.around_nodes = around_nodes if around_nodes else []
+            self.shared_holders = shared_holders if shared_holders else []
+            self.shared_nodes = shared_nodes if shared_nodes else []
             self.node = node
             self.hero = None
             if hero is None and node.hero:
@@ -1312,10 +1439,10 @@ class Router: # singleton only 1 instance
                     if getattr(holder, "_slot_name", None) == key:
                         if isinstance(ctrl, ft.Control):
                             holder.content = ctrl
-                        elif isinstance(ctrl, Router._AroundNode):
-                            active_around_obj = Router._AroundObj._get_active_around(page, ctrl)
-                            if active_around_obj:
-                                holder.content = active_around_obj.obj
+                        elif isinstance(ctrl, Router._SharedNode):
+                            active_shared_obj = Router._SharedObj._get_shared_obj(page, ctrl)
+                            if active_shared_obj:
+                                holder.content = active_shared_obj.obj
                         inserted = True
                         break
                 if not inserted:
@@ -1334,11 +1461,11 @@ class Router: # singleton only 1 instance
                         holder_index += 1
                     else:
                         extra_views += 1
-                elif isinstance(ctrl, Router._AroundNode):
+                elif isinstance(ctrl, Router._SharedNode):
                     if holder_index < num_holders:
-                        active_around_obj = Router._AroundObj._get_active_around(page, ctrl)
-                        if active_around_obj:
-                            nameless_holders[holder_index].content = active_around_obj.obj
+                        active_shared_obj = Router._SharedObj._get_shared_obj(page, ctrl)
+                        if active_shared_obj:
+                            nameless_holders[holder_index].content = active_shared_obj.obj
                             holder_index += 1
                     else:
                         extra_shared_views += 1
@@ -1355,7 +1482,7 @@ class Router: # singleton only 1 instance
             objs = obj_s if isinstance(obj_s, (set, list)) else {obj_s}
             
             for obj in objs:
-                holders = obj.around_holders + getattr(obj, "holders", [])
+                holders = obj.shared_holders + getattr(obj, "holders", [])
                 for holder in holders:
                     holder.content = None
         @classmethod
@@ -1386,8 +1513,9 @@ class Router: # singleton only 1 instance
                 
                 path=Router._get_real_path(page.route, lay_node.path)
 
-                layout_obj = page.fly._layout_news.get(path) or page.fly._layout_actives.get(path)
-                
+                layout_obj = page.fly._layout_news.get(path, None) or\
+                            page.fly._layout_actives.get(path, None)
+
                 if not layout_obj:
                     if ":" in lay_node.path or "[" in lay_node.path or "{" in lay_node.path: # أو lay_node.is_dynamic()
                         layout_obj = page.fly._layout_heros.get(lay_node.path, {}).get(path, None)
@@ -1407,31 +1535,33 @@ class Router: # singleton only 1 instance
             
             layout_loader_dict = Router._get_sync_func_props_path_loader_loader_props(page, node) 
             if not layout_loader_dict: return None
-            func_key = f"{layout_loader_dict['func'].__code__.co_filename}::{layout_loader_dict['func'].__name__}"
+            
+            func_key = Router._create_slots_token(layout_loader_dict['func'])
+            
             page.fly._slots_map[func_key] = {} # pre-execution clearance
             page.fly._slots_token = func_key
             
-            layout_return = Router._PostFly._apply_loader(page, layout_loader_dict)
+            layout_return = Router._Loader._apply_loader(page, layout_loader_dict)
 
             page.fly._slots_token = None
             if not layout_return: return None
             slots = page.fly._slots_map.get(func_key, {})
             
-            fly_around_str = "fly_around_"
-            around_holders = []
-            around_nodes = []
+            shared_str = "shared_"
+            shared_holders = []
+            shared_nodes = []
             holders = []
             for sl in slots:
                 control = slots.get(sl)
                 if control:
-                    if isinstance(sl, str) and sl.startswith(fly_around_str):
-                        sl = sl.replace(fly_around_str, "")
-                        node = General._shared_map.get(sl, None)
+                    if isinstance(sl, str) and sl.startswith(shared_str):
+                        sl = sl.replace(shared_str, "")
+                        node = Router.shared_map.get(sl, None)
                         if node:
-                            around_holders.append(control)
-                            around_nodes.append(node)
+                            shared_holders.append(control)
+                            shared_nodes.append(node)
                         else:
-                            print(f"[fletfly] WARNING: fly_around slot found with name '{sl}' but NO shared content is registered with this name!")
+                            print(f"[fletfly] WARNING: shared slot found with name '{sl}' but NO shared content is registered with this name!")
                     else:
                         control._slot_name = sl
                         holders.append(control)
@@ -1441,8 +1571,8 @@ class Router: # singleton only 1 instance
             layout_obj = Router._LayoutObj(path=layout_loader_dict["path"],
                                            objs_map=objs_map,
                                            holders=holders,
-                                           around_holders=around_holders,
-                                           around_nodes=around_nodes,
+                                           shared_holders=shared_holders,
+                                           shared_nodes=shared_nodes,
                                            node=node,
                                            hero=node.hero
                                            )
@@ -1451,10 +1581,8 @@ class Router: # singleton only 1 instance
         @classmethod
         def _clone_control(cls, control):
             if control is None: return None
-            if not isinstance(control, ft.Control) and not (
-                hasattr(control, "__module__") and "flet_charts" in control.__module__):
+            if not _is_flet_instance(control):
                 return control
-            
             #if not hasattr(control, "page"): # RuntimeError: View(15) Control must be added to the page first
             #    return control    
             control_class = type(control)
@@ -1470,9 +1598,13 @@ class Router: # singleton only 1 instance
                 start_props["content"] = cloned_content
             if cloned_controls:
                 start_props["controls"] = cloned_controls
-            ignore_list = ["parent", "content", "controls", "page", "uid"]
-            for attr in type(control).__init__.__code__.co_varnames:
-                if not attr.startswith("_") and not attr in ignore_list:
+            ignore_list = ["parent", "content", "controls", "page", "uid",
+                            "animate", "animate_size", "animate_position", 
+                            "animate_opacity", "animate_scale", "animate_rotation"
+                            ]
+            #for attr in type(control).__init__.__code__.co_varnames:
+            for attr in dir(control):
+                if not attr.startswith("_") and not attr in ignore_list :
                     try:
                         val = getattr(control, attr, None)
                         if val is not None and not callable(val):
@@ -1486,14 +1618,19 @@ class Router: # singleton only 1 instance
                                 start_props[attr] = cls._clone_control(val)
                     except:
                         continue
+            signature = Router._signatures_map.get(control_class, None)
+            if not signature:
+                signature = inspect.signature(control_class).parameters.keys()
+                Router._signatures_map[control_class] = signature
+            start_props = {k: v for k, v in start_props.items() if k in signature}
             try:
                 new_control = control_class(**start_props)
-            except Exception as e :
-                print(f"[fletfly] Error: {e}" )
+            except Exception as e:
+                print(f"[fletfly] Error: {e}")
                 new_control = control_class()
             return new_control
 
-    class _PostFly:
+    class _Loader:
         @classmethod
         def _apply_loader(cls, page:ft.Page, func_loader_dict):
             
@@ -1696,79 +1833,26 @@ Hint: you can use flet auto complete first for the control properties, then move
     سواءا كان فيه fly_outs or not
     """
 
-def fly_around(name:str = None, method_name:str = None):
-    class_or_func = name
-    def go_class(clas, attr_name=None, inner_name=None):
-        if not attr_name: # must be a method name to register
-            for attr_name in dir(clas):
-                if attr_name in aliases["fly_around"]:
-                    break
-        if attr_name:
-            Router._AroundNode(None, clas, attr_name, inner_name)
-        else:
-            print(f"""
-[fletfly] No attribute in class {clas.__name__} with shared or fly_around name
-Shared view can't be created, please use one of the following:
-@fly_around(name='my_shared', method='func1') \nclass my_class:\ndef func1(page):...
-#or 
-@fly_around(name='my_shared')\nclass my_class:\ndef my_shared(page):...
-#or
-@fly_around\nclass my_class:\ndef fly_around(page):...
-#in the last case it will be renamed to 'my_class_fly_around'
-""") 
-        return clas # for next decorator
-
-    # case 1 @fly_around class
-    if isinstance(class_or_func, type):
-        return go_class(class_or_func)
-    # case 2 @fly_around def (function or method)
-    elif callable(class_or_func):
-        Router._AroundNode(class_or_func) # the engine will call the function with alive page
-        return class_or_func
-    else: # cases 3, 4, 5: placeholder, and @fly_around() and @fly_around('name')   
-        pass # Am i a decorator or function in layout return?
-    
-    #cls or func by user, page by engine (live version)
-    def fly_around_wrapper(cls_or_func=None):
-        # case 3 @fly_around() class
-        if isinstance(cls_or_func, type):
-            return go_class(cls_or_func, method_name, name)
-        
-        # case 4 @fly_around() def (function or method)
-        elif callable(cls_or_func):
-            Router._AroundNode(func= cls_or_func, name=name)
-            return cls_or_func # for next decorator
-
-        # case 5 a layout or view return
-        # will be used as: if the return is callable then engine calls it & return the node
-        elif not cls_or_func: 
-            if not name:
-                print(f"[fletfly] Can't get a fly_around shared content without a name")
-            return Router._AroundNode._get_node(name)
-    fly_around_wrapper._is_fletfly_wrapper = True
-    return fly_around_wrapper    
-
-
-def slot(page:ft.Page=None, name:str|int=None, control:ft.Control=None, fly_around:bool = None):
+def slot(page:ft.Page=None, name:str|int=None, control:ft.Control=None, shared:bool = None):
     if not page or not isinstance(page, ft.Page):
         raise ValueError(_page_err_msg)
     if not hasattr(page, "fly"):
         raise TypeError(f"[fletfly] Only 1 page is per user, please provide the same page")
     if not control:
         control = ft.Container(expand=True)
-    if fly_around and not name:
+    if shared and not name:
         print(f"""
-[fletfly] WARNING: Slot marked as fly_around=True but NO name was provided!
+[fletfly] WARNING: Slot marked as shared=True but NO name was provided!
 Converting to a standard auto numeric named slot to prevent engine locking.
               """)
-        fly_around = False 
+        shared = False 
 
 
 
     allowed_token = getattr(page.fly, "_slots_token", None)
     
     fr = sys._getframe(1)
-    func_key = f"{fr.f_code.co_filename}::{fr.f_code.co_name}"
+    func_key = f"{fr.f_code.co_filename}::{fr.f_code.co_qualname}"
 
     if not allowed_token or func_key != allowed_token:
         raise RuntimeError(
@@ -1780,16 +1864,16 @@ Converting to a standard auto numeric named slot to prevent engine locking.
         page.fly._slots_map[func_key] = {}
     my_map = page.fly._slots_map[func_key]
 
-    fly_around_str = "fly_around_"
+    shared_str = "shared_"
     
     k = None
     if isinstance(name,int):
-        k = fly_around_str + str(name) if fly_around else name
+        k = shared_str + str(name) if shared else name
     elif isinstance(name, str):
-        if name.startswith(fly_around_str): # "fly_around_sidebar"
+        if name.startswith(shared_str): # "shared_sidebar"
             k = name 
-        elif fly_around:
-            k = fly_around_str + name
+        elif shared:
+            k = shared_str + name
         elif name.isdigit():
             k = int(name)
         elif name: # not empty
@@ -1810,8 +1894,6 @@ Converting to a standard auto numeric named slot to prevent engine locking.
 
 holder = slot
 outlet = slot
-shared = fly_around
-
 
 def fly(page, path=None, *args, **kwargs):
     if not isinstance(page, ft.Page): # fly(ft.Page,)

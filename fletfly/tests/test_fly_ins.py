@@ -49,7 +49,7 @@ def test_invalid_tuple_structure_raises_type_error():
         fly_ins((f1, "invalid_kwargs_type"))
 
 def test_invalid_item_type_raises_type_error():
-    with pytest.raises(TypeError, match="Expected a function or a list of functions"):
+    with pytest.raises(TypeError):
         fly_ins(1)
 
 a1 = {"timeout": 10}

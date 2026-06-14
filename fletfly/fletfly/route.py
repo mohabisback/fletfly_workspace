@@ -22,7 +22,9 @@ class General:
     _registered_children = set()
     _routed_classes = set()
     _pending_routes = set()
+    _pending_shared = set()
     _tree_map = {}
+    _shared_map = {}
     _attr_prefix = "$"
 
     # Router
@@ -76,6 +78,8 @@ aliases = {
     "index": ["index", "default"],
     "fly_around": ["fly_around", "shared", "shared_view"],
     "loader": ["loader", "binder", "hydrator"],
+    "name":["name"],
+    "hero":["hero"]
 }
 _rev_aliases = {val:k for k in aliases.keys() for val in aliases.get(k)}
 
@@ -279,9 +283,13 @@ class _MethodHandler:
                 way.props.update(item[1])
                 return way
             else:
-                raise TypeError(f"❌ [fletfly] Child tuple must be (callable, props_dict), but got invalid tuple structure.")
+                raise TypeError(f"[fletfly] Positional arguments are not allowed to pass {self.name} arguments, named arguments only.\n"+
+                                f"Use <{self.name}> method as: my_route.{self.name}(callable, role='user', color='red') or\n"+
+                                f"Use <{self.name}> function as: my_route.{self.name} = {self.name}(callable, role='user', color='red') or\n"+
+                                f"Use tuple of callable and dict as: my_route.{self.name.rstrip('s')} = (callable, {'role':'user', 'color':'red'}) or\n"+
+                                f"Append into a list as: my_route.{self.name}s.extend(callable1, (callable2, dict), {self.name}(callable, a=1))")
         else:
-            raise TypeError(f"❌ [fletfly] Expected Route | callable | (callable, props_dict) tuple | list of the above, but got '{type(item).__name__}'")
+            raise TypeError(f"❌ [fletfly] Expected Route | callable | (callable, props_dict) tuple | list of any of the above, but got '{type(item).__name__}'")
     
     def _get_func_dict(self, func, expected_not):
         _get_set_payload(func)
@@ -299,16 +307,18 @@ class _MethodHandler:
             return item
         elif callable(item) or isinstance(item, str):
             _get_set_payload(item)
-            dic = self._get_func_dict(item, {})
+            return self._get_func_dict(item, {})
         elif isinstance(item, (tuple, list)):
-            if len(item) == 2 and (callable(item[0]) or isinstance(item, str)) and isinstance(item[1], dict):
-                dic = self._get_func_dict(item[0], item[1])
+            if len(item) == 2 and (callable(item[0]) or isinstance(item[0], str)) and isinstance(item[1], dict):
+                return self._get_func_dict(item[0], item[1])
             else:
-                raise TypeError(f"❌ [fletfly] {self.name}, props tuple must be (callable, props_dict), but got invalid tuple structure.")
+                raise TypeError(f"[fletfly] Positional arguments are not allowed to pass {self.name} arguments, named arguments only.\n"+
+                                f"Use <{self.name}> method as: my_route.{self.name}(callable, role='user', color='red') or\n"+
+                                f"Use <{self.name}> function as: my_route.{self.name} = {self.name}(callable, role='user', color='red') or\n"+
+                                f"Use tuple of callable and dict as: my_route.{self.name.rstrip('s')}"+" = (callable, {'role':'user', 'color':'red'}) or\n"+
+                                f"Append into a list as: my_route.{self.name}s.extend(callable1, (callable2, dict), {self.name}(callable, a=1))")
         else:
-            raise TypeError(f"❌ [fletfly] Expected a function or a list of functions, but got '{type(item).__name__}'")
-
-        return dic
+            raise TypeError(f"❌ [fletfly] Expected _FuncDict | callable | (callable, props_dict) tuple | list of any of the above, but got '{type(item).__name__}'")
     
     def _pre_process_core(self, *args, **kwargs):
         no_decorator = False
@@ -839,6 +849,7 @@ class _HeroAttr:
         return self.value == other
     def __int__(self):
         return int(self.value or 0)
+
 class _DictAttr(dict):
     def __init__(self, name: str, value=None, ctx=None):
         # Convert None to an empty dictionary as the default initial state
@@ -901,6 +912,7 @@ class _DictAttr(dict):
         res = super().__ior__(other)
         self._sync_back()
         return res
+
 class _ListAttr(list):
     def __init__(self, name: str, value=None, ctx=None):
         # Convert None to an empty list as the default initial state
@@ -966,6 +978,7 @@ class _ListAttr(list):
         res = super().__imul__(n)
         self._sync_back()
         return res
+
 class _Children(_ListAttr):
     def _extract_items(self, *args):
         items = _extract_callables_props(*args)       
@@ -993,6 +1006,7 @@ class _Children(_ListAttr):
             super().insert(index + i, p_item)
     def __iadd__(self, other):
         return super().__iadd__(self._extract_items(*other))
+
 class _FlyInsOuts(_ListAttr):
     def _extract_items(self, *args):    
         items = _extract_callables_props(*args)
@@ -1079,6 +1093,7 @@ child = _Child()
 loader = _Loader()
 fly_ins = _FlyInsOuts("fly_ins")
 fly_outs = _FlyInsOuts("fly_outs")
+
 class Route():
     layout = _Layout()
     view = _View()
@@ -1177,6 +1192,7 @@ class Route():
         if isinstance(first_arg, type):
             # inject class ref into instance
             self._class = first_arg
+            
             return first_arg
         
         elif callable(first_arg): # function
@@ -1190,7 +1206,7 @@ class Route():
             if old_view and old_view != new_view:
                 raise ValueError(f"[fletfly] Route route already has a view")
             else:
-                self._view = first_arg
+                self.view = (first_arg, self._props)
             return first_arg
         # @obj("str", **kwargs) first call
         else:
@@ -1204,7 +1220,7 @@ class Route():
             return args[0]
         elif len(args) == 1 and not kwargs and callable(args[0]):
             a = Route()
-            a.view = _FuncDict(func=args[0])
+            a.view = _FuncDict(func=args[0], props = a._props)
             return args[0]
         else:
             return super().__new__(cls)
@@ -1520,6 +1536,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                             sub = create_index_child(attr_name, attr_func, kid_props, item_name)
                             for item in kid_dict:
                                 setattr(sub, item, kid_dict[item])
+        
         # second loop for any other attr
         for attr_name, attr_val in _class.__dict__.items():
             if attr_name.startswith("_") or attr_name in flagged_attr: continue
@@ -1529,7 +1546,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             # attr = func, not func directly
             static = attr_name != getattr(attr_func, "__name__", attr_func)
 
-            print(44444444444444, attr_name, attr_val)
             # Find the matching prefix key from the dictionary
             matched_alias = next((k for k in local_aliases if attr_name.lower().startswith(k)), None)
             if matched_alias:
@@ -1540,7 +1556,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         if official_name in ["view", "layout", "loader"]:
                             setattr(route, official_name, _FuncDict(func=attr_func if static else attr_name))
                         elif official_name in ("fly_in", "fly_out"):
-                            getattr(route, f"{official_name}s", []).append(_FuncDict(func=attr_func if static else attr_name))
+                            getattr(route, f"{official_name}s", []).append(attr_func if static else attr_name)
                         elif official_name in ("index", "child"):
                             sub = create_index_child(attr_name, attr_func, {}, official_name)
                 else:
@@ -1560,7 +1576,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     elif official_name in ["fly_in", "fly_out"]:
                         getattr(route, f"{official_name}s", []).append(attr_val)
                     elif official_name !="path": # booleans
-                        print(555555555555555, official_name, attr_name, attr_val)
                         setattr(route, official_name, attr_name)
                         remove_aliases_of(local_aliases[attr_name])
                         
@@ -1580,7 +1595,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
     def _create_tree(cls, handed_classes:list=None):
         if handed_classes is None: handed_classes = []
         inherited_classes = set(Route.__subclasses__()) if General.detect_route_subclasses else set()
-        
+        inherited_classes.discard(Shared)
+
         pending_routes = General._pending_routes if General.detect_path_routes else set()
         
         all_detected = set(handed_classes) | (inherited_classes | pending_routes)
@@ -1593,6 +1609,18 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             if unit not in General._registered_children:
                 Route._inject_into_tree(unit)
         
+        for unit in set(Shared.__subclasses__()) | General._pending_shared:
+            if isinstance(unit, Shared):
+                if unit._class:
+                    shared, _ = Route._route_from_class(unit._class, unit)
+                else:
+                    shared = unit
+                if not shared._name:
+                    if shared._class:
+                        shared.name = shared._class.__name__
+                    else:
+                        shared.name = getattr(shared._view["func"], "__name__", str(shared._view["func"]))
+                General._shared_map[shared._name] = shared
         root = General._tree_map.get('')
         if root and root._view is None and root._index is None and root._fly_to is None:
             common_paths = ['/home', '/index', '/main', '/dashboard', '/start']
@@ -1600,7 +1628,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             
             for p in common_paths:
                 x = General._tree_map.get(p, None)
-                if x and (x._view or (x._index and x._index._view)):
+                if x and (x._view or x._layout or (x._index and (x._index._view or x._index._layout))):
                     found_target = p
                     break
             if not found_target:
@@ -1664,15 +1692,33 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         view = route._view["func"] if route._view and isinstance(route._view, _FuncDict) else route._view
         v = '<'+ Route.cut(view.__name__,12)+'>' if callable(view) else ('"'+ Route.cut(view,12)+'"' if isinstance(view,str) else '')
 
-        lay = route._layout["func"] if route._layout and isinstance(route._layout, _FuncDict) else route._layout
-        l = '<'+ Route.cut(lay.__name__,12)+'>' if callable(lay) else ('"'+ Route.cut(lay,12)+'"' if isinstance(lay,str) else '')
+        load = route._loader["func"] if route._loader and isinstance(route._loader, _FuncDict) else route._loader
+        ld = '<'+ Route.cut(load.__name__,12)+'>' if callable(load) else ('"'+ Route.cut(load,12)+'"' if isinstance(load,str) else '')
+    
+        if not isinstance(route, Shared):
+            lay = route._layout["func"] if route._layout and isinstance(route._layout, _FuncDict) else route._layout
+            ly = '<'+ Route.cut(lay.__name__,12)+'>' if callable(lay) else ('"'+ Route.cut(lay,12)+'"' if isinstance(lay,str) else '')
 
+            to = "'"+Route.cut(route._fly_to, 12)+"'" if route._fly_to else ''
 
-        to = "'"+Route.cut(route._fly_to, 12)+"'" if route._fly_to else ''
+            ins = len(route.fly_ins)
+            outs = len(route.fly_outs)
 
-        ins = len(route.fly_ins)
-        outs = len(route.fly_outs)
-        return f"view:{v:<14} lay:{l:<14} cls:{cls_:<14} to:{to:<14} ins:{ins:1} outs:{outs:1}"
+            if ld and not to:
+                tail = f"ly:{ly:<14} ld:{ld:<14}  ins: {ins:<2} outs: {outs:<2}"
+            elif ld and not ly:
+                tail = f"ld:{ld:<14} to:{to:<14}  ins: {ins:<2} outs: {outs:<2}"
+            elif ld and not ins and not outs:
+                tail = f"ly:{ly:<14} to:{to:<14} ld:{ld:<14}"
+            else:
+                tail = f"ly:{ly:<14} to:{to:<14}  ins: {ins:<2} outs: {outs:<2}"
+            
+        else:
+            hero = f"{str(route._hero)}" if route._hero else ''
+
+            tail = f"load:{ld:<14} hero:{hero:<5} "
+
+        return f"cls:{cls_:<14} view:{v:<14} {tail}"
     
     @classmethod
     def _format_route_tree(cls, current_path="", static_paths=None, dynamic_paths=None, 
@@ -1781,5 +1827,54 @@ def Zone(zone, path=None):
             zone.is_zone = True
     return zone
 
+class _BlockedAttr:
+    def __get__(self, instance, owner):
+        raise AttributeError("[fletfly] Attribute not supported in Shared.")
+    def __set__(self, instance, value):
+        raise AttributeError("[fletfly] Attribute not supported in Shared.")
 
-route = Route 
+class Shared(Route):
+    name = _StrAttr("name")
+    hero = _HeroAttr("hero")
+    
+    _ordered_fields = ["name", "view", "hero", "loader", "props"]
+    
+    path = _BlockedAttr()
+    layout = _BlockedAttr()
+    child = _BlockedAttr()
+    index = _BlockedAttr()
+    fly_in = _BlockedAttr()
+    fly_out = _BlockedAttr()
+    children = _BlockedAttr()
+    fly_ins = _BlockedAttr()
+    fly_outs = _BlockedAttr()
+    fly_to = _BlockedAttr()
+    layout_override = _BlockedAttr()
+    fly_in_override = _BlockedAttr()
+    fly_out_override = _BlockedAttr()
+    is_zone = _BlockedAttr()
+    layout_hero = _BlockedAttr()
+    view_hero = _BlockedAttr()
+    title = _BlockedAttr()
+    icon = _BlockedAttr()
+    
+    def __init__(self, name:str=None, view=None, hero:bool|int=None, loader=None, props:dict=None, **kwargs):
+        super().__init__(name=name, view=view, hero=hero, loader=loader, props=props, **kwargs)
+        General._pending_routes.discard(self)
+        General._pending_shared.add(self)
+    
+   
+    def __new__(cls, *args, **kwargs): # handling 1 condition only, @Shared/class or Shared(class)
+        if len(args) == 1 and not kwargs and isinstance(args[0], type):
+            a = Shared()
+            a._class = args[0]            
+            return args[0]
+        elif len(args) == 1 and not kwargs and callable(args[0]):
+            a = Shared()
+            a.view = _FuncDict(func=args[0])
+            return args[0]
+        else:
+            return super().__new__(cls) 
+    def __repr__(self):
+        return f"{Route._format_route_with_no_path(self)}  name:'{self._name}'"
+    

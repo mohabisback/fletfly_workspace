@@ -3,38 +3,34 @@
 
 "Stop writing procedural routing logic. with `fletfly`, fly with flet."
 
-
-## quick start
+## 1. quick start
 
 ```python
 import flet as ft
-from fletfly import Route, slot, fly
+from fletfly import Route, slot, fly, fly_in
 
 class Home(Route):             # Route detection: path auto named to "/home"
-    def layout(self, page):    # Auto-detected layout by names (layout, frame)
+    def layout(self, page):    # Auto-detected layout
         return ft.Column([
                 ft.Text("Header"),
-                slot(page)
+                slot(page)     # Nameless slot for injection
             ])
-    
+    @classmethod
+    def fly_in(cls):           # Middleware
+        return True
     @staticmethod               
     def about():               # Sub method route detection, auto named to "/home/about"
         return ft.Text("about page")         # injected into self layout
     
     class User:                # Sub class route detection, auto named to "/home/user"
-    
         @classmethod
         def view(cls):            # main view detection, injected into self or parent layout
             return ft.Text("User page")      # injected into parent layout
-    
-        def settings(self):        # sub method route detection, auto named to "/home/user/settings"
-            return ft.Text("Settings page")  # injected into grandparent layout
 
 ft.run(fly)                  # Start Router, with auto detection of routes.
 ```
----
 
-## Medium start
+## 2. deeper dive
 Look at this single block of code. It demonstrates:
 - auto detection of routes, nested subroutes.
 - auto-path-naming (static & dynamic).
@@ -58,7 +54,7 @@ def check_online():            # general middleware without params
 def check_color(param1):       # general middleware with params
     if param1 == 'c': return True
 
-class Home():             # Route detection: path auto named to "/home"
+class Home():                  # path auto named to "/home"
     def layout(self, page):    # Auto-detected layout by names (layout, frame)
         return ft.Column([
             ft.Text("Header"),
@@ -66,9 +62,11 @@ class Home():             # Route detection: path auto named to "/home"
             data(page, ft.Text("loading..."), value="names.0"), # for loader
             slot(page, "slot_a"),   # named slot (auto-injected)
         ])
+    
     async def loader(self):          # auto detected lazy loader, injects data
         await asyncio.sleep(3)       # mocking delay for data fetching
         return {"names":["John"]}  # called by "names.0"
+   
     class Index:               # Auto-detected index
         def view(self):        # Auto-detected view by names:
             return (           # (build, content, component, element)
@@ -105,29 +103,22 @@ def main(page):
 ft.run(main)    
 ```
 
----
-## Persistent Engine: Intelligent Reconciliation & Hero contents
+## 3. Persistent Engine: Intelligent Reconciliation & Hero contents
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
 ```Python
 import flet as ft
 from fletfly import Route, slot, fly
 class Home(Route):
-    path = "{category}"               # dynamic page
-    layout_hero = False               # layout deleted once no view uses it(default)                         # False is preffered(no dynamic details)
+    layout_hero = False       # layout garbaged once no view uses it
     def layout(self, page):           
         return ft.Column([
             ft.Text("Header"),        
             slot(page)
             ])
-    view_hero = True                  # True means 5 in dynamic, 1 in static
+    view_hero = True          # True means 5 in dynamic, 1 in static
     def view(self):
         return ft.Text("Main view")
-    class User:
-        path = ":id"                  # dynamic page
-        view_hero = 2                 # max 2 pages are saved for different params
-        def view(self, id):
-            return ft.Text(f"page: {id}")
 ft.run(fly)
 ```
 **[Understand State Persistence & Hero](docs/class/HERO.md)**

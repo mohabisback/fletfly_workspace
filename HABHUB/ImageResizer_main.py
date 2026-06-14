@@ -1,7 +1,8 @@
 #ImageResizer.main.py
 import flet as ft
 import fletfly as fty
-from fletfly import Route, Generalr, route
+from fletfly import Route, General, route
+route = Route
 from ImageResizer.home import get_view as get_home
 from ImageResizer.about import get_view as get_about
 from ImageResizer.error import get_view as get_err

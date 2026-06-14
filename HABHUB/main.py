@@ -20,12 +20,9 @@ Pages = {
 
 
 def fly_in1(page, msg):
-    print("page:", page)
-    print(msg)
 
     return True
 def fly_in2():
-    print("Done once every reconcile")
     return True
 def fly_in3(page):
     return False
@@ -94,7 +91,7 @@ zone = fty.route(path="/", viewer=get_home, fly_ins=[
         fty.Zone(ImageResizerZone, "/resizer") 
         ]),
 
-fty.Router(zone, error_path="error", max_pads = 2, fly_pads= "all_from_last_port", print_path_zone="/")
+fty.Router(zone, error_path="error", max_views = 3, navigation_style= "all_views", print_path_zone="/")
 
 
 
@@ -116,11 +113,7 @@ plane = Flyer("Boeing 747")
 a = getattr(plane, "fly_to")
 # 3. Call it
 result = a("Cairo")
-print(result, a.__func__._info if isinstance(a, (staticmethod, classmethod)) else a._info) 
-# Output:
-# 11111111111111111111 True
-# fixed is fly_ing to Cairo!
-def test_main(page= ft.Page()):
+def test_main(page:ft.Page):
     
     page.title = TITLE
     fty.fly(page)
