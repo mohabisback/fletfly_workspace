@@ -50,7 +50,7 @@ Look at this single block of code. It demonstrates:
 - start router with different options.
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```python
 from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
@@ -112,7 +112,7 @@ ft.run(main)
 ## 3. Strict Explicit vs Magic Implicit:
 Not only can you rely on magic auto-naming and detection with a wide variety of aliases, but you can also strictly use the explicit mode, defining all your properties with decorators or direct implementation.
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 from fletfly import Router
@@ -130,13 +130,13 @@ Router(
 ```
 </details>
 
-**[More About Aliases, Implicit and Explicit](docs/class/Explicit.md)**
+<small>**[More About Aliases, Implicit and Explicit](docs/class/Explicit.md)**</small>
 
 ## 4. Persistent Engine: Intelligent Reconciliation & Hero contents
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 import flet as ft
@@ -155,7 +155,7 @@ ft.run(fly)
 ```
 </details>
 
-**[More About State Persistence & Hero](docs/class/HERO.md)**
+<small>**[More About State Persistence & Hero](docs/class/HERO.md)**</small>
 
 ## 5. Active Injection with Slots (Outlets)
 Slots are in your service not the other way around.
@@ -165,7 +165,7 @@ Slots are in your service not the other way around.
 - could be any control you want (ft.Container as default)
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```python
 from fletfly import Route, slot, fly, Shared
@@ -196,13 +196,13 @@ ft.run(fly)
 ```
 </details>
 
-**[More About](docs/class/SLOTS.md)**
+<small>**[More About](docs/class/SLOTS.md)**</small>
 
 ## 6. Layout Overrides
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```python
 import flet as ft
@@ -226,7 +226,7 @@ ft.run(fly)
 ```
 </details>
 
-**[More About Layouts Overriding](docs/class/Layout.md)**
+<small>**[More About Layouts Overriding](docs/class/Layout.md)**</small>
 
 ## 7. Multi & Inheritable Middleware System
 No matter how many middleware checks You want to perform, we have your back.
@@ -237,7 +237,7 @@ No matter how many middleware checks You want to perform, we have your back.
 - True, False and Redirect str returns
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 import flet as ft
@@ -268,7 +268,7 @@ ft.run(main)
 ```
 </details>
 
-**[More About fly_in Middleware](docs/class/FLYIN.md)**
+<small>**[More About fly_in Middleware](docs/class/FLYIN.md)**</small>
 
 ## 8. Shared Views
 A shared view is a view keeping its state outside the hierarchical tree, and can be:
@@ -278,7 +278,7 @@ A shared view is a view keeping its state outside the hierarchical tree, and can
 - created at any place of your app and called everywhere
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 from fletfly import Route, slot, fly, Shared
@@ -308,13 +308,13 @@ ft.run(fly)
 ```
 </details>
 
-**[More About Shared](docs/class/SHARED.md)**
+<small>**[More About Shared](docs/class/SHARED.md)**</small>
 
 ## 9. Lazy Loaders & data
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 import asyncio
@@ -347,14 +347,14 @@ ft.run(fly)
 ```
 </details>
 
-**[More About Loaders & data](docs/class/LOADER.md)**
+<small>**[More About Loaders & data](docs/class/LOADER.md)**</small>
 
 ## 10. Microfrontend With Zone and page.fly
 Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
 Use zone() function and navigate with page.fly, to reach relative paths in your sub projects
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 #### Main Project
 ```Python
@@ -393,14 +393,14 @@ if __name__ == "__main__":
 ```
 </details>
 
-**[More About Zone and fly](docs/class/Zone.md)**
+<small>**[More About Zone and fly](docs/class/Zone.md)**</small>
 
 ## 11. Every level fallback
 - Set your fallback style for any or all levels
 - Define your own overall error page, or let us show our 404
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 import flet as ft
@@ -430,14 +430,14 @@ ft.run(main)
 ```
 </details>
 
-**[More About Fallbacks](docs/class/fallback.md)**
+<small>**[More About Fallbacks](docs/class/fallback.md)**</small>
 
 ## 12. Very Deep Nesting
 - @child decorator or children list implementation are in your service
 - multiple decorator stacking on the same class with defferent props
 
 <details>
-<summary><h3>👁️ Code Example</h3></summary>
+<summary><big><b>👁️ Code Example<b></big></summary>
 
 ```Python
 import flet as ft
@@ -473,7 +473,7 @@ ft.run(main)
 ```
 </details>
 
-**[More About Children & Nesting](docs/class/CHILDREN.md)**
+<small>**[More About Children & Nesting](docs/class/CHILDREN.md)**</small>
 
 ## 13. Router Configs and Debugs Example
 - Set the max views opened in the same time
@@ -484,7 +484,7 @@ ft.run(main)
 - The terminal in previous section 12 example would look like this:
 
 <details>
-<summary><h3>👁️ Terminal Example</h3></summary>
+<summary><big><b>👁️ Terminal Example<b></big></summary>
 
 ```text
 [fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.80ms
@@ -545,4 +545,4 @@ layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/:color'
 ```
 </details>
 
-**[More About Configs](docs/class/CONFIGS.md)**
+<small>**[More About Configs](docs/class/CONFIGS.md)**</small>
