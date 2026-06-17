@@ -157,9 +157,6 @@ ft.run(fly)
 
 **[Understand State Persistence & Hero](docs/class/HERO.md)**
 
-<details>
-<summary><b>👁️ Code Example</b></summary>
-
 ## 5. Active Injection with Slots (Outlets)
 Slots are in your service not the other way around.
 - No limit of slot count
