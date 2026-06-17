@@ -50,7 +50,7 @@ Look at this single block of code. It demonstrates:
 - start router with different options.
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```python
 from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
@@ -112,7 +112,7 @@ ft.run(main)
 ## 3. Strict Explicit vs Magic Implicit:
 Not only can you rely on magic auto-naming and detection with a wide variety of aliases, but you can also strictly use the explicit mode, defining all your properties with decorators or direct implementation.
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 from fletfly import Router
@@ -136,7 +136,7 @@ Router(
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -165,7 +165,7 @@ Slots are in your service not the other way around.
 - could be any control you want (ft.Container as default)
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```python
 from fletfly import Route, slot, fly, Shared
@@ -202,7 +202,7 @@ ft.run(fly)
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```python
 import flet as ft
@@ -237,7 +237,7 @@ No matter how many middleware checks You want to perform, we have your back.
 - True, False and Redirect str returns
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -278,7 +278,7 @@ A shared view is a view keeping its state outside the hierarchical tree, and can
 - created at any place of your app and called everywhere
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 from fletfly import Route, slot, fly, Shared
@@ -314,7 +314,7 @@ ft.run(fly)
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import asyncio
@@ -354,7 +354,7 @@ Add complete projects to your main project, not only one level but nested projec
 Use zone() function and navigate with page.fly, to reach relative paths in your sub projects
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 #### Main Project
 ```Python
@@ -400,7 +400,7 @@ if __name__ == "__main__":
 - Define your own overall error page, or let us show our 404
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -437,7 +437,7 @@ ft.run(main)
 - multiple decorator stacking on the same class with defferent props
 
 <details>
-<summary><font size="4"><b>👁️ Code Example<b></font></summary>
+<summary><font size="5"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -484,7 +484,7 @@ ft.run(main)
 - The terminal in previous section 12 example would look like this:
 
 <details>
-<summary><font size="4"><b>👁️ Terminal Example<b></font></summary>
+<summary><font size="5"><b>👁️ Terminal Example<b></font></summary>
 
 ```text
 [fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.80ms
