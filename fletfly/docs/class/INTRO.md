@@ -153,7 +153,7 @@ class Home(Route):
         return ft.Text("Main view")
 ft.run(fly)
 ```
-<details>
+</details>
 
 **[Understand State Persistence & Hero](docs/class/HERO.md)**
 
@@ -312,6 +312,10 @@ ft.run(fly)
 
 ## 9. Lazy Loaders & data
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
+
+<details>
+<summary><b>👁️ Code Example</b></summary>
+
 ```Python
 import asyncio
 import flet as ft
