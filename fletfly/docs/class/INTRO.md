@@ -130,7 +130,7 @@ Router(
 ```
 </details>
 
-<small>**[More About Aliases, Implicit and Explicit](docs/class/Explicit.md)**</small>
+<small>**[<font size="2">More About Aliases, Implicit and Explicit</font>](docs/class/Explicit.md)**</small>
 
 ## 4. Persistent Engine: Intelligent Reconciliation & Hero contents
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
@@ -155,7 +155,7 @@ ft.run(fly)
 ```
 </details>
 
-<small>**[More About State Persistence & Hero](docs/class/HERO.md)**</small>
+<small>**[<font size="2">More About State Persistence & Hero</font>](docs/class/HERO.md)**</small>
 
 ## 5. Active Injection with Slots (Outlets)
 Slots are in your service not the other way around.
@@ -196,7 +196,7 @@ ft.run(fly)
 ```
 </details>
 
-<small>**[More About](docs/class/SLOTS.md)**</small>
+<small>**[<font size="2">More About</font>](docs/class/SLOTS.md)**</small>
 
 ## 6. Layout Overrides
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
@@ -226,7 +226,7 @@ ft.run(fly)
 ```
 </details>
 
-<small>**[More About Layouts Overriding](docs/class/Layout.md)**</small>
+<small>**[<font size="2">More About Layouts Overriding</font>](docs/class/Layout.md)**</small>
 
 ## 7. Multi & Inheritable Middleware System
 No matter how many middleware checks You want to perform, we have your back.
@@ -268,7 +268,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[More About fly_in Middleware](docs/class/FLYIN.md)**</small>
+<small>**[<font size="2">More About fly_in Middleware</font>](docs/class/FLYIN.md)**</small>
 
 ## 8. Shared Views
 A shared view is a view keeping its state outside the hierarchical tree, and can be:
@@ -308,7 +308,7 @@ ft.run(fly)
 ```
 </details>
 
-<small>**[More About Shared](docs/class/SHARED.md)**</small>
+<small>**[<font size="2">More About Shared</font>](docs/class/SHARED.md)**</small>
 
 ## 9. Lazy Loaders & data
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
@@ -347,7 +347,7 @@ ft.run(fly)
 ```
 </details>
 
-<small>**[More About Loaders & data](docs/class/LOADER.md)**</small>
+<small>**[<font size="2">More About Loaders & data</font>](docs/class/LOADER.md)**</small>
 
 ## 10. Microfrontend With Zone and page.fly
 Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
@@ -393,7 +393,7 @@ if __name__ == "__main__":
 ```
 </details>
 
-<small>**[More About Zone and fly](docs/class/Zone.md)**</small>
+<small>**[<font size="2">More About Zone and fly</font>](docs/class/Zone.md)**</small>
 
 ## 11. Every level fallback
 - Set your fallback style for any or all levels
@@ -430,7 +430,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[More About Fallbacks](docs/class/fallback.md)**</small>
+<small>**[<font size="2">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
 ## 12. Very Deep Nesting
 - @child decorator or children list implementation are in your service
@@ -473,7 +473,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[More About Children & Nesting](docs/class/CHILDREN.md)**</small>
+<small>**[<font size="2">More About Children & Nesting</font>](docs/class/CHILDREN.md)**</small>
 
 ## 13. Router Configs and Debugs Example
 - Set the max views opened in the same time
@@ -545,4 +545,4 @@ layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/:color'
 ```
 </details>
 
-<small>**[More About Configs](docs/class/CONFIGS.md)**</small>
+<small>**[<font size="2">More About Configs</font>](docs/class/CONFIGS.md)**</small>
