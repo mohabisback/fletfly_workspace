@@ -5,11 +5,8 @@
 
 "Stop writing procedural routing logic. With `fletfly`, fly with flet."
 
-## 1. quick start
-> 💡 **Polyglot Design:** `fletfly` adapts to your coding model. The core engine is unified, but the syntax is yours to choose.
->
-> **Choose your weapon:**
->
+> 💡 **Polyglot Design Note:**  📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
+
 > * **[Class-Based](fletfly/docs/class/INTRO.md)** — *Django, Flutter, ASP.NET*
 > * **[Registry/Dictionary](fletfly/docs/dict/INTRO.md)** — *Vue, Express, Angular*
 > * **[Declarative](fletfly/docs/declare/INTRO.md)** — *React, SwiftUI, Flutter Trees*
@@ -18,10 +15,7 @@
 
 ---
 
- 📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
-
----
-
+## 1. quick start
 
 ```python
 import flet as ft
@@ -68,7 +62,7 @@ Look at this single block of code. It demonstrates:
 - start router with different options.
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```python
 from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
@@ -130,7 +124,7 @@ ft.run(main)
 ## 3. Strict Explicit vs Magic Implicit:
 Not only can you rely on magic auto-naming and detection with a wide variety of aliases, but you can also strictly use the explicit mode, defining all your properties with decorators or direct implementation.
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 from fletfly import Router
@@ -148,16 +142,13 @@ Router(
 ```
 </details>
 
-**[Understand Aliases, Implicit and Explicit](fletfly/docs/class/Explicit.md)**
-
-<details>
-<summary><b>👁️ Code Example</b></summary>
+<small>**[<font size="1">More About Aliases, Implicit and Explicit</font>](fletfly/docs/class/Explicit.md)**</small>
 
 ## 4. Persistent Engine: Intelligent Reconciliation & Hero contents
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -174,12 +165,9 @@ class Home(Route):
         return ft.Text("Main view")
 ft.run(fly)
 ```
-<details>
+</details>
 
-**[Understand State Persistence & Hero](fletfly/docs/class/HERO.md)**
-
-<details>
-<summary><b>👁️ Code Example</b></summary>
+<small>**[<font size="1">More About State Persistence & Hero</font>](fletfly/docs/class/HERO.md)**</small>
 
 ## 5. Active Injection with Slots (Outlets)
 Slots are in your service not the other way around.
@@ -189,7 +177,7 @@ Slots are in your service not the other way around.
 - could be any control you want (ft.Container as default)
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```python
 from fletfly import Route, slot, fly, Shared
@@ -220,13 +208,13 @@ ft.run(fly)
 ```
 </details>
 
-**[Understand](fletfly/docs/class/SLOTS.md)**
+<small>**[<font size="1">More About Slots</font>](fletfly/docs/class/SLOTS.md)**</small>
 
 ## 6. Layout Overrides
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```python
 import flet as ft
@@ -250,7 +238,7 @@ ft.run(fly)
 ```
 </details>
 
-**[Understand Layouts Overriding](fletfly/docs/class/Layout.md)**
+<small>**[<font size="1">More About Layouts Overriding</font>](fletfly/docs/class/Layout.md)**</small>
 
 ## 7. Multi & Inheritable Middleware System
 No matter how many middleware checks You want to perform, we have your back.
@@ -261,7 +249,7 @@ No matter how many middleware checks You want to perform, we have your back.
 - True, False and Redirect str returns
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -292,7 +280,7 @@ ft.run(main)
 ```
 </details>
 
-**[Understand fly_in Middleware](fletfly/docs/class/FLYIN.md)**
+<small>**[<font size="1">More About fly_in Middlewares</font>](fletfly/docs/class/FLYIN.md)**</small>
 
 ## 8. Shared Views
 A shared view is a view keeping its state outside the hierarchical tree, and can be:
@@ -302,7 +290,7 @@ A shared view is a view keeping its state outside the hierarchical tree, and can
 - created at any place of your app and called everywhere
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 from fletfly import Route, slot, fly, Shared
@@ -332,10 +320,14 @@ ft.run(fly)
 ```
 </details>
 
-**[Understand Shared](fletfly/docs/class/SHARED.md)**
+<small>**[<font size="1">More About Shared</font>](fletfly/docs/class/SHARED.md)**</small>
 
 ## 9. Lazy Loaders & data
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
+
+<details>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+
 ```Python
 import asyncio
 import flet as ft
@@ -367,14 +359,14 @@ ft.run(fly)
 ```
 </details>
 
-**[Understand Loaders & data](fletfly/docs/class/LOADER.md)**
+<small>**[<font size="1">More About Loaders & data</font>](fletfly/docs/class/LOADER.md)**</small>
 
 ## 10. Microfrontend With Zone and page.fly
 Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
 Use zone() function and navigate with page.fly, to reach relative paths in your sub projects
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 #### Main Project
 ```Python
@@ -413,14 +405,14 @@ if __name__ == "__main__":
 ```
 </details>
 
-**[Understand Zone and fly](fletfly/docs/class/Zone.md)**
+<small>**[<font size="1">More About Zone and fly</font>](fletfly/docs/class/Zone.md)**</small>
 
 ## 11. Every level fallback
 - Set your fallback style for any or all levels
 - Define your own overall error page, or let us show our 404
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -450,14 +442,14 @@ ft.run(main)
 ```
 </details>
 
-**[Understand Configs](fletfly/docs/class/fallback.md)**
+<small>**[<font size="1">More About Fallbacks</font>](fletfly/docs/class/fallback.md)**</small>
 
 ## 12. Very Deep Nesting
 - @child decorator or children list implementation are in your service
 - multiple decorator stacking on the same class with defferent props
 
 <details>
-<summary><b>👁️ Code Example</b></summary>
+<summary><font size="7"><b>👁️ Code Example<b></font></summary>
 
 ```Python
 import flet as ft
@@ -493,7 +485,7 @@ ft.run(main)
 ```
 </details>
 
-**[Understand Configs](fletfly/docs/class/CHILDREN.md)**
+<small>**[<font size="1">More About Children & Nesting</font>](fletfly/docs/class/CHILDREN.md)**</small>
 
 ## 13. Router Configs and Debugs Example
 - Set the max views opened in the same time
@@ -504,7 +496,7 @@ ft.run(main)
 - The terminal in previous section 12 example would look like this:
 
 <details>
-<summary><b>👁️ Terminal Example</b></summary>
+<summary><font size="7"><b>👁️ Terminal Example<b></font></summary>
 
 ```text
 [fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.80ms
@@ -565,4 +557,4 @@ layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/:color'
 ```
 </details>
 
-**[Understand Configs](fletfly/docs/class/CONFIGS.md)**
+<small>**[<font size="1">More About Configs</font>](fletfly/docs/class/CONFIGS.md)**</small>

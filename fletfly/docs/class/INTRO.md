@@ -196,7 +196,7 @@ ft.run(fly)
 ```
 </details>
 
-<small>**[<font size="1">More About</font>](docs/class/SLOTS.md)**</small>
+<small>**[<font size="1">More About Slots</font>](docs/class/SLOTS.md)**</small>
 
 ## 6. Layout Overrides
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
@@ -268,7 +268,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About fly_in Middleware</font>](docs/class/FLYIN.md)**</small>
+<small>**[<font size="1">More About fly_in Middlewares</font>](docs/class/FLYIN.md)**</small>
 
 ## 8. Shared Views
 A shared view is a view keeping its state outside the hierarchical tree, and can be:
