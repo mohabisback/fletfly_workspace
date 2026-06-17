@@ -11,7 +11,7 @@ def test_01_route_multi_parenting():
     # All are discovered via the pending routes queue. The shared child must be mounted
     # under both parents correctly without being exposed as a standalone top-level root.
     
-    Router.detect_path_routes = True
+    Router.detect_created_routes = True
     Router.detect_route_subclasses = False
 
     # Create pure route objects (Simulating registration inside __init__)
@@ -27,19 +27,19 @@ def test_01_route_multi_parenting():
     General._pending_routes = {parent_one, parent_two, deep_shared_leaf}
 
     # Execute consolidation pool
-    Route._create_tree(handed_classes=None)
+    Route._create_tree(anchors=[__name__])
 
     # Assertions for Scenario 1:
     # Verify both parent paths resolved correctly
-    assert "/custom-first-gate" in General._tree_map
-    assert "/inherited-parent-two" in General._tree_map
+    assert "/custom-first-gate" in General._main_zone_tree
+    assert "/inherited-parent-two" in General._main_zone_tree
 
     # Verify that the single leaf object successfully expanded under both unique parent branches
-    assert "/custom-first-gate/deep-shared-leaf" in General._tree_map
-    assert "/inherited-parent-two/deep-shared-leaf" in General._tree_map
+    assert "/custom-first-gate/deep-shared-leaf" in General._main_zone_tree
+    assert "/inherited-parent-two/deep-shared-leaf" in General._main_zone_tree
     
     # Guard Check: Ensure it didn't accidentally get leaked as a top-level route
-    assert "/deep-shared-leaf" not in General._tree_map
+    assert "/deep-shared-leaf" not in General._main_zone_tree
 
 
 def test_02_route_hybrid_role():
@@ -48,11 +48,11 @@ def test_02_route_hybrid_role():
     # Since it's picked up in the pending queue, it must be filtered from being a standalone root
     # because it is already unified and registered as a child of root_node.
     
-    General.detect_path_routes = True
+    General.detect_created_routes = True
 
     General._pending_routes.clear()
     General._registered_children.clear()
-    if hasattr(Route, "_map"): General._tree_map.clear()
+    if hasattr(Route, "_map"): General._main_zone_tree.clear()
 
     leaf_node = Route("leaf")
     mid_node = Route("mid-node")
@@ -64,19 +64,19 @@ def test_02_route_hybrid_role():
     General._pending_routes = {root_node, mid_node, leaf_node}
 
     # Execute consolidation
-    Route._create_tree(handed_classes=None)
+    Route._create_tree(anchors=[__name__])
 
     # Critical Assertions for Scenario 2:
     # 1. root_node must exist as a primary root
-    assert "/root-node" in General._tree_map
+    assert "/root-node" in General._main_zone_tree
     
     # 2. Deep children nesting maps perfectly
-    assert "/root-node/mid-node" in General._tree_map
-    assert "/root-node/mid-node/leaf" in General._tree_map
+    assert "/root-node/mid-node" in General._main_zone_tree
+    assert "/root-node/mid-node/leaf" in General._main_zone_tree
 
     # 3. Guard Check: mid_node should not be injected as an independent root
-    assert "/mid-node" not in General._tree_map
-    assert "/mid-node/leaf" not in General._tree_map
+    assert "/mid-node" not in General._main_zone_tree
+    assert "/mid-node/leaf" not in General._main_zone_tree
 
 
 def test_03_route_duplicate_handling_in_children_list():
@@ -84,11 +84,11 @@ def test_03_route_duplicate_handling_in_children_list():
     # An Route object includes the same child Route multiple times in its children list.
     # The system's set-based unification must deduplicate this gracefully without double injection.
     
-    Router.detect_path_routes = True
+    Router.detect_created_routes = True
 
     General._pending_routes.clear()
     General._registered_children.clear()
-    if hasattr(Route, "_map"): General._tree_map.clear()
+    if hasattr(Route, "_map"): General._main_zone_tree.clear()
 
     ultimate_leaf = Route("ultimate-leaf")
     confused_parent = Route("confused-parent")
@@ -99,9 +99,9 @@ def test_03_route_duplicate_handling_in_children_list():
     General._pending_routes = {confused_parent, ultimate_leaf}
 
     # Execute consolidation
-    Route._create_tree(handed_classes=None)
+    Route._create_tree(anchors=[__name__])
 
     # Assertions for Scenario 3:
-    assert "/confused-parent" in General._tree_map
-    assert "/confused-parent/ultimate-leaf" in General._tree_map
-    assert "/ultimate-leaf" not in General._tree_map
+    assert "/confused-parent" in General._main_zone_tree
+    assert "/confused-parent/ultimate-leaf" in General._main_zone_tree
+    assert "/ultimate-leaf" not in General._main_zone_tree

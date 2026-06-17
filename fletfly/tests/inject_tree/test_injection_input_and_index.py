@@ -10,90 +10,95 @@ def dummy_view2(page):
 
 
 def test_01():
+    
+    class zone: tree = {}
     # Edge Case: Ensure that when an Route instance is processed, its children 
     # are extracted into a local variable and the instance's children list is cleared immediately.
     parent_node = Route(path="dashboard")
     child_node = Route(path="settings")
     parent_node.children = [child_node]
 
-    result = Route._inject_into_tree(parent_node)
-    assert General._tree_map[''].path == ""
-    assert General._tree_map['']._is_placeholder is True
-    assert General._tree_map['/dashboard'].path == "dashboard"
-    assert getattr(General._tree_map['/dashboard'], "_is_placeholder", None) is None
-    assert General._tree_map['/dashboard'] == parent_node
-    assert General._tree_map['/dashboard/settings'].path == "settings"
-    assert getattr(General._tree_map['/dashboard/settings'], "_is_placeholder", None) is None
-    assert General._tree_map['/dashboard/settings'] == child_node
-    assert result is parent_node
+    result = Route._inject_into_tree(parent_node, zone)
+    assert zone.tree[''].path == ""
+    assert zone.tree['']._is_placeholder is True
+    assert zone.tree['/dashboard'].path == "dashboard"
+    assert getattr(zone.tree['/dashboard'], "_is_placeholder", None) is None
+    assert zone.tree['/dashboard'] == parent_node
+    assert zone.tree['/dashboard/settings'].path == "settings"
+    assert getattr(zone.tree['/dashboard/settings'], "_is_placeholder", None) is None
+    assert zone.tree['/dashboard/settings'] == child_node
     # The list should contain exactly the child_node once (rebuilt via recursion)
     assert len(parent_node.children) == 1
     assert parent_node.children[0] is child_node
 
 
 def test_02():
+    
+    class zone: tree = {}
     # Edge Case: Passing an invalid type (like None or a string) should return None safely.
-    assert Route._inject_into_tree(None) is None
-    assert Route._inject_into_tree("not_an_route_instance") is None
+    assert Route._inject_into_tree(None, zone) is None
+    assert Route._inject_into_tree("not_an_route_instance", zone) is None
 
 
 def test_03():
+    
+    class zone: tree = {}
     # Test basic path combination and leading slash enforcement
     route = Route(path="profile")
-    Route._inject_into_tree(route, parent_full_path="user")
+    Route._inject_into_tree(route, zone, parent_full_path="user")
     
     # "user" + "/" + "profile" -> "user/profile" -> stripped -> "/user/profile"
-    assert "/user/profile" in General._tree_map
-    assert General._tree_map["/user/profile"] is route
+    assert "/user/profile" in zone.tree
+    assert zone.tree["/user/profile"] is route
     assert route.path == "profile"
 
 def test_04():
+    class zone: tree = {}
     # Test single path with many far nodes
     route = Route(path="/a/b/c/")
-    Route._inject_into_tree(route)
+    Route._inject_into_tree(route, zone)
     
-    assert "" in General._tree_map
-    assert General._tree_map["/a"].path == "a"
-    assert General._tree_map["/a"]._is_placeholder is True
-    assert General._tree_map["/a/b"].path == "b"
-    assert General._tree_map["/a/b"]._is_placeholder is True
-    assert General._tree_map["/a/b/c"].path == "c"
-    assert General._tree_map["/a/b/c"] == route
-    assert getattr(General._tree_map["/a/b/c"], "_is_placeholder", None) is None
+    assert "" in zone.tree
+    assert zone.tree["/a"].path == "a"
+    assert zone.tree["/a"]._is_placeholder is True
+    assert zone.tree["/a/b"].path == "b"
+    assert zone.tree["/a/b"]._is_placeholder is True
+    assert zone.tree["/a/b/c"].path == "c"
+    assert zone.tree["/a/b/c"] == route
+    assert getattr(zone.tree["/a/b/c"], "_is_placeholder", None) is None
 
 
 def test_05():
     # Test single path with many far nodes
+    class zone: tree = {}
     route = Route(path="//c///d//")
-    Route._inject_into_tree(route, parent_full_path="//a/b///")
-    assert "" in General._tree_map
-    assert General._tree_map["/a"].path == "a"
-    assert General._tree_map["/a"]._is_placeholder is True
-    assert General._tree_map["/a/b"].path == "b"
-    assert General._tree_map["/a/b"]._is_placeholder is True
-    assert General._tree_map["/a/b/c"].path == "c"
-    assert General._tree_map["/a/b/c"]._is_placeholder is True
-    assert General._tree_map["/a/b/c/d"].path == "d"
-    assert General._tree_map["/a/b/c/d"] == route
-    assert getattr(General._tree_map["/a/b/c/d"], "_is_placeholder", None) is None
+    Route._inject_into_tree(route, zone, parent_full_path="//a/b///")
+    assert "" in zone.tree
+    assert zone.tree["/a"].path == "a"
+    assert zone.tree["/a"]._is_placeholder is True
+    assert zone.tree["/a/b"].path == "b"
+    assert zone.tree["/a/b"]._is_placeholder is True
+    assert zone.tree["/a/b/c"].path == "c"
+    assert zone.tree["/a/b/c"]._is_placeholder is True
+    assert zone.tree["/a/b/c/d"].path == "d"
+    assert zone.tree["/a/b/c/d"] == route
+    assert getattr(zone.tree["/a/b/c/d"], "_is_placeholder", None) is None
 
 
 def test_inject_handle_index_early_return_alive():
     # Edge Case: Trigger Route._handle_index naturally to verify the early return logic.
     # To succeed: parent.path is not None, child.path == "", parent has no view, child has _view.
+    
+    class zone: tree = {}
     parent = Route(path="dashboard")
     child = Route(path="")
     child._view = dummy_view2
 
-    # Clear maps to ensure a clean testing environment
-    if "" in General._tree_map: del General._tree_map[""]
-    if "/" in General._tree_map: del General._tree_map["/"]
-
     # Invoke injection with active parent context
-    result = Route._inject_into_tree(child, parent_full_path="dashboard", parent=parent)
+    result = Route._inject_into_tree(child, zone=zone, parent_full_path="dashboard", parent=parent)
 
     # It must return the child early, assigning parent.index, and NOT adding the pathless child to the map
     assert result is child
-    assert "" not in General._tree_map
-    assert "/" not in General._tree_map
+    assert "" not in zone.tree
+    assert "/" not in zone.tree
     assert parent._index is child  # Verified that explicit reference assignment happened alive

@@ -26,12 +26,12 @@ def test_child_integration_in_parent_tree_consolidation():
     class SecurityChild:
         view = dummy_view
 
-    General._tree_map = {}
-    Route._create_tree(handed_classes=[main_dashboard])
+    General._main_zone_tree = {}
+    Route._create_tree(anchors=[main_dashboard])
 
-    assert "/dashboard" in General._tree_map
-    assert "/dashboard/security-gate" in General._tree_map
-    assert "/security-gate" not in General._tree_map
+    assert "/dashboard" in General._main_zone_tree
+    assert "/dashboard/security-gate" in General._main_zone_tree
+    assert "/security-gate" not in General._main_zone_tree
 
 
 # --- Scenario 4: Multi-Parenting Divergence with Route Instances ---
@@ -46,11 +46,11 @@ def test_child_multi_parent_routing_resolution():
 
     enterprise_portal.children.append(SharedProfileChild)
 
-    General._tree_map = {}
-    Route._create_tree(handed_classes=[customer_portal, enterprise_portal])
+    General._main_zone_tree = {}
+    Route._create_tree(anchors=[customer_portal, enterprise_portal])
 
-    assert General._tree_map["/customer/profile-view"]._class == SharedProfileChild
-    assert General._tree_map["/enterprise/shared-profile-child"]._class == SharedProfileChild
+    assert General._main_zone_tree["/customer/profile-view"]._class == SharedProfileChild
+    assert General._main_zone_tree["/enterprise/shared-profile-child"]._class == SharedProfileChild
 
 
 # --- Scenario 5: Runtime Attr Recheck Preservation Simulation ---

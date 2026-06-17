@@ -13,7 +13,8 @@ def test_auto_path_naming_disabled():
     class SilentRoute:
         view = dummy_view
 
-    route, kids = Route._route_from_class(SilentRoute)
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(SilentRoute, None, zone)
     
     # Path must strictly remain None because auto-naming is turned off
     assert route._path is None
@@ -29,7 +30,8 @@ def test_detect_methods_routes_disabled():
         # This clean callable should be skipped entirely
         def settings(self, page): pass
 
-    route, kids = Route._route_from_class(DashboardPage)
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(DashboardPage, None, zone)
     
     # Parent path can be auto-named, but kids list must be completely empty
     assert route._class == DashboardPage
@@ -59,12 +61,12 @@ def test_inheritance_and_decorations_disabled_inside_append_classes():
         _view = dummy_view
 
     # Execute consolidation with only manual routes passed
-    Route._create_tree(handed_classes=[ManuallyHandedRoute])
+    Route._create_tree(anchors=[ManuallyHandedRoute])
 
     # Assertions
     # 1. Manual source must be processed and injected successfully
-    assert "/manual-gate" in General._tree_map
+    assert "/manual-gate" in General._main_zone_tree
 
     # 2. Both disabled discovery source vectors must NOT bleed into the tree map
-    assert "/deco-gate" not in General._tree_map
-    assert "/subclass-gate" not in General._tree_map
+    assert "/deco-gate" not in General._main_zone_tree
+    assert "/subclass-gate" not in General._main_zone_tree

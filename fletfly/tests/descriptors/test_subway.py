@@ -33,11 +33,11 @@ def test_child_integration_in_parent_tree_consolidation():
         view = dummy_view
 
 
-    Route._create_tree(handed_classes=[MainDashboard])
+    Route._create_tree(anchors=[MainDashboard])
 
-    assert "/dashboard" in General._tree_map
-    assert "/dashboard/security-gate" in General._tree_map
-    assert "/security-gate" not in General._tree_map
+    assert "/dashboard" in General._main_zone_tree
+    assert "/dashboard/security-gate" in General._main_zone_tree
+    assert "/security-gate" not in General._main_zone_tree
 
 
 def test_child_multi_parent_routing_resolution():
@@ -55,7 +55,7 @@ def test_child_multi_parent_routing_resolution():
 
     EnterprisePortal.children = [SharedProfileChild]
 
-    Route._create_tree(handed_classes=[CustomerPortal, EnterprisePortal])
-    for key in General._tree_map:
+    Route._create_tree(anchors=[CustomerPortal, EnterprisePortal])
+    for key in General._main_zone_tree:
         print(1111111111111, key)
-    assert General._tree_map["/customer/profile-view"]._class == General._tree_map["/enterprise/profile-view"]._class
+    assert General._main_zone_tree["/customer/profile-view"]._class == General._main_zone_tree["/enterprise/profile-view"]._class

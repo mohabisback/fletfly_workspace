@@ -16,7 +16,7 @@ class Home():                  # Route detection: path auto named to "/home"
             slot(page),        # Anonymous slot (auto-injected)
             slot(page, "slot_a"),   # named slot (auto-injected)
             slot(page),        # Anonymous slot (auto-injected)
-            slot(page, "CardDeck2", shared=True) # sticked always
+            slot(page, "CardDeck2", shared=True) # stuck always
         ])
     
     async def loader(self):          # auto detected lazy loader, injects data

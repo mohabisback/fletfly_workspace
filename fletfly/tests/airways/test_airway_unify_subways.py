@@ -17,11 +17,11 @@ def test_recursive_route_attribute_detection():
     level_one = Route(path="level-one", _view=dummy_view)
     level_one.child = level_two
 
-    Route._create_tree(handed_classes=[level_one])
+    Route._create_tree(anchors=[level_one])
 
-    assert "/level-one" in General._tree_map
-    assert "/level-one/level-two" in General._tree_map
-    assert "/level-one/level-two/level-three" in General._tree_map
+    assert "/level-one" in General._main_zone_tree
+    assert "/level-one/level-two" in General._main_zone_tree
+    assert "/level-one/level-two/level-three" in General._main_zone_tree
 
 def test_mixed_attributes_and_children_list():
     # Scenario: Cleanly combines direct Route instance attributes 
@@ -36,8 +36,8 @@ def test_mixed_attributes_and_children_list():
     mixed_parent.child = component_b
 
 
-    Route._create_tree(handed_classes=[mixed_parent])
+    Route._create_tree(anchors=[mixed_parent])
 
-    assert "/mixed/a" in General._tree_map
-    assert "/mixed/b" in General._tree_map
-    assert "/mixed/c" in General._tree_map
+    assert "/mixed/a" in General._main_zone_tree
+    assert "/mixed/b" in General._main_zone_tree
+    assert "/mixed/c" in General._main_zone_tree

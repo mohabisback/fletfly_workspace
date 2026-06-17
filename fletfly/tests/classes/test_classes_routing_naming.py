@@ -11,8 +11,8 @@ def test_detect_methods_routesion_extracts_callable_methods():
         def active_sessions(self, page):
             pass
 
-    route, kids = Route._route_from_class(ControlCenter)
-    
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(ControlCenter, None, zone)
 
     # Child method auto-detection check
     assert len(kids) == 1
@@ -33,7 +33,8 @@ def test_fallback_naming_skipped_for_non_normal_decorated_routes():
             pass
         # Manually triggering non-normal classification via underlying attribute injection
     
-    route, kids = Route._route_from_class(CustomLayoutOnly)
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(CustomLayoutOnly, None, zone)
     
     # Path must remain None because auto-naming is explicitly gated behind normal_route condition
     assert route._path is None

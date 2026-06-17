@@ -23,7 +23,8 @@ def test_01():
         Child = LevelTwo  # Outer inner class attribute
 
     # Run unification on the root of this class tree
-    result = Route._unify_class_children(LevelOne)
+    zone_registed_children = set()
+    result = Route._unify_class_children(LevelOne, zone_registed_children, set())
 
     # Assertions for LevelOne
     assert LevelTwo in result
@@ -40,8 +41,8 @@ def test_01():
     assert LevelThree._fletfly_children == set()
 
     # Verify global cache registration
-    assert LevelTwo in General._registered_children
-    assert LevelThree in General._registered_children
+    assert LevelTwo in zone_registed_children
+    assert LevelThree in zone_registed_children
 
 
 def test_02():
@@ -57,7 +58,7 @@ def test_02():
         _view = dummy_view
         _secret_route = HiddenChild  # Private attribute should be completely ignored
 
-    result = Route._unify_class_children(TargetClass)
+    result = Route._unify_class_children(TargetClass, set(), set())
 
     assert len(result) == 0
     assert result == set()
@@ -88,7 +89,7 @@ def test_04():
         # Alias list containing another class
         children = [ComponentC]
 
-    result = Route._unify_class_children(MixedParent)
+    result = Route._unify_class_children(MixedParent, set(), set())
 
     assert len(result) == 3
     assert ComponentA in result

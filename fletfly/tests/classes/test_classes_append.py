@@ -32,16 +32,16 @@ def test_01():
 
     # Assertions for Scenario 1:
     # Verify both parent paths resolved correctly based on their distinct configurations
-    assert "/custom-first-gate" in General._tree_map
-    assert "/inherited-parent-two" in General._tree_map
+    assert "/custom-first-gate" in General._main_zone_tree
+    assert "/inherited-parent-two" in General._main_zone_tree
 
     # Verify that the single leaf class successfully expanded its auto-generated identity 
     # under both unique parent branches simultaneously without any state leakage or overwriting
-    assert "/inherited-parent-two/deep-shared-leaf" in General._tree_map
-    assert "/custom-first-gate/deep-shared-leaf" in General._tree_map
+    assert "/inherited-parent-two/deep-shared-leaf" in General._main_zone_tree
+    assert "/custom-first-gate/deep-shared-leaf" in General._main_zone_tree
     
     # Ensure it didn't accidentally get exposed as a top-level route
-    assert "/deep-shared-leaf" not in General._tree_map
+    assert "/deep-shared-leaf" not in General._main_zone_tree
 
 
 def test_02():
@@ -69,19 +69,19 @@ def test_02():
         Child = MidNode
 
     # Execute consolidation
-    Route._create_tree()
+    Route._create_tree(__name__)
     # Critical Assertions for Scenario 2:
     # 1. RootNode must exist as a primary root
-    assert "/root-node" in General._tree_map
+    assert "/root-node" in General._main_zone_tree
     
     # 2. MidNode must be cleanly mapped as a child under RootNode, and LeafNode mapped under MidNode deeply
-    assert "/root-node/mid-node" in General._tree_map
-    assert "/root-node/mid-node/leaf" in General._tree_map
+    assert "/root-node/mid-node" in General._main_zone_tree
+    assert "/root-node/mid-node/leaf" in General._main_zone_tree
 
     # 3. Guard Check: Because MidNode was unified as a child of RootNode, it gets added to 
     # _registered_children_classes. Therefore, _append_classes MUST skip injecting it as a standalone root path.
-    assert "/mid-node" not in General._tree_map
-    assert "/leaf" not in General._tree_map
+    assert "/mid-node" not in General._main_zone_tree
+    assert "/leaf" not in General._main_zone_tree
 
 
 def test_append_classes_duplicate_handling_with_mixed_children_aliases():
@@ -104,15 +104,12 @@ def test_append_classes_duplicate_handling_with_mixed_children_aliases():
         children = [UltimateLeaf]
 
     # Execute consolidation
-    Route._create_tree(handed_classes=None)
+    Route._create_tree(anchors=[__name__])
 
     # Assertions for Scenario 3:
-    assert "/confused-parent" in General._tree_map
-    assert "/confused-parent/ultimate-leaf" in General._tree_map
+    assert "/confused-parent" in General._main_zone_tree
+    assert "/confused-parent/ultimate-leaf" in General._main_zone_tree
     
     # Ensure no crash happened, and the internal tracking list is a clean distinct set/list
     assert len(ConfusedParent._fletfly_children) == 1
-    assert "/ultimate-leaf" not in General._tree_map
-
-    # Final cleanup to keep the global slate clean
-    General._registered_children.clear()
+    assert "/ultimate-leaf" not in General._main_zone_tree

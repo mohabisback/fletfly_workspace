@@ -16,9 +16,11 @@ def test_route_from_class_undecorated_method_dict():
         # Standard instance method representing the view function
         def view(self, page):
             pass
-        
-    route, class_kids = Route._route_from_class(MockCBV)
     
+    class zone: registered_children = set()
+    
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(MockCBV, None, zone)
     # Verify that view_clsattr holds the dict representation instead of a plain string
     assert hasattr(route, "view")
     assert isinstance(route._view, _FuncDict)
@@ -34,7 +36,9 @@ def test_route_from_class_static_decorated_method():
     # Simulating the presence of the static marker on the function
     getattr(MockStaticCBV.layout, "__dict__")["_fletfly_static"] = True
 
-    route, class_kids = Route._route_from_class(MockStaticCBV)
+
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(MockStaticCBV, None, zone)
     
     # According to the second loop logic, static flagged sets the official_name attribute directly
     assert hasattr(route, "_layout")
@@ -51,7 +55,9 @@ def test_route_from_class_automated_method_routing_kids():
             pass
 
     # Forcing a clean route scenario without main flags
-    route, func_kids = Route._route_from_class(AutomatedRoutesCBV)
+
+    class zone: registered_children = set()
+    route, func_kids = Route._route_from_class(AutomatedRoutesCBV, None, zone)
     
     # Find the child route generated for dashboard_view
     assert len(func_kids) == 1
@@ -64,8 +70,9 @@ def test_route_from_class_undecorated_fly_in_out_accumulation():
     class MockMiddlewareCBV:
         def fly_in(self, page):
             pass
-
-    route, class_kids = Route._route_from_class(MockMiddlewareCBV)
+            
+    class zone: registered_children = set()
+    route, class_kids = Route._route_from_class(MockMiddlewareCBV, None, zone)
     
     # Verify that fly_ins correctly accumulates the _FuncDict wrapper
     assert hasattr(route, "fly_ins")

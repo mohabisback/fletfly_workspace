@@ -16,8 +16,8 @@ def test_01():
         @layout(hero=True, override=False)
         def my_custom_layout(page): pass
         
-
-    route, kids = Route._route_from_class(DecoratedRoute)
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(DecoratedRoute, None, zone)
     
     assert route._view["func"] == "my_custom_view"
     assert route._layout["func"] == "my_custom_layout"
@@ -41,7 +41,8 @@ def test_duplicate_decorators_throw_value_error(capsys):
         @view(hero=True)      
         def view_two(page): pass
 
-    Route._route_from_class(BrokenRoute)
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(BrokenRoute, None, zone)
     
     captured = capsys.readouterr()
     
@@ -58,8 +59,9 @@ def test_accumulative_decorators_append_instead_of_overwriting():
         @fly_in
         def check_premium(): pass
 
-    route, kids = Route._route_from_class(GuardedRoute)
-    
+    class zone: registered_children = set()
+    route, kids = Route._route_from_class(GuardedRoute, None, zone)
+
     assert isinstance(route.fly_ins, list)
     assert isinstance(route.fly_ins, list)
     assert len(route.fly_ins) == 2

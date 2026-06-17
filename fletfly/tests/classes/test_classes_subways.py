@@ -9,7 +9,7 @@ def test_child_explicit_path_and_diffusion():
     # Scenario 1: Method decorated with @child(path="...") explicit literal string.
     # The explicit path must be captured directly without triggering delayed runtime lookups,
     # and any extra metadata attributes must diffuse into the child route object correctly.
-    
+    class zone: registered_children=set()
     class Dashboard:
         path = "main-dash"
         
@@ -17,7 +17,7 @@ def test_child_explicit_path_and_diffusion():
         def analytics(cls, page):
             pass
 
-    route, kids = Route._route_from_class(Dashboard)
+    route, kids = Route._route_from_class(Dashboard, None, zone=zone)
     
     assert len(kids) == 1
     sub_route = kids[0]
@@ -45,13 +45,13 @@ def test_child_integration_in_global_map():
             pass
 
     # Execute consolidation pool processing
-    Route._create_tree()
+    Route._create_tree(__name__)
 
     # Assertions for complete hierarchical registration inside the routing engine map
-    assert "/portal" in General._tree_map
-    assert "/portal/financial-reports" in General._tree_map
+    assert "/portal" in General._main_zone_tree
+    assert "/portal/financial-reports" in General._main_zone_tree
     
     # Verify the child execution context points back to the parent component
-    assert General._tree_map["/portal/financial-reports"]._class is CorporatePortal
-    assert General._tree_map["/portal/financial-reports"]._view["func"] == "reports"
+    assert General._main_zone_tree["/portal/financial-reports"]._class is CorporatePortal
+    assert General._main_zone_tree["/portal/financial-reports"]._view["func"] == "reports"
     

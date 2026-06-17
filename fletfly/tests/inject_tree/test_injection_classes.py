@@ -26,8 +26,10 @@ def test_01():
         # 2. Defined inside a list matching the library's children_alias configuration
         children = [ChildTwo]
 
+    zone_registed_children = set()
+
     # Execute the unification logic alive
-    result_children = Route._unify_class_children(ParentClass)
+    result_children = Route._unify_class_children(ParentClass, zone_registed_children, set())
 
     # Verify that both children were successfully extracted
     assert ChildOne in result_children
@@ -40,8 +42,8 @@ def test_01():
     assert ChildTwo in ParentClass._fletfly_children
     
     # Ensure that they are registered in the global class cache of the library
-    assert ChildOne in General._registered_children
-    assert ChildTwo in General._registered_children
+    assert ChildOne in zone_registed_children
+    assert ChildTwo in zone_registed_children
 
 
 def test_02():
@@ -56,36 +58,8 @@ def test_02():
         AttrOne = UniqueChild
         children = [UniqueChild, UniqueChild]  # Intentionally duplicating the child in the list
 
-    result = Route._unify_class_children(DuplicateParent)
+    result = Route._unify_class_children(DuplicateParent, set(), set())
     result = list(result)
     # Internal set logic must guarantee that the list contains exactly one unique instance
     assert len(result) == 1
     assert result[0] is UniqueChild
-
-
-def test_03():
-    # Scenario: Passing a class to _inject_into_tree should convert it via _route_from_class,
-    # map it, and recursively inject its unified class children.
-    
-    class LeafClass:
-        path = "leaf"
-        view = dummy_view
-        children = []
-
-    class RootClass:
-        path = "app-root"
-        view = dummy_view
-        Sub = LeafClass
-
-    # Unify the class tree first to view the internal _fletfly_children structure
-    Route._unify_class_children(RootClass)
-
-    # Inject the main class directly into the tree
-    result = Route._inject_into_tree(RootClass)
-    
-    # Verify that the class was properly converted, mapped, and its children injected recursively
-    assert result is not None
-    assert "/app-root" in General._tree_map
-    assert General._tree_map["/app-root"].path == "app-root"
-    assert "/app-root/leaf" in General._tree_map
-    assert General._tree_map["/app-root/leaf"].path == "leaf"

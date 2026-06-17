@@ -51,7 +51,7 @@ class Router: # singleton only 1 instance
     def __init__(self, zone_or_class_or_list = [], initial_route = "", error_path:str = "", every_level_fallback=True,
                  navigation_style:NavigationStyle = NavigationStyle.home_all_from_last_port, max_views:int = 5,
                  auto_path_naming=True,
-                 detect_path_routes=True,
+                 detect_created_routes=True,
                  detect_route_subclasses=True,
                  detect_inner_classes=True,
                  detect_method_ordinaries=True,
@@ -64,7 +64,7 @@ class Router: # singleton only 1 instance
         if hasattr(self, "_initialized"):
             return
         General.auto_path_naming = auto_path_naming
-        General.detect_path_routes = detect_path_routes
+        General.detect_created_routes = detect_created_routes
         General.detect_route_subclasses = detect_route_subclasses
         General.detect_inner_classes = detect_inner_classes
         General.detect_method_routes = detect_method_routes
@@ -85,7 +85,7 @@ class Router: # singleton only 1 instance
         Route._create_tree(zone_or_class_or_list)
         _check_time("creating initial tree")
 
-        final_route = General._tree_routes.get("", None)
+        final_route = General._main_zone_tree.get("", None)
         if not final_route:
             raise ValueError(f"[fletfly] There are no routes to handle...")
 
@@ -107,9 +107,10 @@ class Router: # singleton only 1 instance
             for item in Router.dynamic_map.values(): print(item)
         
         if print_shared_views:
-            print("-------------------- fletfly -- shared map ---------------------")
+            print("-------------------- fletfly -- shared map ----------------------")
             for item in General._shared_routes.values(): print(item)
-            
+        if print_static_pages or print_dynamic_pages or print_dynamic_pages:
+            print("-----------------------------------------------------------------")    
             for item in General.shared_map.values(): print(item.func, item.path)
         self._initialized = True
     
@@ -347,7 +348,7 @@ class Router: # singleton only 1 instance
                                                 loader_func=route._loader,
                                                 )
             layout_node = None
-            if route._layout or route.layout_override:
+            if route._layout or route._layout_override:
                 layout_node = Router._LayoutNode(path=raw_path,
                                                 _class=route._class,
                                                 _class_props=route._props,
@@ -359,7 +360,7 @@ class Router: # singleton only 1 instance
             layout_nodes = list(p_layout_nodes) + ([layout_node] if layout_node else [])
 
             fly_ins_node = None
-            if route._fly_ins or route.fly_in_override:
+            if route._fly_ins or route._fly_in_override:
                 fly_ins_node = Router._FlyInsOutsNode(path=raw_path,
                                                 _class=route._class,
                                                 _class_props=route._props,
@@ -370,7 +371,7 @@ class Router: # singleton only 1 instance
             fly_ins_nodes = list(p_fly_ins_nodes) + ([fly_ins_node] if fly_ins_node else [])
 
             fly_outs_node = None
-            if route._fly_outs or route.fly_in_override:
+            if route._fly_outs or route._fly_out_override:
                 fly_outs_node = Router._FlyInsOutsNode(path=raw_path,
                                                 _class=route._class,
                                                 _class_props=route._props,
@@ -597,7 +598,7 @@ class Router: # singleton only 1 instance
             if to is not None:
                 to = node.take_off_zone.rstrip("/")+"/"+to.lstrip("/")
                 print(f"[fletfly] Redirecting by <fly_to> to: path '{to}'")
-                page.run_task(page.push_route, node.fly_to)
+                page.run_task(page.push_route, to)
                 return True
         return False
 
@@ -616,14 +617,14 @@ class Router: # singleton only 1 instance
                 
                 if node or not temp_path:
                     break
-            if not node and self.error_path:
-                current_zone_error = (page.fly.take_off_zone.rstrip("/") + "/" + self.error_path.strip("/"))
-                node, params = self.match_path(current_zone_error)
-                if not node:
-                    node, params = self.match_path("/" + self.error_path.strip("/"))
+        if not node and self.error_path:
+            current_zone_error = (page.fly.take_off_zone.rstrip("/") + "/" + self.error_path.strip("/"))
+            node, params = self.match_path(current_zone_error)
             if not node:
-                self._default_error_view(page)
-                return None, None
+                node, params = self.match_path("/" + self.error_path.strip("/"))
+        if not node:
+            self._default_error_view(page)
+            return None, None
         return node, params
     
     async def _apply_animation(self, page, node:_FlightNode):
@@ -757,7 +758,7 @@ class Router: # singleton only 1 instance
                 if page.route != page.fly.last_success_path:
                     print(f"🚫 [fletfly] Access Denied by fly_in <{func_name}>. Rolling back to: {page.fly.last_success_path}")
                     page.on_route_change = None 
-                    page.go(page.fly.last_success_path)
+                    await page.push_route(page.fly.last_success_path)
                     page.on_route_change = self._handle_route_change
                 return None
         return filtered_chain

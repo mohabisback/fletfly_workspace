@@ -28,13 +28,13 @@ def test_mixed_instance_class_hierarchy():
     root_route = Route(path="root-route")
     root_route.children=[LevelTwoClass]
 
-    Route._create_tree()
+    Route._create_tree(__name__)
 
     # Assertions to verify the entire combined path resolution
-    assert "/root-route" in General._tree_map
-    assert "/root-route/level-two-class" in General._tree_map
-    assert "/root-route/level-two-class/level-three-route" in General._tree_map
-    assert "/root-route/level-two-class/level-three-route/level-four-class" in General._tree_map
+    assert "/root-route" in General._main_zone_tree
+    assert "/root-route/level-two-class" in General._main_zone_tree
+    assert "/root-route/level-two-class/level-three-route" in General._main_zone_tree
+    assert "/root-route/level-two-class/level-three-route/level-four-class" in General._main_zone_tree
 
 def test_mixed_class_first_hierarchy():
     # Scenario: Verify an alternating mixed hierarchy starting with a Class at the root.
@@ -59,13 +59,13 @@ def test_mixed_class_first_hierarchy():
         view = dummy_view
         children = [level_two_route]
 
-    General._tree_map = {}
-    Route._create_tree(handed_classes=[RootClass])
+    General._main_zone_tree = {}
+    Route._create_tree([RootClass, __name__])
 
-    for k, v in General._tree_map.items():
+    for k, v in General._main_zone_tree.items():
         print(v, ",", k)
     # Assertions to verify the entire combined path resolution
-    assert "/root-class" in General._tree_map
-    assert "/root-class/level-two-route" in General._tree_map
-    assert "/root-class/level-two-route/level-three-class" in General._tree_map
-    assert "/root-class/level-two-route/level-three-class/level-four-route" in General._tree_map
+    assert "/root-class" in General._main_zone_tree
+    assert "/root-class/level-two-route" in General._main_zone_tree
+    assert "/root-class/level-two-route/level-three-class" in General._main_zone_tree
+    assert "/root-class/level-two-route/level-three-class/level-four-route" in General._main_zone_tree
