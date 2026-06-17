@@ -97,5 +97,5 @@ def test_07():
     parent = Route(path="/dashboard")
     child = Route(path="")
     
-    with pytest.raises(ValueError, match="must have a view view"):
+    with pytest.raises(ValueError, match="must have a view"):
         Route._handle_index(parent, child, children=[])

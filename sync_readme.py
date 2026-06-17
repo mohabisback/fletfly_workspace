@@ -14,8 +14,7 @@ targets = {
 root_note = "> 💡 **Note:** This is the workspace for the [`fletfly`](./fletfly) library project.\n\n"
 
 # 2. Polyglot Design Block (for navigation)
-polyglot_block = "> 💡 **Polyglot Design Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.\n>\n> * **[Class-Based](docs/class/INTRO.md)** — *Django, Flutter, ASP.NET*\n> * **[Registry/Dictionary](docs/dict/INTRO.md)** — *Vue, Express, Angular*\n> * **[Declarative](docs/declare/INTRO.md)** — *React, SwiftUI, Flutter Trees*\n> * **[File-Based](docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*\n> * **[Decorator-Based](docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*\n---\n"
-
+polyglot_block = "> 💡 **Polyglot Design Note:** This guide uses **Class-Based Routes** as our primary example to demonstrate the engine's hierarchical power. Choose a dedicated guide for other paradigms based on your technical background:\n>\n> * **[Class-Based Routes](docs/class/INTRO.md)** — *Django (CBV), ASP.NET Controllers, Spring Boot*\n> * **[Dict-Based Routes](docs/dict/INTRO.md)** — *Vue Router, Angular Router, React Router (Objects)*\n> * **[Declarative Routes](docs/declare/INTRO.md)** — *SwiftUI, Flutter (GoRouter), React Router (JSX)*\n> * **[File-Based Routes](docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*\n> * **[Route-Based Decorators](docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*\n> * **[Chain-Based Routes](docs/chain/INTRO.md)** — *Laravel Core, Express.js (Chained)*\n---\n"
 def sync_and_inject(source_path, target_path, prefix):
     # Read source content
     with open(source_path, 'r', encoding='utf-8') as f:

@@ -497,6 +497,7 @@ class _MethodHandler:
                 setattr(class_or_func, _fletfly_ + self.name, lis)
             lis.append(dic)
 
+        dec = "_fletfly_decorated"
         if isinstance(first_arg, type):
             _get_set_payload(first_arg)
             if direct_call_with_args:
@@ -509,14 +510,15 @@ class _MethodHandler:
                         return _child_from_class(first_arg, config_args) # handles inject into parents if any.
                 elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
                     if instance:
-                        # 2.1.0) obj.layout(class, 'user') # -> Ambiguous, ValueError
+                        # 2.1.0) obj.layout(class, 'user') # ->                       # Chaining -> instance
                         _set_func_as_mine(first_arg, config_args)
                         return instance
                     else:                     
-                        # 2.0.0) layout(class, 'user') # CB route (special) -> obj
+                        # 2.0.0) layout(class, 'user') # CB route (special) -> dict   # direct
                         return self._get_func_dict(first_arg, config_args)
-            else:         
+            else:      
                 if instance:
+                    setattr(instance, dec, first_arg)
                     # 1.1.1) obj.child(class)=@obj.child/class # CB route+inject+MCA -> class
                     if self.name in ("child", "index"):
                         _child_from_class(first_arg, {}) # handles inject into parents if instance
@@ -549,7 +551,8 @@ class _MethodHandler:
                     else:
                         return self._get_func_dict(first_arg, config_args)
             else:             
-                if instance:    
+                if instance:
+                    setattr(instance, dec, first_arg)
                     if self.name in ("child", "index"):
                         # 1.3.1)obj.child(func)=@obj.child/func # FIB route+inject+MMA -> func
                         return _child_from_func(first_arg, {})    
@@ -562,18 +565,15 @@ class _MethodHandler:
                     _inject_details_into_class_or_method(first_arg, {})    
                 return first_arg
         
-        elif instance:
+        elif instance and self.name in ("child", "index"):
             # 1.1.2)@obj.child(parents=[], 'user')/class or obj.child("user") # CB route+inject+MCA -> class
             # 1.3.2)@obj.child(parents=[], 'user')/func or obj.child("user) # FIB route+inject+MMA -> func
-            if self.name in ("child", "index"):
-                return _child_from_args(config_args)
-            # 2.1.2)@obj.layout('user')/class or obj.layout("user") # -> Ambiguous, ValueError
-            # 2.3.2)@obj.layout('user')/func or obj.layout("user"), # set method as mine & MMA me -> obj
-            elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                return _set_details_for_my_next(config_args)
+            return _child_from_args(config_args)
                 
         else:
             def wrapper(func_or_class):
+                if instance:
+                    setattr(instance, dec, func_or_class)
                 # get real function not bounded by @classmethod or shit
                 func_or_class = getattr(func_or_class, "__func__", func_or_class)
                 _get_set_payload(func_or_class)
@@ -582,10 +582,13 @@ class _MethodHandler:
                     # 1.0.2) @child(parents=[], 'user')/class # CB route+inject+ MCA child, -> class
                     if self.name in ("child", "index"):
                         _child_from_class(func_or_class, config_args)
-                    # 2.0.2) @layout('user')/class # CB route (special) + MCA child -> class
+                    # 2.0.2)@layout('user')/class # CB route (special) + MCA child -> class
                     
                     elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
                         _special_from_class(func_or_class, config_args) # handles error if instance    
+                        if instance:
+                            # 2.1.2)@obj.layout('user')/class or obj.layout("user") # -> Ambiguous, ValueError
+                            _set_func_as_mine(func_or_class, config_args)
                 else:
                     # 1.2.2)@child(parents=[], 'user')/func # FIB route+inject+MMA -> func
                     if self.name in ("child", "index"):
@@ -593,9 +596,17 @@ class _MethodHandler:
                     elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
                         # 2.2.2)@layout('user')/func # MMA me, -> func
                         if instance:
-                           _set_func_as_mine(func_or_class, config_args)
+                            # 2.3.2)@obj.layout('user')/func or obj.layout("user"), # set method as mine & MMA me -> obj
+                            _set_func_as_mine(func_or_class, config_args)
                 return func_or_class
             return wrapper
+
+obj = Route()
+@obj.layout
+def func(): pass
+
+obj.layout()
+
 
 class _Layout(_MethodHandler):
     name = "layout"
@@ -1426,7 +1437,13 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         ):
             name = None
             potential = getattr(route, "_fletfly_potential_path", None)
-            if not name and potential: name = potential
+            if not name and potential:
+                silly = False
+                for ch in aliases["child"]:
+                    if potential.lower().startswith(ch):
+                        silly = True
+                        break
+                if not silly: name = potential
             if not name and route._class:
                 name = getattr(route._class, "__name__", None)
             if not name and route._view:

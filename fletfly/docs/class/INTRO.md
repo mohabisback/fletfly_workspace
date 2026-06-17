@@ -5,7 +5,7 @@
 
 ---
 
-## 1. quick start
+## 1. Quick Start.
 
 ```python
 import flet as ft
@@ -37,22 +37,22 @@ class Home(Route):             # Route detection: path auto named to "/home"
 ft.run(fly)                    # Start Router, with auto detection of routes.
 ```
 
-## 2. deeper dive
+## 2. Deeper Dive
 Look at this single block of code. It demonstrates:
-- auto detection of routes, nested subroutes.
-- auto-path-naming (static & dynamic).
-- hierarchical layout inheritance, and final views.
-- multi & inheritable middlewares system.
-- lazy loading data injection into already opened pages.
-- named and nameless slots(outlets) injection.
-- auto detection by name, decoration, inheritance and values.
-- all can be CBV instance dependent or static.
-- index detection (for index using programmers).
-- auto arguments manipulation, delivering what's needed including params & query.
-- start router with different options.
+- Auto detection of routes, nested subroutes.
+- Auto-path-naming (static & dynamic).
+- Hierarchical layout inheritance, and final views.
+- Multi & inheritable middlewares system.
+- Lazy loading data injection into already opened pages.
+- Named and nameless slots(outlets) injection.
+- Auto detection by name, decoration, inheritance and values.
+- All can be CBV instance dependent or static.
+- Index detection (for index using programmers).
+- Auto arguments manipulation, delivering what's needed including params & query.
+- Start router with different options.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
 from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
@@ -111,10 +111,10 @@ ft.run(main)
 ```
 </details>
 
-## 3. Strict Explicit vs Magic Implicit:
+## 3. Strict Explicit vs Magic Implicit.
 Not only can you rely on magic auto-naming and detection with a wide variety of aliases, but you can also strictly use the explicit mode, defining all your properties with decorators or direct implementation.
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 from fletfly import Router
@@ -134,11 +134,11 @@ Router(
 
 <small>**[<font size="1">More About Aliases, Implicit and Explicit</font>](docs/class/Explicit.md)**</small>
 
-## 4. Persistent Engine: Intelligent Reconciliation & Hero contents
+## 4. Persistent Engine: Intelligent Reconciliation & Hero content.
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 import flet as ft
@@ -159,15 +159,15 @@ ft.run(fly)
 
 <small>**[<font size="1">More About State Persistence & Hero</font>](docs/class/HERO.md)**</small>
 
-## 5. Active Injection with Slots (Outlets)
-Slots are in your service not the other way around.
-- No limit of slot count
-- Named or nameless slots
-- free slots or stuck to shared views
-- could be any control you want (ft.Container as default)
+## 5. Active Injection With Slots (Outlets).
+Slots are at your service not the other way around.
+- No limit on slots count.
+- Named or nameless slots.
+- Free slots or stuck to shared views.
+- They could be any control you want (ft.Container as default).
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
 from fletfly import Route, slot, fly, Shared
@@ -200,11 +200,11 @@ ft.run(fly)
 
 <small>**[<font size="1">More About Slots</font>](docs/class/SLOTS.md)**</small>
 
-## 6. Layout Overrides
+## 6. Layout .
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
 import flet as ft
@@ -230,16 +230,16 @@ ft.run(fly)
 
 <small>**[<font size="1">More About Layouts Overriding</font>](docs/class/Layout.md)**</small>
 
-## 7. Multi & Inheritable Middleware System
+## 7. Multi & Inheritable Middleware System.
 No matter how many middleware checks You want to perform, we have your back.
 - General static or instance dependant.
 - Sync or async
-- Inheritable or Overrided.
+- Inheritable or Overriden.
 - Applied once or applied each view
-- True, False and Redirect str returns
+- True, False and Redirect str returns.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 import flet as ft
@@ -272,15 +272,15 @@ ft.run(main)
 
 <small>**[<font size="1">More About fly_in Middlewares</font>](docs/class/FLYIN.md)**</small>
 
-## 8. Shared Views
+## 8. Shared Views.
 A shared view is a view keeping its state outside the hierarchical tree, and can be:
-- class dependent or function dependent
-- garbaged after end of usage or immortal hero
-- stuck into a slot of layout, or delivered as a complete or part of a page view
-- created at any place of your app and called everywhere
+- Class dependent or function dependent.
+- Disposed after end of usage or immortal hero.
+- Stuck into a slot of layout, or delivered as a complete or part of a page view.
+- Created anywhere in your app and called everywhere.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 from fletfly import Route, slot, fly, Shared
@@ -316,7 +316,7 @@ ft.run(fly)
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 import asyncio
@@ -351,12 +351,12 @@ ft.run(fly)
 
 <small>**[<font size="1">More About Loaders & data</font>](docs/class/LOADER.md)**</small>
 
-## 10. Microfrontend With Zone and page.fly
+## 10. Microfrontend With Zone and page.fly.
 Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
-Use zone() function and navigate with page.fly, to reach relative paths in your sub projects
+Use zone() function and navigate with page.fly, to reach relative paths in your sub projects.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 #### Main Project
 ```Python
@@ -398,11 +398,11 @@ if __name__ == "__main__":
 <small>**[<font size="1">More About Zone and fly</font>](docs/class/Zone.md)**</small>
 
 ## 11. Every level fallback
-- Set your fallback style for any or all levels
-- Define your own overall error page, or let us show our 404
+- Set your fallback style for any or all levels.
+- Define your own overall error page, or let us show our 404.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 import flet as ft
@@ -434,12 +434,12 @@ ft.run(main)
 
 <small>**[<font size="1">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
-## 12. Very Deep Nesting
-- @child decorator or children list implementation are in your service
-- multiple decorator stacking on the same class with defferent props
+## 12. Very Deep Nesting.
+- @child decorator or children list implementation are at your service.
+- Multiple decorators stacking on the same class with different props.
 
 <details>
-<summary><font size="7"><b>👁️ Code Example<b></font></summary>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 import flet as ft
@@ -478,15 +478,15 @@ ft.run(main)
 <small>**[<font size="1">More About Children & Nesting</font>](docs/class/CHILDREN.md)**</small>
 
 ## 13. Router Configs and Debugs Example
-- Set the max views opened in the same time
-- Select the chosen views to build
-- Use the builtin routes tree debug, static, dynamic & shared maps debugs
-- Set your fallback style, and error page
+- Set the max views opened in the same time.
+- Select the chosen views to build.
+- Use the builtin routes tree debug, static, dynamic & shared maps debugs.
+- Set your fallback style, and error page.
 - Use the terminal to follow your router, print a branch only option.
 - The terminal in previous section 12 example would look like this:
 
 <details>
-<summary><font size="7"><b>👁️ Terminal Example<b></font></summary>
+<summary><font size="7"><b>👁️ Terminal Example</b></font></summary>
 
 ```text
 [fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.80ms

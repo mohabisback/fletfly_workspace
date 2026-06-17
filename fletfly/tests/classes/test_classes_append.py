@@ -29,7 +29,8 @@ def test_01():
 
     # Execute consolidation pool
     Route._create_tree([Explicit_Parent_One])
-
+    for item in General._main_zone_tree:
+        print(item)
     # Assertions for Scenario 1:
     # Verify both parent paths resolved correctly based on their distinct configurations
     assert "/custom-first-gate" in General._main_zone_tree
