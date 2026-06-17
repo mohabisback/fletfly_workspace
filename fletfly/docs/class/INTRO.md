@@ -132,9 +132,6 @@ Router(
 
 **[Understand Aliases, Implicit and Explicit](docs/class/Explicit.md)**
 
-<details>
-<summary><b>👁️ Code Example</b></summary>
-
 ## 4. Persistent Engine: Intelligent Reconciliation & Hero contents
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
 
