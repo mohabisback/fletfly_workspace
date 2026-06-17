@@ -22,7 +22,7 @@ def sync_and_inject(source_path, target_path, prefix):
         lines = f.readlines()
 
     # Insert Polyglot block at line 6
-    lines.insert(5, polyglot_block)
+    lines.insert(6, polyglot_block)
 
     # Insert Root Note at line 0 (only for root README)
     if target_path == "README.md":

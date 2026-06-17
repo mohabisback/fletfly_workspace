@@ -5,6 +5,7 @@
 
 "Stop writing procedural routing logic. With `fletfly`, fly with flet."
 
+---
 > 💡 **Polyglot Design Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.
 >
 > * **[Class-Based](fletfly/docs/class/INTRO.md)** — *Django, Flutter, ASP.NET*
@@ -12,7 +13,6 @@
 > * **[Declarative](fletfly/docs/declare/INTRO.md)** — *React, SwiftUI, Flutter Trees*
 > * **[File-Based](fletfly/docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*
 > * **[Decorator-Based](fletfly/docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*
----
 ---
 
 ## 1. quick start
