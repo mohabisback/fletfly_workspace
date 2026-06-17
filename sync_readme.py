@@ -14,7 +14,7 @@ targets = {
 root_note = "> 💡 **Note:** This is the workspace for the [`fletfly`](./fletfly) library project.\n\n"
 
 # 2. Polyglot Design Block (for navigation)
-polyglot_block = "> 💡 **Polyglot Design Note:**  📌 **Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.\n\n> * **[Class-Based](docs/class/INTRO.md)** — *Django, Flutter, ASP.NET*\n> * **[Registry/Dictionary](docs/dict/INTRO.md)** — *Vue, Express, Angular*\n> * **[Declarative](docs/declare/INTRO.md)** — *React, SwiftUI, Flutter Trees*\n> * **[File-Based](docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*\n> * **[Decorator-Based](docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*\n\n---\n\n"
+polyglot_block = "> 💡 **Polyglot Design Note:** This guide uses **Class-Based Routing** as our primary example to demonstrate the engine's hierarchical power. You can find dedicated guides for other paradigms in their respective directories.\n>\n> * **[Class-Based](docs/class/INTRO.md)** — *Django, Flutter, ASP.NET*\n> * **[Registry/Dictionary](docs/dict/INTRO.md)** — *Vue, Express, Angular*\n> * **[Declarative](docs/declare/INTRO.md)** — *React, SwiftUI, Flutter Trees*\n> * **[File-Based](docs/file/INTRO.md)** — *Next.js, Nuxt.js, SvelteKit*\n> * **[Decorator-Based](docs/decoration/INTRO.md)** — *FastAPI, Flask, NestJS*\n---\n"
 
 def sync_and_inject(source_path, target_path, prefix):
     # Read source content
