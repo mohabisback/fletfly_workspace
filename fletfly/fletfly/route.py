@@ -24,6 +24,7 @@ class General:
     _pending_routes = set()
     _pending_shared = set()
     _inherited_classes = set()
+    _inherited_shared = set()
     _main_zone_tree = {}
     _shared_routes = {}
     shared_map = {}
@@ -196,15 +197,22 @@ class _MethodHandler:
     set_type = "_"
     expected_func = "func"
     expected = {"props":(dict, {})}
-    def __init__(self, value=None, ctx=None):
+    def __init__(self, value=None, ctx=None, at=None):
         self.value = value
         self.ctx = ctx
+        self.at = at
     def __get__(self, instance, owner):
         if instance is None: return self
+        if isinstance(instance, AtProxy):
+            ctx = instance._parent
+            at = True
+        else:
+            ctx = instance
+            at = False
         # Fetch the current actual value from the instance
-        val = getattr(instance, self.set_name, self.value)
+        value = getattr(ctx, self.set_name, self.value)
         # Return a new wrapper instance holding the value and context
-        return self.__class__(value=val, ctx=instance)
+        return self.__class__(value=value, ctx=ctx, at=at)
     # Emulation methods
     def __getitem__(self, key):
         if isinstance(self.value, dict):
@@ -364,7 +372,6 @@ class _MethodHandler:
         
         # get not bounded bare func
         func = getattr(func, "__func__", func)
-
         if len(remaining_args) > len(keys):
             raise ValueError(f"[fletfly] Function expected {len(keys)} arguments but got {len(remaining_args)}")    
         for i, val in enumerate(remaining_args):
@@ -436,23 +443,18 @@ class _MethodHandler:
                 _inject_child_parents(route, kwargs)
             return route
         
-        def _child_from_class(clas, kwargs):
+        def _child_from_func_or_class(func_class, kwargs):
             route = Route()
-            route._class=clas
             General._pending_routes.discard(route)
             expected, props = self._get_expected_and_props(kwargs)
             route.props.update(props)
             _inject_details_into_route(route, expected)
-            return _index_child(route, kwargs)
-        
-        def _child_from_func(func, kwargs):
-            route = Route()
-            General._pending_routes.discard(route)
-            wrapped = self._get_func_dict(func, kwargs)
-            expected, props = self._get_expected_and_props(kwargs)
-            route.view = wrapped
-            route.props.update(props)
-            _inject_details_into_route(route, expected)
+            
+            if isinstance(func_class, type):
+                route._class=func_class
+            else:
+                wrapped = self._get_func_dict(func_class, kwargs)
+                route.view = wrapped
             return _index_child(route, kwargs)
         
         def _child_from_args(kwargs):
@@ -462,15 +464,6 @@ class _MethodHandler:
             route.props.update(props)
             _inject_details_into_route(route, expected)
             return _index_child(route, kwargs)
-        
-        def _special_from_class(clas, kwargs):
-            if instance: raise ValueError(f"[fletfly] Can't use {self.name}(class), a class can't be converted to a {self.name}. functions and methods only.")
-            route = Route()
-            route._class=clas
-            expected, props = self._get_expected_and_props(kwargs)
-            route.props.update(props)
-            _inject_details_into_route(route, expected)
-            return route
         
         def _set_func_as_mine(func, kwargs):
             expected, _ = self._get_expected_and_props(kwargs)
@@ -497,116 +490,82 @@ class _MethodHandler:
                 setattr(class_or_func, _fletfly_ + self.name, lis)
             lis.append(dic)
 
-        dec = "_fletfly_decorated"
-        if isinstance(first_arg, type):
+        if callable(first_arg):
             _get_set_payload(first_arg)
-            if direct_call_with_args:
-                if self.name in ("child", "index"):
-                    if instance:
-                        # 1.1.0) obj.child(class, 'user', parents=[] ) # CB route + inject, -> obj
-                        return _child_from_class(first_arg, config_args) # handles inject into parents if any.
-                    else:
-                        # 1.0.0) child(class,'user', parents=[]) # CB route + inject -> obj
-                        return _child_from_class(first_arg, config_args) # handles inject into parents if any.
-                elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                    if instance:
-                        # 2.1.0) obj.layout(class, 'user') # ->                       # Chaining -> instance
-                        _set_func_as_mine(first_arg, config_args)
-                        return instance
-                    else:                     
-                        # 2.0.0) layout(class, 'user') # CB route (special) -> dict   # direct
-                        return self._get_func_dict(first_arg, config_args)
-            else:      
+            if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
                 if instance:
-                    setattr(instance, dec, first_arg)
+                    # 2.3.1) obj.layout(func)=@obj.layout/func ->       Chain/dec -> instance
+                    # 2.1.1) obj.layout(class)=@obj.layout/class ->     Chain/dec -> instance
+                    # 2.1.0) obj.layout(class, 'user') ->               Chain     -> instance
+                    # 2.3.0) obj.layout(func, 'user') ->                chain     -> instance
+                    _set_func_as_mine(first_arg, config_args if direct_call_with_args else {})
+                    if self.at:
+                        return first_arg
+                    else:
+                        return instance
+                else:
+                    if direct_call_with_args:
+                        # 2.2.0) layout(func, 'user') ->                Declare   -> dict
+                        # 2.0.0) layout(class, 'user') ->               declare   -> dict
+                        return self._get_func_dict(first_arg, config_args)
+                    else:
+                        # 2.2.1) layout(func)=@layout/func ->           decl/deco -> func
+                        # 2.0.1) layout(class)=@layout/class ->         decl/deco -> func
+                        _inject_details_into_class_or_method(first_arg, {})
+                        return first_arg
+            elif self.name in ("child", "index"):
+                if instance:
                     # 1.1.1) obj.child(class)=@obj.child/class # CB route+inject+MCA -> class
-                    if self.name in ("child", "index"):
-                        _child_from_class(first_arg, {}) # handles inject into parents if instance
-                    elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                    # 2.1.1) obj.layout(class)=@obj.layout/class # -> Ambiguous, ValueError
-                        _set_func_as_mine(first_arg, {})
-                        return instance
-                else:
-                    # 1.0.1) child(class)=@child/class # CB route + MCA child-> class
-                    # 2.0.1) layout(class)=@layout/class # CB route (special) MCA child-> class
-                    _inject_details_into_class_or_method(first_arg,{})
-                return first_arg         
-        # decorating a func or method without calling @layout | @Route.layout | @route.layout:
-        elif callable(first_arg):
-            _get_set_payload(first_arg)
-            if direct_call_with_args:
-                if self.name in ("child", "index"):
-                    if instance:
-                        # 1.3.0)obj.child(func, 'user', parents=[]) # FIB route + inject, -> obj
-                        return _child_from_func(first_arg, config_args)
+                    # 1.3.1) obj.child(func)=@obj.child/func # FIB route+inject+MMA -> func
+                    # 1.1.0) obj.child(class, 'user', parents=[] ) # CB route + inject, -> obj
+                    # 1.3.0) obj.child(func, 'user', parents=[]) # FIB route + inject, -> obj
+                    child = _child_from_func_or_class(first_arg, config_args if direct_call_with_args else {})
+                    if self.at:
+                        return first_arg
                     else:
-                        # 1.2.0)child(func, 'user', parents=[]) # FIB route + inject-> obj, 
-                        return _child_from_func(first_arg, config_args)
-                elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                    # 2.3.0)obj.layout(func, 'user') # set method as mine -> obj
-                    if instance:
-                        _set_func_as_mine(first_arg, config_args)
-                        return instance
-                    # 2.2.0)layout(func, 'user') # dict -> dict, 
-                    else:
-                        return self._get_func_dict(first_arg, config_args)
-            else:             
-                if instance:
-                    setattr(instance, dec, first_arg)
-                    if self.name in ("child", "index"):
-                        # 1.3.1)obj.child(func)=@obj.child/func # FIB route+inject+MMA -> func
-                        return _child_from_func(first_arg, {})    
-                    elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                        # 2.3.1)obj.layout(func)=@obj.layout/func # set method as mine & MMA me -> func
-                        return _set_func_as_mine(first_arg, {})
+                        return child
                 else:
-                    # 1.2.1)child(func)=@child/func # MMA child-> func,
-                    # 2.2.1)layout(func)=@layout/func # MMA me-> func, 
-                    _inject_details_into_class_or_method(first_arg, {})    
-                return first_arg
-        
-        elif instance and self.name in ("child", "index"):
-            # 1.1.2)@obj.child(parents=[], 'user')/class or obj.child("user") # CB route+inject+MCA -> class
-            # 1.3.2)@obj.child(parents=[], 'user')/func or obj.child("user) # FIB route+inject+MMA -> func
-            return _child_from_args(config_args)
-                
+                    if direct_call_with_args:
+                        # 1.2.0) child(func, 'user', parents=[]) # FIB route + inject-> obj, 
+                        # 1.0.0) child(class,'user', parents=[]) # CB route + inject -> obj    
+                        return _child_from_func_or_class(first_arg, config_args if direct_call_with_args else {})
+                    else:    
+                        # 1.0.1) child(class)=@child/class # CB route + MCA child-> class
+                        # 1.2.1) child(func)=@child/func # MMA child-> func,
+                        _inject_details_into_class_or_method(first_arg, {}) 
+                        return first_arg
+        elif instance and not self.at:
+            if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
+                # 2.1.2)@obj.layout('user')/class or obj.layout("user")# decl/deco -> ldd dict
+                # 2.3.2)@obj.layout('user')/func or obj.layout("user") # decl/deco -> ldd dict
+                _set_details_for_my_next(config_args)
+                return instance
+            elif self.name in ("child", "index"):
+                # 1.1.2)@obj.child(parents=[], 'user')/class or obj.child("user") # CB route+inject+MCA -> class
+                # 1.3.2)@obj.child(parents=[], 'user')/func or obj.child("user) # FIB route+inject+MMA -> func
+                return _child_from_args(config_args)
         else:
             def wrapper(func_or_class):
-                if instance:
-                    setattr(instance, dec, func_or_class)
                 # get real function not bounded by @classmethod or shit
                 func_or_class = getattr(func_or_class, "__func__", func_or_class)
                 _get_set_payload(func_or_class)
                 _inject_details_into_class_or_method(func_or_class, config_args)
-                if isinstance(func_or_class, type):
+
+                if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
+                    if instance: # self.at = True
+                        # 2.1.2)@obj.layout('user')/class or obj.layout("user")# decl/deco -> ldd dict
+                        # 2.3.2)@obj.layout('user')/func or obj.layout("user") # decl/deco -> ldd dict
+                        _set_func_as_mine(func_or_class, config_args)
+                    else:
+                        # 2.0.2)@layout('user')/class                   # decl   -> free
+                        # 2.2.2)@layout('user')/func                    # decl   -> free
+                        pass
+                elif self.name in ("child", "index"):
+                    # 1.2.2) @child(parents=[], 'user')/func # FIB route+inject+MMA -> func
                     # 1.0.2) @child(parents=[], 'user')/class # CB route+inject+ MCA child, -> class
-                    if self.name in ("child", "index"):
-                        _child_from_class(func_or_class, config_args)
-                    # 2.0.2)@layout('user')/class # CB route (special) + MCA child -> class
-                    
-                    elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                        _special_from_class(func_or_class, config_args) # handles error if instance    
-                        if instance:
-                            # 2.1.2)@obj.layout('user')/class or obj.layout("user") # -> Ambiguous, ValueError
-                            _set_func_as_mine(func_or_class, config_args)
-                else:
-                    # 1.2.2)@child(parents=[], 'user')/func # FIB route+inject+MMA -> func
-                    if self.name in ("child", "index"):
-                        _child_from_func(func_or_class, config_args)
-                    elif self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                        # 2.2.2)@layout('user')/func # MMA me, -> func
-                        if instance:
-                            # 2.3.2)@obj.layout('user')/func or obj.layout("user"), # set method as mine & MMA me -> obj
-                            _set_func_as_mine(func_or_class, config_args)
+                    _child_from_func_or_class(func_or_class, config_args)
                 return func_or_class
             return wrapper
-
-obj = Route()
-@obj.layout
-def func(): pass
-
-obj.layout()
-
 
 class _Layout(_MethodHandler):
     name = "layout"
@@ -1109,6 +1068,19 @@ def _extract_callables_props(*args):
         items = list(args)
     return [_unwrap(item) for item in items]
 
+class AtProxy:
+    def __init__(self, parent):
+        # Use __dict__ directly to prevent infinite recursion
+        self.__dict__['_parent'] = parent
+
+    def __getattr__(self, name):
+        parent_class = self._parent.__class__
+        descriptor = getattr(parent_class, name, None)
+        if descriptor and hasattr(descriptor, '__get__'):
+            return descriptor.__get__(self, parent_class)
+            
+        raise AttributeError(f"'{parent_class.__name__}' object has no decorator '{name}'")
+
 layout = _Layout()
 view = _View()
 index = _Index()
@@ -1141,6 +1113,10 @@ class Route():
     title = _StrAttr("title")
     icon = _StrAttr("icon")
     props= _DictAttr("props")
+    
+    @property
+    def at(self):
+        return AtProxy(self)
     
     @overload
     def __init__(self, path:str=None, view=None, children:list[Route]=None, index:Route=None,
@@ -1366,8 +1342,11 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             children.append(route._index)
             route._index = None
         
+        if route._path is None: route.path = Route._auto_name(route)     
+        if route._path is not None:
+            name = re.sub(r'(?<!^)(?=[A-Z])', '-', route.path) # CamelCase to kebab_case
+            route.path = name.lower().replace("_", "-").replace("--", "-")
         
-        route = Route._handle_path(route)
         route = Route._adjust_view(route)
         
         path1 = parent_full_path if parent_full_path else ""
@@ -1430,25 +1409,31 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         
         return route
     @classmethod
-    def _handle_path(cls, route):
-        if General.auto_path_naming and(
-            route._path is None or\
-            route._path.lower().startswith(tuple(aliases["child"]+aliases["index"]))
-        ):
+    def _auto_name(cls, route, shared = False):
+        if General.auto_path_naming and route._path is None:
             name = None
             potential = getattr(route, "_fletfly_potential_path", None)
             if not name and potential:
                 silly = False
-                for ch in aliases["child"]:
+                for ch in ["shared"] if shared else aliases["child"]:
                     if potential.lower().startswith(ch):
                         silly = True
                         break
                 if not silly: name = potential
+            if not name and getattr(route, "__module__", None):
+                mod = sys.modules.get(route.__module__)
+                if mod:
+                    for k, v in mod.__dict__.items():
+                        if v is route:
+                            name = k
+                            break
             if not name and route._class:
                 name = getattr(route._class, "__name__", None)
             if not name and route._view:
                 func = route._view.get("func", None)
                 if func: name = getattr(func, "__name__", func)
+            
+            if shared: return name
             if not name and route._layout:
                 func = route._layout.get("func", None)
                 if func: name = getattr(func, "__name__", func)
@@ -1460,10 +1445,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                 if func: name = getattr(func, "__name__", func)
             if name is not None: 
                 route.path = name
-        if route._path is not None:
-            name = re.sub(r'(?<!^)(?=[A-Z])', '-', route.path) # CamelCase to kebab_case
-            route.path = name.lower().replace("_", "-").replace("--", "-")
-        return route
+
+        return name
     
     @classmethod
     def _adjust_view(cls, route): 
@@ -1543,7 +1526,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                 registered_kids.append(sub)
                 if sub._path is None:
                     sub._fletfly_potential_path = attr_name
-                    sub.path = att_name
             return sub
 
         # first loop for flagged functions
@@ -1700,7 +1682,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             General._inherited_classes.discard(Zone)
         if not General.detect_created_routes:
             General._pending_routes = set()
-        
+        General._inherited_shared = set(Shared.__subclasses__())
+
         for unit in (General._inherited_classes | General._pending_routes):
             cls._unify_class_children(unit, General._registered_children, General._routed_classes)
         
@@ -1717,20 +1700,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         _adjust_zones_modules(General._zones)
         zone0._create_tree()
         General._main_zone_tree = zone0.tree
-
-        for unit in set(Shared.__subclasses__()) | General._pending_shared:
-            if isinstance(unit, Shared):
-                if unit._class:
-                    shared, _ = Route._route_from_class(unit._class, unit)
-                else:
-                    shared = unit
-                if not shared._name:
-                    if shared._class:
-                        shared.name = shared._class.__name__
-                    else:
-                        shared.name = getattr(shared._view["func"], "__name__", str(shared._view["func"]))
-                shared = Route._adjust_view(shared)
-                General._shared_routes[shared._name] = shared
 
     @classmethod
     def _check_root_fly_to(cls, tree):
@@ -2007,10 +1976,13 @@ class Zone:
         self.registered_children = set()
         self.routed_classes = set()
         self.tree = {}
+        self.shared = {}
 
     def _create_tree(self)->Route:
         inh = {c for c in General._inherited_classes if c.__module__ in self.modules}
         pnd = {c for c in General._pending_routes if c.__module__ in self.modules}
+ 
+        
         reg = General._registered_children | self.registered_children
         rou = General._routed_classes | self.routed_classes
         pre_finals = ((inh | pnd)-(reg | rou))
@@ -2020,6 +1992,22 @@ class Zone:
             Route._inject_into_tree(route_node=unit, zone=self)
         
         Route._check_root_fly_to(self.tree)
+
+        # shared
+        pnd_sh = {c for c in General._pending_shared if c.__module__ in self.modules}
+        inh_sh = {c for c in General._inherited_shared if c.__module__ in self.modules}
+        for unit in inh_sh | pnd_sh:
+            if unit._class:
+                shared, _ = Route._route_from_class(unit._class, unit, zone=self)
+            else:
+                shared = unit
+            if not shared._name:
+                shared.name = Route._auto_name(shared)
+            shared = Route._adjust_view(shared)
+
+            self.shared[shared.name] = shared
+            General._shared_routes[shared._name] = shared
+
 
         route = self.tree.get('', None)
         if route:

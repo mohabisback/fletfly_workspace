@@ -256,7 +256,6 @@ def test_inject_class():
     assert res2.get("layout_override", "not there") == True
     assert res2.get("hero", "not there") == "not there"
     
-    print('wwwwwwwwwwwww')
     res3 = view(True, MyClass, role="user")
     assert res3.get("func", "not there") == MyClass
     assert res3.get("props", "not there") == {"role":"user"}

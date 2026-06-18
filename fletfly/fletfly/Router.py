@@ -1039,7 +1039,8 @@ class Router: # singleton only 1 instance
             target_code = getattr(func.__call__, "__code__", None)
             if not target_code: raise TypeError(f"[fletfly] instance <{func}> was set as a callable view or layout, but it has no __call__ function")
         else:
-            target_code = getattr(func, '__func__', func).__code__  # Bound method (instance.method)
+            func = getattr(func, "__func__", func)
+            target_code = func.__code__  # Bound method (instance.method)
 
 
         # Generate the unified key matching the slot frame output

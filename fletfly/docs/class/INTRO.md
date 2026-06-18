@@ -189,7 +189,7 @@ class Home(Route):
             {'a': ft.Text("Going for slot called a")},
             ft.Text("Going for first nameless slot"),
             ft.Text("Going for second nameless slot"),
-            ft.Text("Has no where to go")
+            ft.Text("Has nowhere to go")
             )
 @Shared(value='I am shared')
 class CardDeck(ft.TextField): pass
@@ -224,7 +224,7 @@ class Home(Route):
             # returning one view means, forget everything, show me.
             return ft.View(controls=[ft.Text("I am a view")])
             # return ft.Text("I am not a view")  # try this instead
-ft.run(fly)
+ft.run(main)
 ```
 </details>
 
@@ -232,7 +232,7 @@ ft.run(fly)
 
 ## 7. Multi & Inheritable Middleware System.
 No matter how many middleware checks You want to perform, we have your back.
-- General static or instance dependant.
+- General static or instance dependent.
 - Sync or async
 - Inheritable or Overriden.
 - Applied once or applied each view
