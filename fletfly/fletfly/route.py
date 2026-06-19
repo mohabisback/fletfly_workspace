@@ -189,31 +189,57 @@ def _get_set_payload(func) -> dict | None:
 
 class _FuncDict(dict):
     def __init__(self, func, name:str, props:dict=None):
+        self.func = func
+        self.name = name
+        self.props = props
         super().__init__({"func": func, "name": name, "props": props if props else {}})
     def copy(self):
         new_obj = self.__class__.__new__(self.__class__)
         new_obj.update(self)    
         return new_obj
+    def __repr__(self):
+        func = self['func']
+        f = f"<{func.__name__}>" if hasattr(func, "__name__") else f"{func}"
+        props = len(list(self.props.keys())) if self.props is not None else ''
+        return f"<FuncDict name:'{self.name}' func:{f} props:[{props}]>"
+
+
+class UseProxy:
+    def __init__(self, parent=None):
+        # Use __dict__ directly to prevent infinite recursion
+        self.__dict__['_parent'] = parent
+    def __get__(self, instance, owner):
+        return self.__class__(instance)
+    
+    def __getattr__(self, name):
+        descriptor = getattr(Route, name, None)
+        if descriptor and hasattr(descriptor, '__get__'):
+            return descriptor.__get__(self, Route)
+        elif self.__dict__['_parent']:
+            raise AttributeError(f"No .use. decorator called '{name}'")
+        else:
+            raise AttributeError(f"No .use. method called '{name}'")
+ 
 class _MethodHandler:
     set_type = "_"
     expected_func = "func"
     expected = {"props":(dict, {})}
-    def __init__(self, value=None, ctx=None, at=None):
+    def __init__(self, value=None, ctx=None, use=None):
         self.value = value
         self.ctx = ctx
-        self.at = at
+        self.use = use
     def __get__(self, instance, owner):
         if instance is None: return self
-        if isinstance(instance, AtProxy):
+        if isinstance(instance, UseProxy):
             ctx = instance._parent
-            at = True
+            use = True
         else:
             ctx = instance
-            at = False
+            use = False
         # Fetch the current actual value from the instance
-        value = getattr(ctx, self.set_name, self.value)
+        value = getattr(ctx, self.set_name, self.value) if ctx else self.value
         # Return a new wrapper instance holding the value and context
-        return self.__class__(value=value, ctx=ctx, at=at)
+        return self.__class__(value=value, ctx=ctx, use=use)
     # Emulation methods
     def __getitem__(self, key):
         if isinstance(self.value, dict):
@@ -473,7 +499,7 @@ class _MethodHandler:
             _inject_details_into_route(instance, expected)
             return instance
         
-        def _set_details_for_my_next(kwargs):
+        def _set_details_for_me(kwargs):
             expected, props = self._get_expected_and_props(kwargs)
             setattr(instance, f"_fletfly_waiting_{self.set_name}", props)
             _inject_details_into_route(instance, expected)
@@ -495,25 +521,28 @@ class _MethodHandler:
             _get_set_payload(first_arg)
             if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
                 if instance:
-                    # 2.3.1) obj.layout(func)=@obj.layout/func ->       Chain/dec -> instance
-                    # 2.1.1) obj.layout(class)=@obj.layout/class ->     Chain/dec -> instance
-                    # 2.1.0) obj.layout(class, 'user') ->               Chain     -> instance
-                    # 2.3.0) obj.layout(func, 'user') ->                chain     -> instance
+                    # 2.1.1) obj.layout(C)=@obj.layout/C ->             Chain -> obj
+                    # 2.3.1) obj.use.layout(C)=@obj.use.layout/C ->     dec   -> C
+                    # 2.1.0) obj.layout(C, 'user') ->                   Chain -> obj
+                    # 2.3.0) obj.use.layout(C, 'user') ->               Chain -> obj
                     _set_func_as_mine(first_arg, config_args if direct_call_with_args else {})
-                    if self.at:
+                    if self.use and not direct_call_with_args:
                         return first_arg
                     else:
                         return instance
                 else:
                     if direct_call_with_args:
-                        # 2.2.0) layout(func, 'user') ->                Declare   -> dict
-                        # 2.0.0) layout(class, 'user') ->               declare   -> dict
+                        # 2.0.0) layout(C, 'user') ->                   declare   -> dict
+                        # 2.2.0) use.layout(C, 'user') ->               declare   -> dict
                         return self._get_func_dict(first_arg, config_args)
                     else:
-                        # 2.2.1) layout(func)=@layout/func ->           decl/deco -> func
-                        # 2.0.1) layout(class)=@layout/class ->         decl/deco -> func
+                        # 2.0.1) layout(C)=@layout/C ->                 deco      -> C
+                        # 2.2.1) use.layout(C)=@layout/C ->             decl      -> dict
                         _inject_details_into_class_or_method(first_arg, {})
-                        return first_arg
+                        if self.use:
+                            return self._get_func_dict(first_arg, {})
+                        else:
+                            return first_arg
             elif self.name in ("child", "index"):
                 if instance:
                     # 1.1.1) obj.child(class)=@obj.child/class # CB route+inject+MCA -> class
@@ -521,7 +550,7 @@ class _MethodHandler:
                     # 1.1.0) obj.child(class, 'user', parents=[] ) # CB route + inject, -> obj
                     # 1.3.0) obj.child(func, 'user', parents=[]) # FIB route + inject, -> obj
                     child = _child_from_func_or_class(first_arg, config_args if direct_call_with_args else {})
-                    if self.at:
+                    if self.use and not direct_call_with_args:
                         return first_arg
                     else:
                         return child
@@ -533,18 +562,31 @@ class _MethodHandler:
                     else:    
                         # 1.0.1) child(class)=@child/class # CB route + MCA child-> class
                         # 1.2.1) child(func)=@child/func # MMA child-> func,
-                        _inject_details_into_class_or_method(first_arg, {}) 
-                        return first_arg
-        elif instance and not self.at:
+                        _inject_details_into_class_or_method(first_arg, {})
+                        if self.use:
+                            return _child_from_func_or_class(first_arg, config_args if direct_call_with_args else {}) 
+                        else:
+                            return first_arg
+        elif instance and not self.use:
             if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
                 # 2.1.2)@obj.layout('user')/class or obj.layout("user")# decl/deco -> ldd dict
                 # 2.3.2)@obj.layout('user')/func or obj.layout("user") # decl/deco -> ldd dict
-                _set_details_for_my_next(config_args)
+                _set_details_for_me(config_args)
                 return instance
             elif self.name in ("child", "index"):
                 # 1.1.2)@obj.child(parents=[], 'user')/class or obj.child("user") # CB route+inject+MCA -> class
                 # 1.3.2)@obj.child(parents=[], 'user')/func or obj.child("user) # FIB route+inject+MMA -> func
                 return _child_from_args(config_args)
+        elif not instance and self.use:
+            if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
+                # 2.1.2)@layout('user')/class or layout("user")# decl/deco -> ldd dict
+                # 2.3.2)@layout('user')/func or layout("user") # decl/deco -> ldd dict
+                _set_details_for_me(config_args)
+                return None
+            elif self.name in ("child", "index"):
+                # 1.1.2)@child(parents=[], 'user')/class or child("user") # CB route+inject+MCA -> class
+                # 1.3.2)@child(parents=[], 'user')/func or child("user) # FIB route+inject+MMA -> func
+                return _child_from_args(config_args)    
         else:
             def wrapper(func_or_class):
                 # get real function not bounded by @classmethod or shit
@@ -553,7 +595,7 @@ class _MethodHandler:
                 _inject_details_into_class_or_method(func_or_class, config_args)
 
                 if self.name in ("layout", "view", "fly_in", "fly_out", "loader"):
-                    if instance: # self.at = True
+                    if instance: # self.use = True
                         # 2.1.2)@obj.layout('user')/class or obj.layout("user")# decl/deco -> ldd dict
                         # 2.3.2)@obj.layout('user')/func or obj.layout("user") # decl/deco -> ldd dict
                         _set_func_as_mine(func_or_class, config_args)
@@ -1069,19 +1111,6 @@ def _extract_callables_props(*args):
         items = list(args)
     return [_unwrap(item) for item in items]
 
-class AtProxy:
-    def __init__(self, parent):
-        # Use __dict__ directly to prevent infinite recursion
-        self.__dict__['_parent'] = parent
-
-    def __getattr__(self, name):
-        parent_class = self._parent.__class__
-        descriptor = getattr(parent_class, name, None)
-        if descriptor and hasattr(descriptor, '__get__'):
-            return descriptor.__get__(self, parent_class)
-            
-        raise AttributeError(f"'{parent_class.__name__}' object has no decorator '{name}'")
-
 layout = _Layout()
 view = _View()
 index = _Index()
@@ -1091,6 +1120,8 @@ child = _Child()
 loader = _Loader()
 fly_ins = _FlyInsOuts("fly_ins")
 fly_outs = _FlyInsOuts("fly_outs")
+
+use = UseProxy()
 
 class Route():
     layout = _Layout()
@@ -1112,19 +1143,21 @@ class Route():
     layout_hero = _HeroAttr("layout_hero")
     title = _StrAttr("title")
     icon = _StrAttr("icon")
-    props= _DictAttr("props")
+    props = _DictAttr("props")
     
     @property
-    def at(self):
-        return AtProxy(self)
+    def use(self):
+        return UseProxy(self)
     
     @overload
-    def __init__(self, path:str=None, view=None, children:list[Route]=None, index:Route=None,
-                 fly_to:str=None, layout = None, layout_override:bool=None,
+    def __init__(self, path:str=None, view=None, children:list[Route]=None,
+                 *uses,
+                 index:Route=None, fly_to:str=None, layout = None, layout_override:bool=None,
                     fly_ins = None, fly_in_override:bool=None, 
                     fly_outs=None, fly_out_override:bool=None,
                     view_hero:bool=None, layout_hero:bool=None,
-                    title=None, icon=None, loader=None, props:dict=None, **kwargs): ...
+                    title=None, icon=None, loader=None,
+                    props:dict=None, **kwargs): ...
     def __init__(self, *args, **kwargs):
         self._layout=None
         self._view=None
@@ -1170,20 +1203,47 @@ class Route():
         new_route._original = self
         new_route.__module__ = self.__module__
         return new_route
-    _ordered_fields = [
-        "children", "index", "fly_to", "layout", "layout_override",
-        "fly_ins", "fly_in_override", "fly_outs", "fly_out_override",
-        "view_hero", "layout_hero", "title", "icon", "loader", "props"
-    ]
-    def _adjust_locals(self, args, kwargs):
-        pre_fields = []
-        for i in range(2):
-            if len(args)>i:
-                if callable(args[i]):
-                    pre_fields.append("view")
-                elif isinstance(args[i], str):
-                    pre_fields.append("name" if isinstance(self, Shared) else "path")
-        params = dict(zip(pre_fields+self._ordered_fields, args))
+    
+    def _adjust_locals(self, original_args, kwargs):
+
+        pre_fields = ["path", "view", "children"]
+        args = list(original_args)
+        # adjusting FuncDict
+        for item in original_args:
+            if isinstance(item, _FuncDict):
+                args.remove(item)
+                setattr(self, item.name, item)
+                if item.name in pre_fields: pre_fields.remove(item.name)
+
+        err_msg =  f"[fletfly] only 'path:str', 'view:Callable' & 'children:list' are allowed as positional arguments."
+        if len(args) > 3:
+            raise ValueError(err_msg)
+        
+        # Loop based on what the developer actually passed
+        pre_ordered_fields = []
+        for arg in args:
+            if callable(arg):
+                if "view" in pre_fields:
+                    pre_ordered_fields.append("view")
+                    pre_fields.remove("view")
+                else:
+                    raise ValueError("[fletfly] view argument duplication")
+            elif isinstance(arg, str):
+                if "path" in pre_fields:
+                    pre_ordered_fields.append("name" if isinstance(self, Shared) else "path")
+                    pre_fields.remove("path")
+                else:
+                    raise ValueError(f"[fletfly] {'name' if isinstance(self, Shared) else 'path'} argument duplication")
+            elif isinstance(arg, (list, tuple)):
+                if "children" in pre_fields:
+                    pre_ordered_fields.append("children")
+                    pre_fields.remove("children")
+                else:
+                    raise ValueError("[fletfly] children argument duplication")
+            else:
+                raise TypeError(err_msg)
+            
+        params = dict(zip(pre_ordered_fields, args))
         params.update(kwargs)
         for official_name, aliases_list in aliases.items():
             for alias in aliases_list:
@@ -1201,8 +1261,11 @@ class Route():
         self.props = self_props | new_props | params
  
     @overload
-    def __call__(self, path:str=None, view=None, children:list[Route]=None, index:Route=None, 
-                 fly_to:str=None, layout = None, layout_override:bool=None,
+    def __call__(self,
+                    path:str=None, view=None, children:list[Route]=None,
+                    *uses,
+                    index:Route=None, fly_to:str=None,
+                    layout = None, layout_override:bool=None,
                     fly_ins = None, fly_in_override:bool=None, 
                     fly_outs=None, fly_out_override:bool=None,
                     view_hero:bool=None, layout_hero:bool=None,
@@ -1211,18 +1274,6 @@ class Route():
     
     def __call__(self, *args, **kwargs):
         first_arg = args[0] if args else None
-        
-        # @obj.layout() or @obj.layout(override=True, role=User)
-        handled_as_waiting = False
-        for item_name in ["view", "layout", "fly_in", "fly_out", "loader"]:
-            waiting_attr = f"_fletfly_waiting_{item_name}"
-            props = getattr(self, waiting_attr, None) 
-            if props is not None:
-                setattr(self, item_name, _FuncDict(func=first_arg, name=item_name, props=props))
-                setattr(self, waiting_attr, None) 
-                handled_as_waiting = True        
-        if handled_as_waiting:
-            return first_arg
         
         # @obj, @Route("string") first call, @obj("str", **kwargs) second call
         if isinstance(first_arg, type):
@@ -1422,9 +1473,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
     def _auto_name(cls, route, shared = False):
         if General.auto_path_naming and route._path is None:
             name = None
-            if not name and route._class:
-                name = getattr(route._class, "__name__", None)
-            
             potential = getattr(route, "_potential_path", None)
             if potential is None and getattr(route, "__module__", None):
                 mod = sys.modules.get(route.__module__)
@@ -1441,6 +1489,9 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         break
                 if not silly: name = potential
 
+            if not name and route._class:
+                name = getattr(route._class, "__name__", None)
+            
             if not name and route._view:
                 func = route._view.get("func", None)
                 if func: name = getattr(func, "__name__", func)
@@ -1472,7 +1523,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                 if isinstance(dic, _FuncDict):
                     dic["props"] = (route._props or {}) | (dic.get("props",{}) or {})
                 else:
-                    print(111111111111111, dic, type(dic)) # not type _FuncDict which i made
                     raise ValueError(f"Debug error, a '{item}' function is not saved as function dictionary")
         return route
     @classmethod

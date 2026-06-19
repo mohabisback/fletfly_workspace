@@ -1,29 +1,29 @@
-from fletfly import Route, slot, fly, Shared
 import flet as ft
+import fletfly as fy
 import asyncio
 
-@Shared(value='I am shared, change me') # auto named to 'CardDeck'
-@Shared('CardDeck2', value='I am shared, change me too')
+@fy.Shared(value='I am shared, change me') # auto named to 'CardDeck'
+@fy.Shared('CardDeck2', value='I am shared, change me too')
 class CardDeck(ft.TextField): pass
 
-class Home(Route):
+class Home(fy.Route):
     def layout(self, page):    # Auto-detected layout by names (layout, frame)
         return ft.Column([
-            slot(page, "CardDeck", shared=True), # stuck always
-            slot(page) ])
+            fy.slot(page, "CardDeck", shared=True), # stuck always
+            fy.slot(page) ])
     def view(self): return 'CardDeck2'     # Shared but delivered by view
-class A(Route):
+class A(fy.Route):
     class B:
         class C:
             class D:
                 class E:
                     def layout(self, page):
                         return ft.Column([
-                            slot(page, "CardDeck", shared=True),
-                            slot(page, "CardDeck2", shared=True)
+                            fy.slot(page, "CardDeck", shared=True),
+                            fy.slot(page, "CardDeck2", shared=True)
                         ])
 async def main(page):
-    fly(page)
+    fy.fly(page)
     target_pages = ['home', 'a/b/c/d/e']
     for _ in range(5):
         for p in target_pages:

@@ -1,10 +1,10 @@
 import flet as ft
-from fletfly import Route, fly, Shared
+import fletfly as fy
 
-@Shared(hero=True, value = 'I am "CardDeck" shared of Sub Project')
+@fy.Shared(hero=True, value = 'I am "CardDeck" shared of Sub Project')
 class CardDeck(ft.TextField): pass
 
-class Home(Route):
+class Home(fy.Route):
     path = '/home'
     def view(self):
         return (
@@ -15,7 +15,7 @@ class Home(Route):
         )
     class Settings:
         path = '/home/settings'
-        def view(self, page):
+        def view(self):
             return (
                 ft.Text ("Sub project Settings page"),
                 ft.Button('Go Home', on_click=lambda e: e.page.fly('home')),
@@ -23,4 +23,4 @@ class Home(Route):
                 'CardDeck'
             )
 if __name__ == "__main__":
-    ft.run(fly)
+    ft.run(fy.fly)

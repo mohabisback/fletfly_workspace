@@ -1,9 +1,9 @@
-from fletfly import Router, Route, slot, fly, child, data, fly_in, StackMode, Shared
 import flet as ft
+import fletfly as fy
 import asyncio # just for mocking time delay
 
-@Shared('CardDeck2', value='its me everywhere')
-@Shared(value='same obj same data') # auto named to 'CardDeck'
+@fy.Shared('CardDeck2', value='its me everywhere')
+@fy.Shared(value='same obj same data') # auto named to 'CardDeck'
 class CardDeck(ft.TextField): pass
 
 class Home():                  # Route detection: path auto named to "/home"
@@ -11,11 +11,11 @@ class Home():                  # Route detection: path auto named to "/home"
     def layout(self, page):    # Auto-detected layout by names (layout, frame)
         return ft.Column([
             ft.Text("Header"),
-            data(page, ft.Text("loading..."), value="names.0"), # for loader
-            slot(page),        # Anonymous slot (auto-injected)
-            slot(page, "slot_a"),   # named slot (auto-injected)
-            slot(page),        # Anonymous slot (auto-injected)
-            slot(page, "CardDeck2", shared=True) # stuck always
+            fy.data(page, ft.Text("loading..."), value="names.0"), # for loader
+            fy.slot(page),        # Anonymous slot (auto-injected)
+            fy.slot(page, "slot_a"),   # named slot (auto-injected)
+            fy.slot(page),        # Anonymous slot (auto-injected)
+            fy.slot(page, "CardDeck2", shared=True) # stuck always
         ])
     
     async def loader(self):          # auto detected lazy loader, injects data
@@ -33,7 +33,7 @@ class Home():                  # Route detection: path auto named to "/home"
     
     class _Helper: pass        # Private scope (ignored by router)
 
-    @child(":id")              # Sub route detection, path: "/home/:id"
+    @fy.child(":id")              # Sub route detection, path: "/home/:id"
     class User:
     
         def view(self, page):  # Injected into self or inheritable layout
@@ -43,18 +43,18 @@ class Home():                  # Route detection: path auto named to "/home"
                 "CardDeck"   # shared view returned as part of view
             )
     
-        @fly_in(inheritable = True, param1='a') # detected by decoration
+        @fy.fly_in(inheritable = True, param1='a') # detected by decoration
         @classmethod             # classmethod descriptor auto-unwrapped internally
         def func(cls, param1):
             return True
 
 # handed father of class (or list of fathers of classes)
-Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=False, max_views=5, 
-       stack_mode=StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
+fy.Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=False, max_views=5, 
+       stack_mode=fy.StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
 
 
 async def main(page):
-    fly(page)
+    fy.fly(page)
 
     target_pages = ["home/123", "home/456", "home/999", 'home/100']
     for p in target_pages:

@@ -7,7 +7,7 @@ home = Route()                          # Route detection: path auto named to "/
 @home.use.layout
 def layout(page):                       # Auto-detected layout
     return ft.Column([
-            ft.Text("Header"),
+            ft.Text("Header"), 
             slot(page) ])               # Nameless slot for injection
             
 @home.use.fly_in

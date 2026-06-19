@@ -1,10 +1,10 @@
 import flet as ft
-from fletfly import Route, fly, fly_in
+import fletfly as fy
 
 def check_role(role='user'):          # general middleware with params
     return True if role == 'admin' else 'home'
     
-class Home(Route):
+class Home(fy.Route):
     def view(self): return ft.Text("Main view")
     
     class Admin:
@@ -14,12 +14,12 @@ class Home(Route):
             return True
         
         @classmethod               
-        @fly_in(inheritable = True, param1='a') # detected by decoration
+        @fy.fly_in(inheritable = True, param1='a') # detected by decoration
         def func(cls, param1):
             return True
 
-        d = fly_in(check_role, role='user')  # change role to "admin", to enter the page
+        d = fy.fly_in(check_role, role='user')  # change role to "admin", to enter the page
 
 def main(page):
-    fly(page, '/home/admin')
+    fy.fly(page, '/home/admin')
 ft.run(main)

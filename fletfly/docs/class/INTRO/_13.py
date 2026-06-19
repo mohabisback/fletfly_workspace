@@ -1,24 +1,32 @@
 import flet as ft
-from fletfly import Route, Router, fly, child
+import fletfly as fy
 import asyncio
-class A(Route):      
-    def view(self): return ft.Text('Normal class A view')
+class A(fy.Route):      
     class B:
-        path = ":id"
-        def view(self, id, color): return ft.Text(f"{id} page, color is {color}")
-        class Fallback: # special fallback for zone C
-            path = "*"
-            def view(self): return ft.Text('Fallback for B zone')
-    @child(path="*") # use path = "*" for fallback
-    class Fallback:
-        def view(self): return ft.Text('Fallback for A zone')
-
-Router(error_path='a/*')
+        class C:
+            class D:
+                class E:
+                    @fy.child('red_page', color = 'red')   # add class as child
+                    @fy.child(':color')                    # as dynamic child
+                    class ColorPage:
+                        def __init__(self, color='green'):
+                            self.color = color
+                        def view(self): return ft.Text(f"Color is {self.color}", color=self.color)
+                    
+                    page = fy.child(ColorPage, 'cyan_page',  color = 'cyan')   # child
+                    green_page = fy.child(ColorPage, color = 'green')          # child
+                    
+                    children=[
+                        fy.child('blue-page', ColorPage, color='blue'),        
+                        fy.child(ColorPage, 'orange-page', color='orange')
+                        ]
+fy.Router(print_path_zone='/a/b/c/d/e', ) # print only this branch
 async def main(page):
-    fly(page)
-    target_pages = ['a/123?color="red"', 'a/b/c/d/e/f/g/h/i/j/k/l', 'a/m/n/o/p/q/r/s', 'something']
-    for _ in range(3):
+    fy.fly(page)
+    target_pages = ['a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
+                    'a/b/c/d/e/cyan', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow']
+    for _ in range(1): 
         for p in target_pages:
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
             page.fly(p)
 ft.run(main)

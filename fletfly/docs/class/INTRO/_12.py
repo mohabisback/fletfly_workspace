@@ -1,30 +1,26 @@
-import flet as ft
-from fletfly import Route, Router, fly, child
 import asyncio
-class A(Route):      
+import flet as ft
+import fletfly as fy
+class A(fy.Route):      
+    def view(self): return ft.Text('Normal class A view')
     class B:
         class C:
-            class D:
-                class E:
-                    @child('red_page', color = 'red')
-                    @child(':color')
-                    class ColoredPage:
-                        def __init__(self, color='green'):
-                            self.color = color
-                        def view(self): return ft.Text(f"Color is {self.color}", color=self.color)
-                    magenta_page = child(ColoredPage, color = 'magenta')
-                    green_page = child(ColoredPage, color = 'green')
-                    children=[
-                        child(ColoredPage, 'blue-page', color='blue'),
-                        child(ColoredPage, 'orange-page', color='orange')
-                        ]
-Router(print_path_zone='/a/b/c/d/e', )
+            path = ":id"
+            def view(self, id, color): return ft.Text(f"{id} page, color is {color}")
+        class Fallback: # special fallback for zone C
+            path = "*"
+            def view(self): return ft.Text('Fallback for B zone')
+    @fy.child(path="*") # use path = "*" for fallback
+    class Fallback:
+        def view(self): return ft.Text('Fallback for A zone')
+
+fy.Router(error_path='a/*')
+
 async def main(page):
-    fly(page)
-    target_pages = ['a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
-                    'a/b/c/d/e/brown-page', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow']
-    for _ in range(1): 
+    fy.fly(page)
+    target_pages = ['a/b/123?color="red"', 'a/b/c/d/e/f/g/h/i/j/k/l', 'a/m/n/o/p/q/r/s', 'something']
+    for _ in range(1):
         for p in target_pages:
-            await asyncio.sleep(3)
+            await asyncio.sleep(2)
             page.fly(p)
 ft.run(main)

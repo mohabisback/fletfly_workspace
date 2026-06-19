@@ -9,30 +9,30 @@
 
 ```python
 import flet as ft
-from fletfly import Route, slot, fly
+import fletfly as fy Route, slot, fly
 
 home = Route()                          # Route detection: path auto named to "/home"
 
-@home.at.layout
+@home.use.layout
 def layout(page):                       # Auto-detected layout
     return ft.Column([
             ft.Text("Header"),
             slot(page) ])               # Nameless slot for injection
             
-@home.at.fly_in
+@home.use.fly_in
 def fly_in():                           # Middleware
     return True
 
-@home.at.child('contact')
+@home.use.child('contact')
 def contact():                          # subroute from func, named to "/home/contact"
     return ft.Text("Contact page")      # injected into self layout
 
-@home.at.child('about', value='About page')     # fast route "/home/about"
-@home.at.child('error', value='Error page')     # fast route "/home/error"
+@home.use.child('about', value='About page')     # fast route "/home/about"
+@home.use.child('error', value='Error page')     # fast route "/home/error"
 class A(ft.Text): pass
 
 user = Route('user')                            # Subroute, named to "/home/user"
-@user.at.view
+@user.use.view
 def view():                         # main view detection, into layout inject
     return ft.Text('User page')     # injected into parent layout
 
@@ -43,14 +43,13 @@ ft.run(fly)                    # Start Router, with auto detection of routes.
 
 ## 2. Deeper Dive
 Look at this single block of code. It demonstrates:
-- Auto detection of routes, nested subroutes.
+- Auto detection of routes.
 - Auto-path-naming (static & dynamic).
 - Hierarchical layout inheritance, and final views.
 - Multi & inheritable middlewares system.
 - Lazy loading data injection into already opened pages.
 - Named and nameless slots(outlets) injection.
 - Auto detection by name, decoration, inheritance and values.
-- All can be CBV instance dependent or static.
 - Index detection (for index using programmers).
 - Auto arguments manipulation, delivering what's needed including params & query.
 - Start router with different options.
@@ -59,7 +58,7 @@ Look at this single block of code. It demonstrates:
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
-from fletfly import Router, Route, slot, fly, data, StackMode, Shared
+import fletfly as fy Router, Route, slot, fly, data, StackMode, Shared
 import flet as ft
 import asyncio # just for mocking time delay
 
@@ -69,7 +68,7 @@ CardDeck2 = Shared(CardDeck, value='its me everywhere')
 
 home = Route()                  # Route detection: path auto named to "/home"
 
-@home.at.layout
+@home.use.layout
 def layout(page):    # Auto-detected layout by names (layout, frame)
     return ft.Column([
         ft.Text("Header"),
@@ -80,12 +79,12 @@ def layout(page):    # Auto-detected layout by names (layout, frame)
         slot(page, "CardDeck2", shared=True) # stuck always
     ])
 
-@home.at.loader
+@home.use.loader
 async def loader():          # auto detected lazy loader, injects data
     await asyncio.sleep(5)       # mocking delay for data fetching
     return {"names":["John"]}  # called by "names.0"
 
-@home.at.view # Auto-detected index
+@home.use.view # Auto-detected index
 def view():        # Auto-detected view by names:
     return (           # (build, content, component, element)
     {"slot_a": ft.Text("Sir")},   # Binds to slot named 'slot_a'
@@ -95,7 +94,7 @@ def view():        # Auto-detected view by names:
 
 user = Route(':id')        # Sub route detection, path: "/home/:id"
 
-@user.at.view
+@user.use.view
 def user_view(page):  # Injected into self or inheritable layout
     return (
         ft.Text(f"{page.fly.params.get('id','default')}"),   # URL params
@@ -103,7 +102,7 @@ def user_view(page):  # Injected into self or inheritable layout
         "CardDeck"   # shared view returned as part of view
     )
 
-@user.at.fly_in(inheritable = True, param1='a') # detected by decoration
+@user.use.fly_in(inheritable = True, param1='a') # detected by decoration
 # classmethod descriptor auto-unwrapped internally
 def func(param1):
     return True
@@ -127,9 +126,9 @@ Not only can you rely on magic auto-naming and detection with a wide variety of 
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
-from fletfly import Router
+import fletfly as fy Router
 import flet as ft
-from fletfly import Router, Route, fly, fly_in
+import fletfly as fy Router, Route, fly, fly_in
 
 # will not be registered by creation
 home = Route('home')                # explicit paths only
@@ -160,25 +159,25 @@ No matter how many views you are opening in the views stack, and how many naviga
 ```Python
 import asyncio
 import flet as ft
-from fletfly import Router, Route, slot, fly
+import fletfly as fy Router, Route, slot, fly
 
 # dynamic route
 home = Route("{category}", layout_hero=False) # layout_hero in route
 
-@home.at.layout
+@home.use.layout
 def layout(page):           
     return ft.Column([
         ft.Text("Header"),
         slot(page)
     ])
 
-@home.at.view(hero=True)         # True means 5 in dynamic, 1 in static
+@home.use.view(hero=True)         # True means 5 in dynamic, 1 in static
 def view():
     return ft.Text("Main view")
 
 user = Route(":id")
 
-@user.at.view(hero=2)            # max 2 pages are saved for different params
+@user.use.view(hero=2)            # max 2 pages are saved for different params
 def user_view(page):
     category = page.fly.params.get("category", "default")
     user_id = page.fly.params.get("id", "default")
@@ -206,12 +205,12 @@ Slots are at your service not the other way around.
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
-from fletfly import Route, slot, fly, Shared
+import fletfly as fy Route, slot, fly, Shared
 import flet as ft
 
 home = Route()
 
-@home.at.layout
+@home.use.layout
 def layout(page):    
     return ft.Column([
         ft.Text("Header"),
@@ -222,7 +221,7 @@ def layout(page):
         slot(page, "CardDeck", shared=True) # stuck always to shared view named "CardDeck"
     ])
 
-@home.at.view
+@home.use.view
 def view():
     return (
         {1: ft.Text("Going for slot called 1")},
@@ -251,11 +250,11 @@ Break the inheritance gracefully when you need an isolated view (like a login or
 
 ```python
 import flet as ft
-from fletfly import Route, fly, slot
+import fletfly as fy Route, fly, slot
 
 home = Route()
 
-@home.at.layout
+@home.use.layout
 def layout(page):
     return ft.Column([
         ft.Text('Header'),
@@ -264,7 +263,7 @@ def layout(page):
 
 settings = Route('settings', layout_override=True) # layout_override
 
-@settings.at.layout(override = True) # override = layout_override
+@settings.use.layout(override = True) # override = layout_override
 def settings_layout():          
     return ft.Text("I am not a view")  
     # returning one view means, forget everything, show me.
@@ -272,7 +271,7 @@ def settings_layout():
 
 home.children.append(settings)
 
-ft.run(main)
+ft.run(fly)
 ```
 </details>
 
@@ -291,36 +290,36 @@ No matter how many middleware checks You want to perform, we have your back.
 
 ```Python
 import flet as ft
-from fletfly import Route, fly
+import fletfly as fy Route, fly
 
 def check_role(role='user'):          # general middleware with params
     return True if role == 'admin' else 'home'
     
 home = Route()
 
-@home.at.view
+@home.use.view
 def home_view(): 
     return ft.Text("Main view")
 
 # Child route with fly_in_override passed directly via kwargs props
 admin = Route('admin', fly_in_override=True)
 
-@admin.at.view
+@admin.use.view
 def admin_view(): 
     return ft.Text("Admin view")
 
 # Registering local middleware explicitly
-@admin.at.fly_in
+@admin.use.fly_in
 def fly_in_self(): 
     return True
 
 # Registering inheritable middleware with props
-@admin.at.fly_in(inheritable=True, param1='a')
+@admin.use.fly_in(inheritable=True, param1='a')
 def func(param1):
     return True
 
 # Registering external function to fly_in explicitly with parameters
-admin.at.fly_in(role='user')(check_role)  # change role to "admin", to enter the page
+admin.use.fly_in(role='user')(check_role)  # change role to "admin", to enter the page
 
 home.children.append(admin)
 
@@ -344,7 +343,7 @@ A shared view is a view keeping its state outside the hierarchical tree, and can
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
-from fletfly import Router, Route, slot, fly, Shared
+import fletfly as fy Router, Route, slot, fly, Shared
 import flet as ft
 
 class CardDeck(ft.TextField): pass
@@ -354,20 +353,20 @@ CardDeck2 = Shared(CardDeck, value='I am shared, change me too')
 # --- Home Route ---
 home = Route()
 
-@home.at.layout
+@home.use.layout
 def home_layout(page):    # Auto-detected layout
     return ft.Column([
         slot(page, "CardDeck", shared=True), # stuck always
         slot(page) 
     ])
 
-@home.at.view
+@home.use.view
 def home_view(): 
     return 'CardDeck2'     # Shared but delivered by view
 
 e = Route('/a/b/c/d/e') # Deep Nested Route
 
-@e.at.layout
+@e.use.layout
 def e_layout(page):
     return ft.Column([
         slot(page, "CardDeck", shared=True),
@@ -381,7 +380,7 @@ ft.run(fly)
 <small>**[<font size="1">More About Shared</font>](docs/class/SHARED.md)**</small>
 
 ## 9. Lazy Loaders & data
-Don't keep your users waiting till the data is fetched, open your pages, with default values, use data markers, and fetch your data by loader function.
+Don't keep your users waiting till the data is fetched, open your pages, with default values, use `data()` markers, and fetch your data by `loader()` function.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -389,11 +388,11 @@ Don't keep your users waiting till the data is fetched, open your pages, with de
 ```Python
 import asyncio
 import flet as ft
-from fletfly import Router, Route, data, fly
+import fletfly as fy Router, Route, data, fly
 
 home = Route()
 
-@home.at.loader
+@home.use.loader
 async def loader():
     await asyncio.sleep(3)    # mocking data of 100 products
     return {"products":[         
@@ -401,7 +400,7 @@ async def loader():
             "price": f"{ (i + 1) * 10 }$"}
             for i in range(100)]}
 
-@home.at.view
+@home.use.view
 def view(page): 
     return ft.GridView(expand=True, max_extent=200, spacing=10, controls =[
             ft.Card(content=ft.Column(alignment=ft.Alignment.CENTER, controls=[
@@ -429,17 +428,16 @@ ft.run(fly)
 Stop worrying about matching boilerplate signatures. 
 - Write only the parameters that your methods actually need.
 - The `page` object, dynamic URL params, and query strings are auto-injected by name.
-- Class-level props are automatically inherited by all inner methods and classes.
+- Route-level props are automatically inherited by all route functions (view, layout, loader).
 - specific props dedicated to individual external functions or middlewares.
 - Pass your props via explicit `props = {}`, no-boilerplate `**kwargs`, or combining both.
-- Resolves name collisions: use `props` for explicit keys matching library keywords.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
 import flet as ft
-from fletfly import Route, fly, slot
+import fletfly as fy Route, fly, slot
 
 def external_func(auth=False):
     print("Middleware check passed")
@@ -448,7 +446,7 @@ def external_func(auth=False):
 # Route instance initialization with kwargs props
 profile = Route('profile/:id', role='admin', theme='dark', props={'num':3})
 
-@profile.at.layout
+@profile.use.layout
 def layout(page, theme): 
     # Layout only requests 'theme' from route props
     return ft.Column([
@@ -459,9 +457,9 @@ def layout(page, theme):
 # Registering external function to fly_in explicitly
 profile.fly_ins.append(Route.fly_in(external_func, auth=True))
 # or
-profile.at.fly_in(auth=True)(external_func) # decoration immitation
+profile.use.fly_in(auth=True)(external_func) # decoration immitation
 
-@profile.at.view
+@profile.use.view
 def view(id, role, num): 
     # View requests 'id' (dynamic param) and 'role'/'num' (route props)
     return ft.Text(f"User {id} with number {num} is logged in as {role}")
@@ -477,7 +475,7 @@ ft.run(main)
 
 ## 11. Microfrontend With Zone and page.fly.
 - Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
-- Use zone() function and navigate with page.fly, to reach relative paths in your sub projects.
+- Use `zone()` function and navigate with `page.fly()`, to reach relative paths in your sub projects.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -485,7 +483,7 @@ ft.run(main)
 #### Main Project
 ```Python
 import flet as ft
-from fletfly import Route, Zone, fly, Shared
+import fletfly as fy Route, Zone, fly, Shared
 from _11a import home as Project1 # Imported the Route instance instead of the class
 
 class CardDeck(ft.TextField): pass
@@ -493,7 +491,7 @@ shared = Shared(CardDeck, value='I am "CardDeck" shared of Main Zone')
 
 home = Route() # Main project '/home'
 
-@home.at.view
+@home.use.view
 def home_view(): 
     return (
         ft.Text("Main Home page"),
@@ -509,14 +507,14 @@ ft.run(fly)
 #### Sub Project
 ```Python
 import flet as ft
-from fletfly import Route, fly, Shared
+import fletfly as fy Route, fly, Shared
 
 class CardDeck(ft.TextField): pass
 shared = Shared(CardDeck, hero=True, value='I am "CardDeck" shared of Sub Project')
 
 home = Route()
 
-@home.at.view
+@home.use.view
 def sub_home_view():
     return (
         ft.Text("Sub project Home page"),
@@ -527,7 +525,7 @@ def sub_home_view():
 
 settings = Route()
 
-@settings.at.view
+@settings.use.view
 def settings_view(page):
     return (
         ft.Text("Sub project Settings page"),
@@ -554,71 +552,102 @@ if __name__ == "__main__":
 
 ```Python
 import flet as ft
-from fletfly import Route, Router, fly, child
+import fletfly as fy Route, Router, fly
 import asyncio
-class A(Route):      
-    def view(self): return ft.Text('Normal class A view')
-    class B:
-        path = ":id"
-        def view(self, id, color): return ft.Text(f"{id} page, color is {color}")
-        class Fallback: # special fallback for zone C
-            path = "*"
-            def view(self): return ft.Text('Fallback for B zone')
-    @child(path="*") # use path = "*" for fallback
-    class Fallback:
-        def view(self): return ft.Text('Fallback for A zone')
+
+a = Route()  # Route detection: path auto named to "/a"
+
+@a.use.view
+def a_view(): 
+    return ft.Text('Normal class A view')
+
+a_fallback = Route('*')
+
+@a_fallback.use.view
+def a_fallback_view(): 
+    return ft.Text('Fallback for A zone')
+
+b = Route()
+
+b_fallback = Route('*')
+
+@b_fallback.use.view
+def b_fallback_view(): 
+    return ft.Text('Fallback for B zone')
+
+c = Route(':id')
+
+@c.use.view
+def b_view(id, color): 
+    return ft.Text(f"{id} page, color is {color}")
+
+b.children.extend([c, b_fallback])
+a.children.extend([b, a_fallback])
 
 Router(error_path='a/*')
-async def main(page):
-    fly(page)
-    target_pages = ['a/123?color="red"', 'a/b/c/d/e/f/g/h/i/j/k/l', 'a/m/n/o/p/q/r/s', 'something']
-    for _ in range(3):
-        for p in target_pages:
-            await asyncio.sleep(5)
-            page.fly(p)
-ft.run(main)
+
+ft.run(fly)
 ```
 </details>
 
 <small>**[<font size="1">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
-## 13. Very Deep Nesting.
-- @child decorator or children list implementation are at your service.
-- Multiple decorators stacking on the same class with different props.
+## 13. Deep Nesting & Route Reusability.
+
+- Deeply nested routing structures are fully supported out of the box.
+
+- Route Multi-Instantiation: Reuse the same view multiple times across different paths with different properties.
+
+- Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
 import flet as ft
-from fletfly import Route, Router, fly, child
+import fletfly as fy Route, Router, fly, child
 import asyncio
-class A(Route):      
-    class B:
-        class C:
-            class D:
-                class E:
-                    @child('red_page', color = 'red')
-                    @child(':color')
-                    class ColoredPage:
-                        def __init__(self, color='green'):
-                            self.color = color
-                        def view(self): return ft.Text(f"Color is {self.color}", color=self.color)
-                    magenta_page = child(ColoredPage, color = 'magenta')
-                    green_page = child(ColoredPage, color = 'green')
-                    children=[
-                        child(ColoredPage, 'blue-page', color='blue'),
-                        child(ColoredPage, 'orange-page', color='orange')
-                        ]
-Router(print_path_zone='/a/b/c/d/e', )
+
+a = Route()
+b = Route()
+c = Route()
+d = Route()
+e = Route()
+
+# Hierarchy assembly
+a.children.append(b)
+b.children.append(c)
+c.children.append(d)
+d.children.append(e)
+
+cyan_page = Route(color='cyan')
+
+@cyan_page.use.view                      # add function as view
+@e.use.child('red_page', color='red')    # add function as child
+@e.use.child(':color')                   # as dynamic child
+def color_page(color='green'): 
+    return ft.Text(f"Color is {color}", color=color)
+e.use.child('green_page', color='green')(color_page) # as child
+
+e.children.extend([
+            cyan_page,
+            child('blue-page' ,color_page, color='blue'),
+            child(color_page, 'orange-page', color='orange')
+])
+
+Router(a, print_path_zone='/a/b/c/d/e') # print only this branch
+
 async def main(page):
     fly(page)
-    target_pages = ['a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
-                    'a/b/c/d/e/brown-page', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow']
+    target_pages = [
+        'a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
+        'a/b/c/d/e/cyan', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow'
+    ]
     for _ in range(1): 
         for p in target_pages:
             await asyncio.sleep(3)
             page.fly(p)
+
 ft.run(main)
 ```
 </details>
@@ -627,68 +656,68 @@ ft.run(main)
 
 ## 14. Router Configs and Debugs Example
 - Set the max views opened in the same time.
-- Select the chosen views to build.
+- Select the chosen views to build in stack mode.
 - Use the builtin routes tree debug, static, dynamic & shared maps debugs.
 - Set your fallback style, and error page.
 - Use the terminal to follow your router, print a branch only option.
-- The terminal in previous section 12 example would look like this:
+- The terminal in previous section 13 example would look like this:
 
 <details>
 <summary><font size="7"><b>👁️ Terminal Example</b></font></summary>
 
 ```text
-[fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.80ms
-[fletfly Debug] Time taken during [ creating initial tree ]: 2.09ms
-[fletfly Debug] Time taken during [ parsing static, dynamic & shared nodes maps ]: 0.74ms
+[fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.68ms
+[fletfly Debug] Time taken during [ creating initial tree ]: 0.85ms
+[fletfly Debug] Time taken during [ parsing static, dynamic & shared nodes maps ]: 0.42ms
 -------------------- fletfly -- tree branch ---------------------
-─ /a/b/c/d/e/ ─── cls:<E>            view:               ly:               to:                ins: 0  outs: 0 
+─ /a/b/c/d/e/ ─── cls:               view:               ly:               to:                ins: 0  outs: 0 
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── blue-page/ ──── cls:<ColoredPage>  view:"view"         ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/blue-page
+    ├── :color/ ─────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [DYN]/a/b/c/d/e/:color
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── orange-page/ ── cls:<ColoredPage>  view:"view"         ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/orange-page
+    ├── red-page/ ───── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/red-page
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── :color/ ─────── cls:<ColoredPage>  view:"view"         ly:               to:                ins: 0  outs: 0  [DYN]/a/b/c/d/e/:color
+    ├── green-page/ ─── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/green-page
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── red-page/ ───── cls:<ColoredPage>  view:"view"         ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/red-page
+    ├── cyan-page/ ──── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/cyan-page
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── magenta-page/ ─ cls:<ColoredPage>  view:"view"         ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/magenta-page
+    ├── blue-page/ ──── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/blue-page
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    └── green-page/ ─── cls:<ColoredPage>  view:"view"         ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/green-page
+    └── orange-page/ ── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/orange-page
       -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
 
 --------------------- fletfly -- static map ---------------------
 layouts=[0]  view="N/A" fly_to=/a/b/c/d/e/red-page  path=''
-layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/blue-page'
-layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/orange-page'
-layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/red-page'
-layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/magenta-page'
-layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/green-page'
+layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/red-page'
+layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/green-page'
+layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/cyan-page'
+layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/blue-page'
+layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/orange-page'
 -------------------- fletfly -- dynamic map ---------------------
-layouts=[0]  view="view" fly_to=None  path='/a/b/c/d/e/:color'
+layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/:color'
 -------------------- fletfly -- shared map ----------------------
 -----------------------------------------------------------------
-[fletfly Debug] Time taken during [ triggering initial _handle_route_change by flet ]: 3264.29ms
+[fletfly Debug] Time taken during [ triggering initial _handle_route_change by flet ]: 1717.70ms
 ---------- match path = / ----------
 [fletfly] Redirecting by <fly_to> to: path '/a/b/c/d/e/red-page'
 ---------- match path = /a/b/c/d/e/red-page ----------
-[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.74ms
+[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 3.70ms
 [fletfly Debug] Time taken during [ reconciling views ]: 0.34ms
-[fletfly Debug] Time taken during [ page update ]: 1.30ms
+[fletfly Debug] Time taken during [ page update ]: 1.48ms
 [fletfly Debug] Active views: 1 ['red-page']
 [fletfly Debug] Active layouts: 0 
 [fletfly Debug] Active shared views: 0 
-[fletfly Debug] Active instances: 1 ['red-page']
+[fletfly Debug] Active instances: 0 
 [fletfly Debug] Hero views: 0 
 [fletfly Debug] Hero layouts: 0 
 [fletfly Debug] Hero shared: 0 
 ---------- match path = /a/b/c/d/e/blue-page ----------
-[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.63ms
-[fletfly Debug] Time taken during [ reconciling views ]: 0.29ms
-[fletfly Debug] Time taken during [ page update ]: 0.86ms
-[fletfly Debug] Active views: 1 ['blue-page']
+[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.67ms
+[fletfly Debug] Time taken during [ reconciling views ]: 1.44ms
+[fletfly Debug] Time taken during [ page update ]: 1.02ms
+[fletfly Debug] Active views: 2 ['red-page', 'blue-page']
 [fletfly Debug] Active layouts: 0 
 [fletfly Debug] Active shared views: 0 
-[fletfly Debug] Active instances: 1 ['blue-page']
+[fletfly Debug] Active instances: 0 
 [fletfly Debug] Hero views: 0 
 [fletfly Debug] Hero layouts: 0 
 [fletfly Debug] Hero shared: 0 

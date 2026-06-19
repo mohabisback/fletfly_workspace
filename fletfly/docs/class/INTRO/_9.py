@@ -1,7 +1,7 @@
 import asyncio
 import flet as ft
-from fletfly import Route, data, fly
-class Home(Route):
+import fletfly as fy
+class Home(fy.Route):
     async def loader(self):
         await asyncio.sleep(3)    # mocking data of 100 products
         return {"products":[         
@@ -11,12 +11,12 @@ class Home(Route):
     def view(self, page): 
         return ft.GridView(expand=True, max_extent=200, spacing=10, controls =[
                 ft.Card(content=ft.Column(alignment=ft.Alignment.CENTER, controls=[
-                    data(page, 
+                    fy.data(page, 
                         ft.Text(value='loading...',
                                  size=16,
                                  weight='bold'),
                         value=f"products.{i}.name"),
-                    data(page, 
+                    fy.data(page, 
                         ft.Text(value='loading...',
                                  size=14,
                                  color='green'),
@@ -24,4 +24,4 @@ class Home(Route):
                 ]))
                 for i in range(100)
             ])   
-ft.run(fly) 
+ft.run(fy.fly)

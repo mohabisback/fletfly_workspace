@@ -1,19 +1,19 @@
 import flet as ft
-from fletfly import Router, Route, fly, fly_in
+import fletfly as fy
 # will not be registered by decoration
-@Route('home')                      # explicit paths only
-class Home(Route):                  # will not be registered by inheritence
+@fy.Route('home')                      # explicit paths only
+class Home(fy.Route):                  # will not be registered by inheritence
 
     def layout(self):               # will not be detected by name
         pass
-    check = fly_in(lambda _: True)  # will not be detected by value
+    check = fy.fly_in(lambda _: True)  # will not be detected by value
     
     def settings(self):             # Method will not create a subroute
         pass
     class User:                     # Inner class will not create a subroute
         pass
     
-Router(
+fy.Router(
     routes=[Home],                  # Class Registered explicitly
     initial_route = "/",            # don't let us detect the initial for you
     error_path = "",                # don't let us show our error page, tell us where
@@ -24,6 +24,6 @@ Router(
     detect_method_ordinaries=False) # don't let us detect methods as props by name or value
 
 def main(page):
-    fly(page)
+    fy.fly(page)
 if __name__ == "__main__":
     ft.run(main)

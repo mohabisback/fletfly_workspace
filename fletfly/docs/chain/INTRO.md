@@ -9,7 +9,7 @@
 
 ```python
 import flet as ft
-import fletfly as fy Route, slot, fly
+from fletfly import Route, slot, fly
 
 home = Route()                          # Route detection: path auto named to "/home"
 
@@ -58,7 +58,7 @@ Look at this single block of code. It demonstrates:
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
-import fletfly as fy Router, Route, slot, fly, data, StackMode, Shared
+from fletfly import Router, Route, slot, fly, data, StackMode, Shared
 import flet as ft
 import asyncio # just for mocking time delay
 
@@ -126,9 +126,9 @@ Not only can you rely on magic auto-naming and detection with a wide variety of 
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
-import fletfly as fy Router
+from fletfly import Router
 import flet as ft
-import fletfly as fy Router, Route, fly, fly_in
+from fletfly import Router, Route, fly, fly_in
 
 # will not be registered by creation
 home = Route('home')                # explicit paths only
@@ -159,7 +159,7 @@ No matter how many views you are opening in the views stack, and how many naviga
 ```Python
 import asyncio
 import flet as ft
-import fletfly as fy Router, Route, slot, fly
+from fletfly import Router, Route, slot, fly
 
 # dynamic route
 home = Route("{category}", layout_hero=False) # layout_hero in route
@@ -205,7 +205,7 @@ Slots are at your service not the other way around.
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
-import fletfly as fy Route, slot, fly, Shared
+from fletfly import Route, slot, fly, Shared
 import flet as ft
 
 home = Route()
@@ -250,7 +250,7 @@ Break the inheritance gracefully when you need an isolated view (like a login or
 
 ```python
 import flet as ft
-import fletfly as fy Route, fly, slot
+from fletfly import Route, fly, slot
 
 home = Route()
 
@@ -290,7 +290,7 @@ No matter how many middleware checks You want to perform, we have your back.
 
 ```Python
 import flet as ft
-import fletfly as fy Route, fly
+from fletfly import Route, fly
 
 def check_role(role='user'):          # general middleware with params
     return True if role == 'admin' else 'home'
@@ -343,7 +343,7 @@ A shared view is a view keeping its state outside the hierarchical tree, and can
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
-import fletfly as fy Router, Route, slot, fly, Shared
+from fletfly import Router, Route, slot, fly, Shared
 import flet as ft
 
 class CardDeck(ft.TextField): pass
@@ -388,7 +388,7 @@ Don't keep your users waiting till the data is fetched, open your pages, with de
 ```Python
 import asyncio
 import flet as ft
-import fletfly as fy Router, Route, data, fly
+from fletfly import Router, Route, data, fly
 
 home = Route()
 
@@ -437,7 +437,7 @@ Stop worrying about matching boilerplate signatures.
 
 ```python
 import flet as ft
-import fletfly as fy Route, fly, slot
+from fletfly import Route, fly, slot
 
 def external_func(auth=False):
     print("Middleware check passed")
@@ -483,7 +483,7 @@ ft.run(main)
 #### Main Project
 ```Python
 import flet as ft
-import fletfly as fy Route, Zone, fly, Shared
+from fletfly import Route, Zone, fly, Shared
 from _11a import home as Project1 # Imported the Route instance instead of the class
 
 class CardDeck(ft.TextField): pass
@@ -507,7 +507,7 @@ ft.run(fly)
 #### Sub Project
 ```Python
 import flet as ft
-import fletfly as fy Route, fly, Shared
+from fletfly import Route, fly, Shared
 
 class CardDeck(ft.TextField): pass
 shared = Shared(CardDeck, hero=True, value='I am "CardDeck" shared of Sub Project')
@@ -552,7 +552,7 @@ if __name__ == "__main__":
 
 ```Python
 import flet as ft
-import fletfly as fy Route, Router, fly
+from fletfly import Route, Router, fly
 import asyncio
 
 a = Route()  # Route detection: path auto named to "/a"
@@ -605,7 +605,7 @@ ft.run(fly)
 
 ```Python
 import flet as ft
-import fletfly as fy Route, Router, fly, child
+from fletfly import Route, Router, fly, child
 import asyncio
 
 a = Route()
