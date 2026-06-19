@@ -55,7 +55,7 @@ Look at this single block of code. It demonstrates:
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
-from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
+from fletfly import Router, Route, slot, fly, child, data, fly_in, StackMode, Shared
 import flet as ft
 import asyncio # just for mocking time delay
 
@@ -102,7 +102,7 @@ class Home():                  # Route detection: path auto named to "/home"
             return True
 
 # handed father of class (or list of fathers of classes)
-Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=True, max_views=5, navigation_style=NavigationStyle.home_all_from_last_port, detect_route_subclasses=False, print_debugs=True)
+Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=True, max_views=5, stack_mode=StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
 
 def main(page):
     # your main stuff per user
@@ -117,18 +117,35 @@ Not only can you rely on magic auto-naming and detection with a wide variety of 
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
-from fletfly import Router
+import flet as ft
+from fletfly import Router, Route, fly, fly_in
+# will not be registered by decoration
+@Route('home')                      # explicit paths only
+class Home(Route):                  # will not be registered by inheritence
+
+    def layout(self):               # will not be detected by name
+        pass
+    check = fly_in(lambda _: True)  # will not be detected by value
+    
+    def settings(self):             # Method will not create a subroute
+        pass
+    class User:                     # Inner class will not create a subroute
+        pass
+    
 Router(
-    zone_or_class_or_list=[],       # hand over your class/classes to inject into the tree
+    routes=[Home],                  # Class Registered explicitly
     initial_route = "/",            # don't let us detect the initial for you
     error_path = "",                # don't let us show our error page, tell us where
     auto_path_naming=False,         # don't let us name your paths
-    detect_created_routes=False,    # don't let us gather your created routes
     detect_route_subclasses=False,  # don't let us gather your routes inheriting from Route
     detect_method_routes=False,     # don't let us detect methods as subroutes
     detect_inner_classes=False,     # don't let us detect your inner classes as subroutes
     detect_method_ordinaries=False) # don't let us detect methods as props by name or value
 
+def main(page):
+    fly(page)
+if __name__ == "__main__":
+    ft.run(main)
 ```
 </details>
 
@@ -143,16 +160,25 @@ No matter how many views you are opening in the views stack, and how many naviga
 ```Python
 import flet as ft
 from fletfly import Route, slot, fly
-class Home(Route):
-    layout_hero = False       # layout garbaged once no view uses it
-    def layout(self, page):           
+
+@Route('{category}', layout_hero=False) # dynamic page
+class Home:
+    def layout(self, page):           # layout deleted once no view uses it(default)
         return ft.Column([
-            ft.Text("Header"),        
+            ft.Text("Header"),
             slot(page)
             ])
-    view_hero = True          # True means 1 in static, but 5 in dynamic
+    view_hero = True                  # True means 5 in dynamic, 1 in static
     def view(self):
         return ft.Text("Main view")
+    class User:
+        path = ":id"                  # dynamic page
+        @Route.view(hero=2)           # max 2 pages are saved for different params
+        def view(self, category, id):
+            return ft.Column([
+                    ft.Text(f" C: {category}"),
+                    ft.Text(f"id: {id}")
+                    ])
 ft.run(fly)
 ```
 </details>
@@ -200,7 +226,7 @@ ft.run(fly)
 
 <small>**[<font size="1">More About Slots</font>](docs/class/SLOTS.md)**</small>
 
-## 6. Layout .
+## 6. Layout Override.
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
 
 <details>
@@ -223,7 +249,7 @@ class Home(Route):
         def layout(self):          
             # returning one view means, forget everything, show me.
             return ft.View(controls=[ft.Text("I am a view")])
-            # return ft.Text("I am not a view")  # try this instead
+            return ft.Text("I am not a view")  # try this instead
 ft.run(main)
 ```
 </details>
@@ -351,9 +377,49 @@ ft.run(fly)
 
 <small>**[<font size="1">More About Loaders & data</font>](docs/class/LOADER.md)**</small>
 
-## 10. Microfrontend With Zone and page.fly.
-Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
-Use zone() function and navigate with page.fly, to reach relative paths in your sub projects.
+## 10. Smart Dependency Injection
+Stop worrying about matching boilerplate signatures. 
+- Write only the parameters that your methods actually need.
+- The `page` object, dynamic URL params, and query strings are auto-injected by name.
+- Class-level props are automatically inherited by all inner methods and classes.
+- specific props dedicated to individual external functions or middlewares.
+- Pass your props via explicit `props = {}`, no-boilerplate `**kwargs`, or combining both.
+- Resolves name collisions: use `props` for explicit keys matching library keywords.
+
+<details>
+<summary><font size="7"><b>👁️ Code Example</b></font></summary>
+
+```python
+import flet as ft
+from fletfly import Route, fly, slot
+
+def external_func(auth=False):
+    print("Middleware check passed")
+    return auth
+
+@Route('profile/:id', role='admin', theme='dark', props={'num':3}) # Route props via **kwargs
+class Profile:
+    # Layout only requests 'theme' from route props
+    def layout(self, page, theme): 
+        return ft.Column([
+            ft.Text(f"Theme: {theme}"),
+            slot(page)
+        ])
+    fly_in = Route.fly_in(external_func, auth=True) # specific props
+    # View requests 'id' (dynamic param) and 'role' (route prop)
+    def view(self, id, role, num): 
+        return ft.Text(f"User {id} with number {num} is logged in as {role}")
+def main(page):
+    fly(page, 'profile/fletfly')
+ft.run(main)
+```
+</details>
+
+<small>**[<font size="1">More About Props</font>](docs/class/props.md)**</small>
+
+## 11. Microfrontend With Zone and page.fly.
+- Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
+- Use zone() function and navigate with page.fly, to reach relative paths in your sub projects.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -361,43 +427,56 @@ Use zone() function and navigate with page.fly, to reach relative paths in your 
 #### Main Project
 ```Python
 import flet as ft
-from fletfly import Route, Zone, fly
-from b10_zone import Home as Project1
+from fletfly import Route, Zone, fly, Shared
+from _11a import Home as Project1
 
-class Home(Route): # Main project
-    path = '/home'
-    def view(self, page): return ft.Button("Go Project", on_click=lambda e: e.page.fly('home/project'))
-    Project = Zone(Project1) # Zone
+@Shared(value = 'I am "CardDeck" shared of Main Zone')
+class CardDeck(ft.TextField): pass
+
+class Home(Route): # Main project '/home'
+    def view(self): return (
+                ft.Text ("Main Home page"),
+                ft.Button("Go Sub Project", on_click=lambda e: e.page.fly('home/project')),
+                'CardDeck' )
+    
+    Project = Zone(Project1) # Zone, auto named to '/home/project'
 
 ft.run(fly)
 ```
 #### Sub Project
 ```Python
 import flet as ft
-from fletfly import Route, fly
+from fletfly import Route, fly, Shared
+
+@Shared(value = 'I am "CardDeck" shared of Sub Project')
+class CardDeck(ft.TextField): pass
 
 class Home(Route):
     path = '/home'
-    def view(self, page):
-        return ft.Column([
+    def view(self):
+        return (
             ft.Text ("Sub project Home page"),
-            ft.Button('Go settings', on_click=lambda e: e.page.fly('home/settings'))
-        ])
+            ft.Button('Go settings', on_click=lambda e: e.page.fly('home/settings')),
+            ft.Button('Go Root Home', on_click=lambda e: e.page.fly('home', root=True)),
+            'CardDeck'
+        )
     class Settings:
         path = '/home/settings'
         def view(self, page):
-            return ft.Column([
+            return (
                 ft.Text ("Sub project Settings page"),
-                ft.Button('Go Home', on_click=lambda e: e.page.fly('home'))
-            ])
+                ft.Button('Go Home', on_click=lambda e: e.page.fly('home')),
+                ft.Button('Go Root Home', on_click=lambda e: e.page.fly('home', root=True)),
+                'CardDeck'
+            )
 if __name__ == "__main__":
     ft.run(fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Zone and fly</font>](docs/class/Zone.md)**</small>
+<small>**[<font size="1">More About Zone and fly</font>](docs/class/zone.md)**</small>
 
-## 11. Every level fallback
+## 12. Every level fallback
 - Set your fallback style for any or all levels.
 - Define your own overall error page, or let us show our 404.
 
@@ -434,7 +513,7 @@ ft.run(main)
 
 <small>**[<font size="1">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
-## 12. Very Deep Nesting.
+## 13. Very Deep Nesting.
 - @child decorator or children list implementation are at your service.
 - Multiple decorators stacking on the same class with different props.
 
@@ -477,7 +556,7 @@ ft.run(main)
 
 <small>**[<font size="1">More About Children & Nesting</font>](docs/class/CHILDREN.md)**</small>
 
-## 13. Router Configs and Debugs Example
+## 14. Router Configs and Debugs Example
 - Set the max views opened in the same time.
 - Select the chosen views to build.
 - Use the builtin routes tree debug, static, dynamic & shared maps debugs.

@@ -1,5 +1,4 @@
-# docs/class/INTRO/deeper_dive.py
-from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
+from fletfly import Router, Route, slot, fly, child, data, fly_in, StackMode, Shared
 import flet as ft
 import asyncio # just for mocking time delay
 
@@ -51,7 +50,7 @@ class Home():                  # Route detection: path auto named to "/home"
 
 # handed father of class (or list of fathers of classes)
 Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=False, max_views=5, 
-       navigation_style=NavigationStyle.home_all_from_last_port, detect_route_subclasses=False, print_debugs=True)
+       stack_mode=StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
 
 
 async def main(page):

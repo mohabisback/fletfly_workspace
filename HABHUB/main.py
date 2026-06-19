@@ -91,7 +91,7 @@ zone = fty.route(path="/", viewer=get_home, fly_ins=[
         fty.Zone(ImageResizerZone, "/resizer") 
         ]),
 
-fty.Router(zone, error_path="error", max_views = 3, navigation_style= "all_views", print_path_zone="/")
+fty.Router(zone, error_path="error", max_views = 3, stack_mode= "all_views", print_path_zone="/")
 
 
 

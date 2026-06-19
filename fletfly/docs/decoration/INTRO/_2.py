@@ -1,11 +1,11 @@
 
-from fletfly import Router, Route, slot, fly, data, NavigationStyle, Shared
+from fletfly import Router, Route, slot, fly, data, StackMode, Shared
 import flet as ft
 import asyncio # just for mocking time delay
 
-@Shared('CardDeck2', value='its me everywhere')
-@Shared(value='same obj same data') # auto named to 'CardDeck'
 class CardDeck(ft.TextField): pass
+shared = Shared(CardDeck, value='same obj same data') # auto-named to CardDeck
+CardDeck2 = Shared(CardDeck, value='its me everywhere')
 
 home = Route()                  # Route detection: path auto named to "/home"
 
@@ -33,8 +33,6 @@ def view():        # Auto-detected view by names:
     "CardDeck"       # shared view returned as part of view
     )
 
-class _Helper: pass        # Private scope (ignored by router)
-
 user = Route(':id')        # Sub route detection, path: "/home/:id"
 
 @user.at.view
@@ -54,7 +52,7 @@ home.children.append(user)
 
 # handed father of class (or list of fathers of classes)
 Router(home, initial_route = "/home", error_path="/home", every_level_fallback=False, max_views=5, 
-       navigation_style=NavigationStyle.home_all_from_last_port, detect_route_subclasses=False, print_debugs=True)
+       stack_mode=StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
 
 
 async def main(page):

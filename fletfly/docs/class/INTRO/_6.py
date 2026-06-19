@@ -13,9 +13,9 @@ class Home(Route):
         layout_override=True           # direct implementation can work too
         @layout(override=True)         # method layout decoration works too
         def layout(self):          
+            return ft.Text("I am not a view")
             # returning one view means, forget everything, show me.
-            return ft.View(controls=[ft.Text("I am a view")])
-            # return ft.Text("I am not a view")  # try this instead
+            return ft.View(controls=[ft.Text("I am a view")]) # try this instead
 
 async def main(page):
     fly(page)

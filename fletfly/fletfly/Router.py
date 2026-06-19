@@ -2,14 +2,14 @@ from __future__ import annotations
 import flet as ft
 import re, sys, inspect, asyncio, os, importlib.util, time, builtins
 from .route import aliases, Route, _is_flet_instance, _call_with_payload, _page_err_msg, General
-class NavigationStyle:
+class StackMode:
     all_views = "all_views" # all views are active and built
-    home_target = "home_target" # main home only & target
-    home_ports_target = "home_ports_target" # main and all sub homes & target
-    last_port_target = "last_port_target" # last sub home only & target
-    all_from_last_port = "all_from_last_port"
-    home_last_port_target = "home_last_port_target" # home , last port & target
-    home_all_from_last_port = "home_all_from_last_port" # default, which view all views from last port or home to the target
+    root_target = "root_target" # main home only & target
+    last_home_target = "last_home_target" # last sub home only & target
+    root_last_home_target = "root_last_home_target" # home , last port & target
+    root_homes_target = "root_homes_target" # main and all sub homes & target
+    all_from_last_home = "all_from_last_home"
+    root_all_from_last_home = "root_all_from_last_home" # default, which view all views from last port or home to the target
     target_only = "target_only"
 # max_views when <= 0 then every view is allowed.
 # max_views is a periority, and it saves target then main home then nearest parent to target then nearest view to target
@@ -48,8 +48,12 @@ class Router: # singleton only 1 instance
 """)
         return General._router_instance
     
-    def __init__(self, zone_or_class_or_list = [], initial_route = "", error_path:str = "", every_level_fallback=True,
-                 navigation_style:NavigationStyle = NavigationStyle.home_all_from_last_port, max_views:int = 5,
+    def __init__(self, routes:type|Route|dict|list[type|Route|dict]|None = None,
+                 initial_route = "",
+                 error_path:str = "",
+                 every_level_fallback=True,
+                 stack_mode:StackMode = StackMode.root_all_from_last_home,
+                 max_views:int = 5,
                  auto_path_naming=True,
                  detect_created_routes=True,
                  detect_route_subclasses=True,
@@ -74,15 +78,17 @@ class Router: # singleton only 1 instance
         
         self.error_path = error_path
         self.every_level_fallback = every_level_fallback
-        self.navigation_style = navigation_style
+        self.stack_mode = stack_mode
         self.max_views = max_views
-        if isinstance(zone_or_class_or_list, (list, tuple, set)):
-            zone_or_class_or_list = list(zone_or_class_or_list)
+        if routes is None:
+            routes = []
+        elif isinstance(routes, (list, tuple, set)):
+            routes = list(routes)
         else:
-            zone_or_class_or_list = [zone_or_class_or_list]
+            routes = [routes]
         
         _check_time("importing all modules till start of router")
-        Route._create_tree(zone_or_class_or_list)
+        Route._create_tree(routes)
         _check_time("creating initial tree")
 
         final_route = General._main_zone_tree.get("", None)
@@ -90,7 +96,7 @@ class Router: # singleton only 1 instance
             raise ValueError(f"[fletfly] There are no routes to handle...")
 
         self._parse_routes(final_route)
-        self._parse_shared(General._shared_routes)
+        self._parse_shared(General._zones)
 
         _check_time("parsing static, dynamic & shared nodes maps")
         
@@ -100,29 +106,32 @@ class Router: # singleton only 1 instance
 
         if print_static_pages:
             print("--------------------- fletfly -- static map ---------------------")
-            for item in Router.static_map.values(): print(item)
+            for k in Router.static_map.values(): print(k)
         
         if print_dynamic_pages:
             print("-------------------- fletfly -- dynamic map ---------------------")
-            for item in Router.dynamic_map.values(): print(item)
+            for k in Router.dynamic_map.values(): print(k)
         
         if print_shared_views:
             print("-------------------- fletfly -- shared map ----------------------")
-            for item in General._shared_routes.values(): print(item)
+            
+            for zone in General._zones:
+                for shared in zone.shared_map.values():
+                    print(shared)
         if print_static_pages or print_dynamic_pages or print_dynamic_pages:
-            print("-----------------------------------------------------------------")    
-            for item in General.shared_map.values(): print(item.func, item.path)
+            print("-----------------------------------------------------------------")
+        
         self._initialized = True
     
     class _FlightNode:
         __slots__ = [
             'seg', # ':id'
             'path', # '/segment1/zonesegment1/segment2/:id'
-            'take_off_zone', # '/segment1/zonesegment1/'
+            'zone_root', # '/segment1/zonesegment1/'
             'lineage', # [flight_node, flight_node]
             'view_node',
-            'fly_ins', # [{"func":func1, "args":args, "takeoff":'/'}]
-            'fly_outs', # [{"func":func2, "args":args, "takeoff":'/'}]
+            'fly_ins', # [{"func":func1, "args":args, "zone_root":'/'}]
+            'fly_outs', # [{"func":func2, "args":args, "zone_root":'/'}]
             'fly_to', # redirect, redirectTo
             'layout_nodes', # list of layoutNodes
             'title', # title
@@ -169,7 +178,7 @@ class Router: # singleton only 1 instance
             self.data = {}
             self.fly_ins_radar = "/"
             self.fly_ins_is_target = False
-            self.take_off_zone = "/"
+            self.zone_root = "/"
             self.last_success_path = "/"
             self.is_navigating = False
             self.closing_view = None
@@ -185,8 +194,11 @@ class Router: # singleton only 1 instance
             self._instance_actives = {}
             self._temp_data = [] 
 
-        def __call__(self, path: str = "/"):
-            target = f"{self.take_off_zone}{path.strip('/')}".replace("//", "/")
+        def __call__(self, path: str = "/", root=False):
+            if root:
+                target = path.strip('/')
+            else:
+                target = f"{self.zone_root}{path.strip('/')}".replace("//", "/")
             if target == "/": target = ""
             self.page.run_task(self.page.push_route, target)
     
@@ -203,7 +215,7 @@ class Router: # singleton only 1 instance
         scanned_zone = cls._scan_folder(root_dir)
 
         if General._router_instance is None:
-            return Router(zone_or_class_or_list=scanned_zone)
+            return Router(routes=scanned_zone)
         else:
             if scanned_zone:
                 Route._validate_route_final(scanned_zone)
@@ -305,7 +317,7 @@ class Router: # singleton only 1 instance
                 e.page.views.remove(e.view)
                 if e.page.views:
                     top_view = e.page.views[-1]
-                    e.page.fly.take_off_zone = top_view.take_off_zone
+                    e.page.fly.zone_root = top_view.zone_root
                     e.page.fly.params = getattr(top_view, "params", {})
                     e.page.fly.query = getattr(top_view, "query", {})
                     await e.page.push_route(top_view.route)
@@ -328,7 +340,7 @@ class Router: # singleton only 1 instance
     # create node
     # chick if children for each go to start point
     def _parse_routes(self, route:Route, parent_lineage=None, 
-                       current_full_path="/", current_take_off_zone="/",
+                       current_full_path="/", current_zone_root="/",
                         p_fly_ins_nodes=[], p_fly_outs_nodes=[], p_layout_nodes=[]):
         true_node = route._view or route._layout or route._fly_to
 
@@ -336,7 +348,11 @@ class Router: # singleton only 1 instance
             seg = route._path.strip("/") if route._path else ""
             raw_path = f"{current_full_path.rstrip('/')}{f"/{seg.strip('/')}" if seg else ""}"
             current_lineage = parent_lineage.copy() if parent_lineage else []
-            take_off_zone = raw_path.rstrip("/") + "/" if route._is_zone else current_take_off_zone
+            if route._zone:
+                zone_root = raw_path.rstrip("/") + "/"
+                route._zone.zone_root = zone_root
+            else:
+                zone_root = current_zone_root
             # no view then absolutely no page to see
             view_node = None
             if route._view:
@@ -346,7 +362,7 @@ class Router: # singleton only 1 instance
                                                 func=route._view,
                                                 hero=route._view_hero,
                                                 loader_func=route._loader,
-                                                )
+                                                zone_root=zone_root)
             layout_node = None
             if route._layout or route._layout_override:
                 layout_node = Router._LayoutNode(path=raw_path,
@@ -356,7 +372,8 @@ class Router: # singleton only 1 instance
                                                 hero=route._layout_hero,
                                                 override=route._layout_override,
                                                 loader_func=route._loader,
-                                                )
+                                                zone_root=zone_root)
+                
             layout_nodes = list(p_layout_nodes) + ([layout_node] if layout_node else [])
 
             fly_ins_node = None
@@ -366,7 +383,7 @@ class Router: # singleton only 1 instance
                                                 _class_props=route._props,
                                                 funcs=route._fly_ins if route._fly_ins else [],
                                                 override = route._fly_in_override,
-                                                take_off=current_take_off_zone)
+                                                zone_root=zone_root)
                 
             fly_ins_nodes = list(p_fly_ins_nodes) + ([fly_ins_node] if fly_ins_node else [])
 
@@ -377,7 +394,7 @@ class Router: # singleton only 1 instance
                                                 _class_props=route._props,
                                                 funcs=route._fly_outs if route._fly_outs else [],
                                                 override = route._fly_out_override,
-                                                take_off=current_take_off_zone)
+                                                zone_root=zone_root)
                 
             fly_outs_nodes = list(p_fly_outs_nodes) + ([fly_outs_node] if fly_outs_node else [])
                         
@@ -385,12 +402,12 @@ class Router: # singleton only 1 instance
                 node = Router._FlightNode(
                     seg=route._path,
                     path=raw_path,
-                    take_off_zone=take_off_zone,
+                    zone_root=zone_root,
                     title=route._title,
                     icon= route._icon,
                     view_node = view_node,
                     fly_to = route._fly_to,
-                    is_zone=route._is_zone,
+                    is_zone= bool(route._zone),
                     layout_nodes=layout_nodes, 
                     lineage=current_lineage,
                     fly_ins=fly_ins_nodes,
@@ -412,7 +429,7 @@ class Router: # singleton only 1 instance
                                                 _class_props=route._props,
                                                 funcs=[x for x in fly_ins_node.funcs if x["inheritable"] == True],
                                                 override= route._fly_in_override,
-                                                take_off=current_take_off_zone)
+                                                zone_root=zone_root)
                                                             ] if fly_ins_node else [])
 
                 fly_outs_nodes = list(p_fly_outs_nodes) + ([
@@ -421,33 +438,38 @@ class Router: # singleton only 1 instance
                                                 _class_props=route._props,
                                                 funcs=[x for x in fly_outs_node.funcs if x["inheritable"] == True],
                                                 override= route._fly_out_override,
-                                                take_off=current_take_off_zone)
+                                                zone_root=zone_root)
                                                             ] if fly_outs_node else [])
                 for child in ([route._index] if route._index else []) + route._children:
                     self._parse_routes(route=child,
                                         parent_lineage=current_lineage,
                                         current_full_path=raw_path,
-                                        current_take_off_zone=take_off_zone,
+                                        current_zone_root=zone_root,
                                         p_fly_ins_nodes=fly_ins_nodes,
                                         p_fly_outs_nodes=fly_outs_nodes,
                                         p_layout_nodes=layout_nodes)
                     #self._safe_merge(Router.static_map, Router.dynamic_map, child_static, child_dynamic)
 
-    def _parse_shared(self, shared_map):
-        for shared in shared_map.values():
-            if shared._view:
-                node = Router._SharedNode(
-                    path=shared._name,
-                    _class=shared._class,
-                    _class_props=shared._props,
-                    func=shared._view,
-                    hero=shared._hero,
-                    loader_func=shared._loader,
-                )
-                if General.shared_map.get(shared._name, None) is None:
-                    General.shared_map[shared._name] = node
-                else:
-                    raise ValueError(f"[fletfly] shared content with name {self.path} is already registered")
+    def _parse_shared(self, zones):
+        for zone in zones:
+            shared_map = zone.shared_map
+            for shared in shared_map.values():
+                if shared._view:
+                    path = zone.zone_root + shared._name
+
+                    node = Router._SharedNode(
+                        path=path,
+                        _class=shared._class,
+                        _class_props=shared._props,
+                        func=shared._view,
+                        hero=shared._hero,
+                        loader_func=shared._loader,
+                        zone_root=zone.zone_root)
+                    
+                    if General.shared_map.get(path, None) is None:
+                        General.shared_map[path] = node
+                    else:
+                        raise ValueError(f"[fletfly] shared content of zone '{zone.zone_root}' and name {shared._name} is already registered")
 
     def _safe_merge(self, main_static, main_dynamic, static, dynamic, skip_conflicts = False):
         
@@ -510,7 +532,7 @@ class Router: # singleton only 1 instance
         page.fly.params = params if params else {}
         page.fly.query = query if query else {}
 
-        step1 = self._apply_navigation_style(node) 
+        step1 = self._apply_stack_mode(node) 
         
         step2 = await self._check_fly_ins(page, step1, node)
 
@@ -596,7 +618,7 @@ class Router: # singleton only 1 instance
                     if val != "not there" and isinstance(val, str):
                         to = val
             if to is not None:
-                to = node.take_off_zone.rstrip("/")+"/"+to.lstrip("/")
+                to = node.zone_root.rstrip("/")+"/"+to.lstrip("/")
                 print(f"[fletfly] Redirecting by <fly_to> to: path '{to}'")
                 page.run_task(page.push_route, to)
                 return True
@@ -618,7 +640,7 @@ class Router: # singleton only 1 instance
                 if node or not temp_path:
                     break
         if not node and self.error_path:
-            current_zone_error = (page.fly.take_off_zone.rstrip("/") + "/" + self.error_path.strip("/"))
+            current_zone_error = (page.fly.zone_root.rstrip("/") + "/" + self.error_path.strip("/"))
             node, params = self.match_path(current_zone_error)
             if not node:
                 node, params = self.match_path("/" + self.error_path.strip("/"))
@@ -657,49 +679,64 @@ class Router: # singleton only 1 instance
 
         """
         
-
-    def _apply_navigation_style(self, node:_FlightNode):
-        if self.navigation_style == NavigationStyle.target_only or node.path == "/":
+    def _apply_stack_mode(self, node:_FlightNode):
+        if self.stack_mode == StackMode.target_only or node.path in ("", "/") or not node.lineage:
             return [node]
         
-        full_chain = node.lineage + [node]
-        home_node = full_chain[0]
+        home_node = node.lineage[0]
 
-        if self.navigation_style == NavigationStyle.home_target:
-            return [home_node, node]
+        if self.stack_mode == StackMode.root_target:
+            ok_chain = [home_node]
 
-        if self.navigation_style == NavigationStyle.last_port_target:
+        elif self.stack_mode == StackMode.last_home_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
-            return [last_port, node] if last_port else [home_node, node]
+            ok_chain = [last_port] if last_port else [home_node]
 
-        if self.navigation_style == NavigationStyle.home_last_port_target:
+        elif self.stack_mode == StackMode.root_last_home_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
-            if last_port and last_port != home_node:
-                return [home_node, last_port, node]
-            return [home_node, node]
+            if last_port:
+                ok_chain = [home_node, last_port]
+            else:
+                ok_chain = [home_node]
 
-        if self.navigation_style == NavigationStyle.home_ports_target:
-            wishlist = [n for n in full_chain if n.is_zone]
-            if node not in wishlist: wishlist.append(node)
-            return wishlist
+        elif self.stack_mode == StackMode.root_homes_target:
+            ok_chain = [n for n in node.lineage if n.is_zone]
 
-        if self.navigation_style == NavigationStyle.all_from_last_port:
-            last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
+        elif self.stack_mode == StackMode.all_from_last_home:
+            last_port_idx = next((i for i, n in enumerate(reversed(node.lineage)) if n.is_zone), None)
             if last_port_idx is not None:
-                actual_idx = len(full_chain) - 1 - last_port_idx
-                return full_chain[actual_idx:]
-            return full_chain
+                actual_idx = len(node.lineage) - 1 - last_port_idx
+                ok_chain = node.lineage[actual_idx:]
+            else:
+                ok_chain = node.lineage
 
-        if self.navigation_style == NavigationStyle.home_all_from_last_port:
-            last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
+        elif self.stack_mode == StackMode.root_all_from_last_home:
+            last_port_idx = next((i for i, n in enumerate(reversed(node.lineage)) if n.is_zone), None)
             if last_port_idx is not None:
-                actual_idx = len(full_chain) - 1 - last_port_idx
-                if actual_idx == 0: return full_chain
-                return [home_node] + full_chain[actual_idx:]
-            return full_chain
+                actual_idx = len(node.lineage) - 1 - last_port_idx
+                ok_chain = [home_node] + node.lineage[actual_idx:]
+            else:
+                ok_chain = [home_node] + node.lineage
+        else:
+            ok_chain = node.lineage
 
-        return full_chain
-    
+        def get_real_node(empty_node: Router._FlightNode):
+            new_node = None
+            if empty_node.fly_to:
+                empty_to = self.static_map.get(empty_node.fly_to, None)
+                if empty_to: 
+                    new_node = empty_to
+            return new_node if new_node else empty_node
+        
+        temp_chain = [get_real_node(n) for n in ok_chain]
+        final_chain = [node]
+        insert_idx = 0
+        for item in temp_chain:
+            if item not in final_chain:
+                final_chain.insert(insert_idx, item)
+                insert_idx+=1
+        return final_chain
+
     async def _artificial_back(self,page, response, view):
         result = await response
         if result is True:
@@ -789,7 +826,7 @@ class Router: # singleton only 1 instance
                             last_res = False if ins_outs == "ins" else True
 
                         if isinstance(last_res, str):
-                            last_res = mw.get("take_off", node.take_off_zone if node.take_off_zone else "").rstrip("/") + "/" + last_res.lstrip("/")
+                            last_res = mw.get("zone_root", node.zone_root if node.zone_root else "").rstrip("/") + "/" + last_res.lstrip("/")
                             print(f"🔀 [fletfly] Redirect by '{sync_mw["func"].__name__}' at '{node.path}':")
 
                         if last_res is not True:
@@ -903,8 +940,8 @@ class Router: # singleton only 1 instance
 
             page.views.append(final_view)
             
-            page.fly.take_off_zone = flight_node.take_off_zone
-            final_view.take_off_zone = flight_node.take_off_zone
+            page.fly.zone_root = flight_node.zone_root
+            final_view.zone_root = flight_node.zone_root
             final_view.route = Router._get_real_path(page.route, flight_node.path) if flight_node.is_dynamic else flight_node.path
             final_view.params = dict(page.fly.params) # to restore on back
             final_view.query = dict(page.fly.query) # to restore on back
@@ -1052,13 +1089,16 @@ class Router: # singleton only 1 instance
                     _class_props,
                     func,
                     hero,
-                    loader_func):
+                    loader_func,
+                    zone_root):
             self.path = path
             self.func = func #function
             self._class = _class
             self._class_props = _class_props #class
             self.hero = hero #function
             self.loader_func = loader_func
+            self.zone_root = zone_root
+
         @classmethod
         def _get_node(cls, name):
             if not isinstance(name, str):
@@ -1117,7 +1157,7 @@ class Router: # singleton only 1 instance
                 if control:
                     if isinstance(sl, str) and sl.startswith(shared_str):
                         sl = sl.replace(shared_str, "")
-                        shared_node = General.shared_map.get(sl, None)
+                        shared_node = General.shared_map.get(shared_node.zone_root+sl, None)
                         if shared_node:
                             shared_holders.append(control)
                             shared_nodes.append(shared_node)
@@ -1172,13 +1212,15 @@ class Router: # singleton only 1 instance
                     _class_props,
                     func,
                     hero,
-                    loader_func):
+                    loader_func,
+                    zone_root):
             self.path = path
             self.func = func #function
             self._class = _class
             self._class_props = _class_props #class
             self.hero = hero #function
             self.loader_func = loader_func
+            self.zone_root = zone_root
 
     class _ViewObj:# carrying views (multiple) views info about the view
         def __init__(self, path:str, objs_map, shared_holders, shared_nodes,
@@ -1240,7 +1282,7 @@ class Router: # singleton only 1 instance
                 if control:
                     if isinstance(sl, str) and sl.startswith(shared_str):
                         sl = sl.replace(shared_str, "")
-                        shared_node = General.shared_map.get(sl, None)
+                        shared_node = General.shared_map.get(view_node.zone_root+sl, None)
                         if shared_node:
                             shared_holders.append(control)
                             shared_nodes.append(shared_node)
@@ -1250,7 +1292,7 @@ class Router: # singleton only 1 instance
                         print(f"[fletfly] WARNING: Only layouts (not views) can have free (not shared) slots. "
                             f"Free slot with the name '{sl}' will be ignored.")
 
-            objs_map = Router._ViewObj._explore_return(page, view_return)
+            objs_map = Router._ViewObj._explore_return(page, view_return, view_node)
             
             page.fly._slots_map.pop(func_key, None) # post-execution clearance
             view_obj = Router._ViewObj(path=page.route,
@@ -1263,7 +1305,7 @@ class Router: # singleton only 1 instance
             return view_obj
         
         @classmethod
-        def _explore_return(cls, page, view_return):
+        def _explore_return(cls, page, view_return, node):
             if not isinstance(view_return, (list, tuple)):
                 view_return = [view_return]
             v_flag = None
@@ -1274,7 +1316,7 @@ class Router: # singleton only 1 instance
                     v_flag = ""
                 elif isinstance(value, str):
                     shared_name = value
-                    shared_node = General.shared_map.get(shared_name, None)
+                    shared_node = General.shared_map.get(node.zone_root+shared_name, None)
                     if shared_node:
                         value = Router._SharedObj._get_shared_obj(page, shared_node)
                         if value:
@@ -1322,13 +1364,13 @@ class Router: # singleton only 1 instance
                     _class=None,
                     _class_props=None,
                     override=None, 
-                    take_off=None):
+                    zone_root=None):
             self.path = path
             self.funcs = funcs #function
             self._class = _class #class
             self._class_props = _class_props
             self.override = override
-            self.take_off=take_off
+            self.zone_root=zone_root
         @classmethod
         def _get_not_overrided_fly_ins_nodes(cls, page, fly_in_node_list: list[Router._FlyInsOutsNode]):
             slice_idx = 0
@@ -1352,13 +1394,14 @@ class Router: # singleton only 1 instance
 
             return fly_in_node_list[slice_idx:]
     class _LayoutNode: # one node created for one layout for all times
-        def __init__(self, path=None,
-                    _class=None,
-                    _class_props=None,
-                    func=None,
-                    hero=None,
-                    override=None,  
-                    loader_func=None):
+        def __init__(self, path,
+                    _class,
+                    _class_props,
+                    func,
+                    hero,
+                    override,  
+                    loader_func,
+                    zone_root):
             self.path = path
             self.func = func #function
             self.override = override
@@ -1366,6 +1409,7 @@ class Router: # singleton only 1 instance
             self._class_props = _class_props
             self.hero = hero
             self.loader_func = loader_func
+            self.zone_root = zone_root
 
         @classmethod
         def _get_not_overrided_nodes(cls, page, node_list: list[Router._LayoutNode]):
@@ -1547,7 +1591,7 @@ class Router: # singleton only 1 instance
                 if control:
                     if isinstance(sl, str) and sl.startswith(shared_str):
                         sl = sl.replace(shared_str, "")
-                        shared_node = General.shared_map.get(sl, None)
+                        shared_node = General.shared_map.get(layout_node.zone_root+sl, None)
                         if shared_node:
                             shared_holders.append(control)
                             shared_nodes.append(shared_node)
@@ -1556,7 +1600,7 @@ class Router: # singleton only 1 instance
                     else:
                         control._slot_name = sl
                         holders.append(control)
-            objs_map = Router._ViewObj._explore_return(page, layout_return)
+            objs_map = Router._ViewObj._explore_return(page, layout_return, layout_node)
             
             page.fly._slots_map.pop(func_key, None) # post-execution clearance
             layout_obj = Router._LayoutObj(path=layout_loader_dict["path"],

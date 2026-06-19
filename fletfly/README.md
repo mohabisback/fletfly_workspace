@@ -64,7 +64,7 @@ Look at this single block of code. It demonstrates:
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```python
-from fletfly import Router, Route, slot, fly, child, data, fly_in, NavigationStyle, Shared
+from fletfly import Router, Route, slot, fly, child, data, fly_in, StackMode, Shared
 import flet as ft
 import asyncio # just for mocking time delay
 
@@ -111,7 +111,7 @@ class Home():                  # Route detection: path auto named to "/home"
             return True
 
 # handed father of class (or list of fathers of classes)
-Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=True, max_views=5, navigation_style=NavigationStyle.home_all_from_last_port, detect_route_subclasses=False, print_debugs=True)
+Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=True, max_views=5, stack_mode=StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
 
 def main(page):
     # your main stuff per user
@@ -128,7 +128,7 @@ Not only can you rely on magic auto-naming and detection with a wide variety of 
 ```Python
 from fletfly import Router
 Router(
-    zone_or_class_or_list=[],       # hand over your class/classes to inject into the tree
+    routes=[],       # hand over your class/classes to inject into the tree
     initial_route = "/",            # don't let us detect the initial for you
     error_path = "",                # don't let us show our error page, tell us where
     auto_path_naming=False,         # don't let us name your paths

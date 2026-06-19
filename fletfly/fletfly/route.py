@@ -26,7 +26,6 @@ class General:
     _inherited_classes = set()
     _inherited_shared = set()
     _main_zone_tree = {}
-    _shared_routes = {}
     shared_map = {}
     _attr_prefix = "$"
     _zones = []
@@ -41,7 +40,6 @@ class General:
     detect_route_subclasses = True
     detect_inner_classes = True
     print_debugs = True
-    _shared_routes = {}
     _router_instance = None
 
 __all__ = ['route', 'fly_ins', 'fly_outs', 'Zone', 'slot', 'data', 'fly', 'fly_around']
@@ -192,7 +190,10 @@ def _get_set_payload(func) -> dict | None:
 class _FuncDict(dict):
     def __init__(self, func, name:str, props:dict=None):
         super().__init__({"func": func, "name": name, "props": props if props else {}})
-
+    def copy(self):
+        new_obj = self.__class__.__new__(self.__class__)
+        new_obj.update(self)    
+        return new_obj
 class _MethodHandler:
     set_type = "_"
     expected_func = "func"
@@ -293,7 +294,7 @@ class _MethodHandler:
 
     def _child_item(self, item):
         if item is None: return None
-        if isinstance(item, Route):
+        if isinstance(item, (Route, Zone)):
             return item
         elif callable(item):
             _get_set_payload(item)
@@ -311,7 +312,7 @@ class _MethodHandler:
                                 f"Use tuple of callable and dict as: my_route.{self.name.rstrip('s')} = (callable, {'role':'user', 'color':'red'}) or\n"+
                                 f"Append into a list as: my_route.{self.name}s.extend(callable1, (callable2, dict), {self.name}(callable, a=1))")
         else:
-            raise TypeError(f"❌ [fletfly] Expected Route | callable | (callable, props_dict) tuple | list of any of the above, but got '{type(item).__name__}'")
+            raise TypeError(f"❌ [fletfly] Expected Route | Zone | callable | (callable, props_dict) tuple | list of any of the above, but got '{type(item).__name__}'")
     
     def _get_func_dict(self, func, expected_not):
         _get_set_payload(func)
@@ -570,7 +571,7 @@ class _MethodHandler:
 class _Layout(_MethodHandler):
     name = "layout"
     set_name = "_layout"
-    expected = {"hero": (bool, None), "override": (bool, None)}
+    expected = {"hero": ((bool, int), None), "override": (bool, None)}
     def __get__(self, instance, owner):
         return super().__get__(instance, owner)
     def __call__(self, *args, **kwargs):
@@ -580,7 +581,7 @@ class _Layout(_MethodHandler):
 class _View(_MethodHandler):
     name = "view"
     set_name = "_view"
-    expected = {"hero": (bool, None)}
+    expected = {"hero": ((bool, int), None)}
     @overload
     def __call__(self, hero: bool = None, props:dict=None, **kwargs:Any) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
     @overload
@@ -648,7 +649,7 @@ class _Child(_MethodHandler):
                 "fly_to": (str,None), "layout": (object, None), "layout_override": (bool,None),
                 "fly_ins":(list, None), "fly_in_override": (bool,None),
                 "fly_outs":(list, None), "fly_out_override": (bool,None),
-                "is_zone": (bool,None), "view_hero": (bool,None), "layout_hero": (bool,None),
+                "view_hero": (bool,None), "layout_hero": (bool,None),
                 "title": (str,None), "icon": (str,None), "loader":(object,None)}
     @overload # Decorator on a function
     def __call__(self,
@@ -657,7 +658,7 @@ class _Child(_MethodHandler):
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any 
                  ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
     @overload # Decorator on a class
@@ -667,7 +668,7 @@ class _Child(_MethodHandler):
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any
                  ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
     @overload # Direct call with function
@@ -677,7 +678,7 @@ class _Child(_MethodHandler):
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any)-> Any: ...
 
     @overload # Direct call with a class
@@ -687,7 +688,7 @@ class _Child(_MethodHandler):
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any) -> Any: ...
     def __call__(self, *args, **kwargs):
         """1-2 /4 func | class decorator: @child('home', [clsA, clsB])
@@ -702,20 +703,20 @@ class _Index(_MethodHandler):
                 "fly_to": (str,None), "layout": (object, None), "layout_override": (bool,None),
                 "fly_ins":(list, None), "fly_in_override": (bool,None),
                 "fly_outs":(list, None), "fly_out_override": (bool,None),
-                "is_zone": (bool,None), "view_hero": (bool,None), "layout_hero": (bool,None),
+                "view_hero": (bool,None), "layout_hero": (bool,None),
                 "title": (str,None), "icon": (str,None), "loader":(object,None)}
     @overload # Decorator on a function
     def __call__(self, fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any 
                  ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
     @overload # Decorator on a class
     def __call__(self, view=None, fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any
                  ) -> Callable[[Union[Type[Any], Callable[..., Any]]], Any]: ...
     @overload # Direct call with function
@@ -723,14 +724,14 @@ class _Index(_MethodHandler):
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any)-> Any: ...
     @overload # Direct call with a class
     def __call__(self, cls: type, view=None,
                  fly_to:str=None, layout = None, layout_override:bool=None,
                  fly_ins = None, fly_in_override:bool=None, 
                  fly_outs=None, fly_out_override:bool=None,
-                 is_zone:bool=None, view_hero:bool=None, layout_hero:bool=None,
+                 view_hero:bool=None, layout_hero:bool=None,
                  title=None, icon=None, loader=None, props:dict=None, **kwargs:Any) -> Any: ...
     def __call__(self, *args, **kwargs):
         """1-2 /4 func | class decorator: @index('home', [clsA, clsB])
@@ -1107,7 +1108,6 @@ class Route():
     layout_override = _BoolAttr("layout_override")
     fly_in_override = _BoolAttr("fly_in_override")
     fly_out_override = _BoolAttr("fly_out_override")
-    is_zone = _BoolAttr("is_zone")
     view_hero = _HeroAttr("view_hero")
     layout_hero = _HeroAttr("layout_hero")
     title = _StrAttr("title")
@@ -1124,7 +1124,7 @@ class Route():
                     fly_ins = None, fly_in_override:bool=None, 
                     fly_outs=None, fly_out_override:bool=None,
                     view_hero:bool=None, layout_hero:bool=None,
-                    title=None, icon=None, loader=None, props:dict=None, is_zone:bool=None, **kwargs): ...
+                    title=None, icon=None, loader=None, props:dict=None, **kwargs): ...
     def __init__(self, *args, **kwargs):
         self._layout=None
         self._view=None
@@ -1139,12 +1139,12 @@ class Route():
         self._title = None
         self._view_hero = None
         self._layout_hero = None
-        self._is_zone = None
         self._fly_ins = []
         self._fly_outs = []
         self._children = []
         self._props = {}
         self._class = None
+        self._zone:Zone = None
 
         self._adjust_locals(args, kwargs)
         self.parent = None
@@ -1160,22 +1160,30 @@ class Route():
     
     def copy(self, *args, **kwargs):
         new_route = self.__class__()
-        ignore_list = ["_fletfly_method_child", "_fletfly_potential_path"]
+        ignore_list = ["_fletfly_method_child", "_potential_path"]
         for key, val in self.__dict__.items():
             if isinstance(val, (dict, list, set)):
                 new_route.__dict__[key] = val.copy()
             elif key not in ignore_list:
                 new_route.__dict__[key] = val
-        
         new_route._adjust_locals(args, kwargs)
+        new_route._original = self
+        new_route.__module__ = self.__module__
         return new_route
     _ordered_fields = [
-        "path", "view", "children", "index", "fly_to", "layout", "layout_override",
+        "children", "index", "fly_to", "layout", "layout_override",
         "fly_ins", "fly_in_override", "fly_outs", "fly_out_override",
-        "view_hero", "layout_hero", "title", "icon", "loader", "is_zone", "props"
+        "view_hero", "layout_hero", "title", "icon", "loader", "props"
     ]
     def _adjust_locals(self, args, kwargs):
-        params = dict(zip(self._ordered_fields, args))
+        pre_fields = []
+        for i in range(2):
+            if len(args)>i:
+                if callable(args[i]):
+                    pre_fields.append("view")
+                elif isinstance(args[i], str):
+                    pre_fields.append("name" if isinstance(self, Shared) else "path")
+        params = dict(zip(pre_fields+self._ordered_fields, args))
         params.update(kwargs)
         for official_name, aliases_list in aliases.items():
             for alias in aliases_list:
@@ -1198,7 +1206,7 @@ class Route():
                     fly_ins = None, fly_in_override:bool=None, 
                     fly_outs=None, fly_out_override:bool=None,
                     view_hero:bool=None, layout_hero:bool=None,
-                    title=None, icon=None, loader=None, is_zone:bool=None,
+                    title=None, icon=None, loader=None,
                     props:dict=None, **kwargs): ...
     
     def __call__(self, *args, **kwargs):
@@ -1337,6 +1345,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             children.extend(more_children)
             route.children = []
         if not route: return None
+        
         if route._index:
             route._index._path = ""
             children.append(route._index)
@@ -1348,7 +1357,8 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             route.path = name.lower().replace("_", "-").replace("--", "-")
         
         route = Route._adjust_view(route)
-        
+        route = Route._inherit_props(route)
+
         path1 = parent_full_path if parent_full_path else ""
         path2 = route._path if route._path else "" 
         path = (path1 + "/" + path2) if path1 or path2 else ""
@@ -1356,7 +1366,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         while "//" in path: path = path.replace("//", "/")
         if len(path) > 0 and not path.startswith("/"): path = "/" + path
         
-        # handling Root
+        # handling Zone Root
         if route._path in ("", "/") and path in ("", "/"):
             if not zone.tree.get(""): 
                 zone.tree[""] = route
@@ -1412,7 +1422,17 @@ Command Bunker, injection, if there is a path, then create a node in the map.
     def _auto_name(cls, route, shared = False):
         if General.auto_path_naming and route._path is None:
             name = None
-            potential = getattr(route, "_fletfly_potential_path", None)
+            if not name and route._class:
+                name = getattr(route._class, "__name__", None)
+            
+            potential = getattr(route, "_potential_path", None)
+            if potential is None and getattr(route, "__module__", None):
+                mod = sys.modules.get(route.__module__)
+                if mod:
+                    for k, v in mod.__dict__.items():
+                        if v is route or (getattr(route, "_original", None) is not None and v is route._original):                            
+                            potential = k
+                            break
             if not name and potential:
                 silly = False
                 for ch in ["shared"] if shared else aliases["child"]:
@@ -1420,15 +1440,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         silly = True
                         break
                 if not silly: name = potential
-            if not name and getattr(route, "__module__", None):
-                mod = sys.modules.get(route.__module__)
-                if mod:
-                    for k, v in mod.__dict__.items():
-                        if v is route:
-                            name = k
-                            break
-            if not name and route._class:
-                name = getattr(route._class, "__name__", None)
+
             if not name and route._view:
                 func = route._view.get("func", None)
                 if func: name = getattr(func, "__name__", func)
@@ -1443,9 +1455,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             if not name and route.fly_outs:
                 func = route.fly_outs[0].get("func", None)
                 if func: name = getattr(func, "__name__", func)
-            if name is not None: 
-                route.path = name
-
         return name
     
     @classmethod
@@ -1454,7 +1463,18 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             _is_flet_instance(route._class, or_class=True):
             route._view = _FuncDict(func=route._class, name="view", props=route._props)
         return route
-    
+    @classmethod
+    def _inherit_props(cls, route):
+        
+        for item in ["view", "layout", "loader", "fly_in", "fly_out"]:
+            dic = getattr(route, f"_{item}", None)
+            if dic:
+                if isinstance(dic, _FuncDict):
+                    dic["props"] = (route._props or {}) | (dic.get("props",{}) or {})
+                else:
+                    print(111111111111111, dic, type(dic)) # not type _FuncDict which i made
+                    raise ValueError(f"Debug error, a '{item}' function is not saved as function dictionary")
+        return route
     @classmethod
     def _check_similarity(cls, a1:Route, a2:Route, err_msg=None)->Route:
         if (a1._path == a2._path) and (
@@ -1525,7 +1545,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             else:
                 registered_kids.append(sub)
                 if sub._path is None:
-                    sub._fletfly_potential_path = attr_name
+                    sub._potential_path = attr_name
             return sub
 
         # first loop for flagged functions
@@ -1618,10 +1638,10 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             elif isinstance(attr_val, Route):
                 sub = attr_val
                 if sub._path is None:
-                    if hasattr(sub, "_fletfly_potential_path"):
+                    if hasattr(sub, "_potential_path"):
                         raise ValueError(f"f[fletfly] Route in attr'{attr_name}' any adjustment will affect original route, use copy() method")
                     else:
-                        sub._fletfly_potential_path = attr_name
+                        sub._potential_path = attr_name
                         registered_kids.append(sub)
             elif isinstance(attr_val, _FuncDict):
                 n = attr_val.get("name", None)
@@ -1671,9 +1691,6 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             cls._unify_class_children(child, registered_children, routed_classes)
         return children
 
-
-
-
     @classmethod
     def _create_tree(cls, anchors:list=None):
         if General.detect_route_subclasses:
@@ -1700,7 +1717,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         _adjust_zones_modules(General._zones)
         zone0._create_tree()
         General._main_zone_tree = zone0.tree
-
+    
     @classmethod
     def _check_root_fly_to(cls, tree):
         root = tree.get('')
@@ -1898,10 +1915,12 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         return self
 
 class _BlockedAttr:
+    def __set_name__(self, owner, name):
+        self.name = name
     def __get__(self, instance, owner):
-        raise AttributeError("[fletfly] Attribute not supported in Shared.")
+        raise AttributeError(f"[fletfly] Attribute '{self.name}' not supported in Shared, can't get.")
     def __set__(self, instance, value):
-        raise AttributeError("[fletfly] Attribute not supported in Shared.")
+        raise AttributeError(f"[fletfly] Attribute '{self.name}' not supported in Shared, can't set.")
 
 class Shared(Route):
     name = _StrAttr("name")
@@ -1922,14 +1941,18 @@ class Shared(Route):
     layout_override = _BlockedAttr()
     fly_in_override = _BlockedAttr()
     fly_out_override = _BlockedAttr()
-    is_zone = _BlockedAttr()
     layout_hero = _BlockedAttr()
     view_hero = _BlockedAttr()
     title = _BlockedAttr()
     icon = _BlockedAttr()
     
+    @overload
     def __init__(self, name:str=None, view=None, hero:bool|int=None, loader=None, props:dict=None, **kwargs):
-        super().__init__(name=name, view=view, hero=hero, loader=loader, props=props, **kwargs)
+        ...
+    def __init__(self, *args, **kwargs):
+        self._name = None
+        self._hero = None
+        super().__init__(*args, **kwargs)
         General._pending_routes.discard(self)
         General._pending_shared.add(self)
     
@@ -1946,7 +1969,8 @@ class Shared(Route):
         else:
             return super().__new__(cls) 
     def __repr__(self):
-        return f"{Route._format_route_with_no_path(self)}  name:'{self._name}'"
+        name = f"'{self._name}'"
+        return f"{Route._format_route_with_no_path(self)}  name:{Route.cut(name,15,True)} zone:'{self._zone.zone_root if self._zone else ''}'"
 
 class Zone:
     def __init__(self, route_class_module_or_list, path=None):
@@ -1976,15 +2000,25 @@ class Zone:
         self.registered_children = set()
         self.routed_classes = set()
         self.tree = {}
-        self.shared = {}
+        self.shared_map = {}
+        self.zone_root = None
+        # Dynamic calling module detection
+        if self.path is None:
+            frame = sys._getframe(1)
+            while frame:
+                module_name = frame.f_globals.get('__name__')
+                if module_name and not module_name.startswith('fletfly'):
+                    self.__module__ = module_name
+                    break
+                frame = frame.f_back
 
     def _create_tree(self)->Route:
         inh = {c for c in General._inherited_classes if c.__module__ in self.modules}
         pnd = {c for c in General._pending_routes if c.__module__ in self.modules}
  
-        
         reg = General._registered_children | self.registered_children
         rou = General._routed_classes | self.routed_classes
+        
         pre_finals = ((inh | pnd)-(reg | rou))
         finals = [i for i in self.anchors if isinstance(i, dict) or i not in pre_finals] + list(pre_finals)
 
@@ -2002,46 +2036,51 @@ class Zone:
             else:
                 shared = unit
             if not shared._name:
-                shared.name = Route._auto_name(shared)
+                shared.name = Route._auto_name(shared, shared=True)
             shared = Route._adjust_view(shared)
+            shared = Route._inherit_props(shared)
 
-            self.shared[shared.name] = shared
-            General._shared_routes[shared._name] = shared
-
+            shared._zone = self
+            self.shared_map[shared.name] = shared
 
         route = self.tree.get('', None)
         if route:
             route.path = self.path
-            route.is_zone=True
+            route._zone = self
+            if route._path is None and self.__module__:
+                mod = sys.modules.get(self.__module__)
+                if mod:
+                    for k, v in mod.__dict__.items():
+                        if v is self:                            
+                            route._potential_path = k
+                            break
+            
             return route
         else:
             print(f"[fletfly] Failed to create Zone {self.path}")
             return None
+
 import types
 
-def _should_ignore_module(mod):        
-    mod_name = getattr(mod, '__name__', '').split('.')[0]
-    if mod_name == '__main__':
-        return False  # Do not ignore the entry point
+def _should_ignore_module(mod_name: str):        
+    root_name = mod_name.split('.')[0]
+    if root_name == '__main__':
+        return False  
         
-    # Ignore Python Standard Library modules
-    if mod_name in sys.stdlib_module_names or mod_name == 'builtins':
+    if root_name in sys.stdlib_module_names or root_name in {'builtins', 'flet', 'fletfly'}:
         return True
-        
+
     # Ignore Flet and fletfly itself to avoid circular deep inspection
-    if mod_name in {'flet', 'fletfly'}:
+    if root_name in {'flet', 'fletfly'}:
         return True
-        
-    # Ignore built-in extensions without a __file__ attribute (e.g., built-in C modules)
-    file_path = getattr(mod, '__file__', None)
-    if not file_path:
-        return True
-        
-    # Ignore external third-party libraries installed via pip
-    file_path = os.path.abspath(file_path)
-    if "site-packages" in file_path or "dist-packages" in file_path:
-        return True
-        
+    
+    mod = sys.modules.get(root_name)
+    if mod:
+        mod_file = getattr(mod, '__file__', '') or ''
+        if not getattr(sys, 'frozen', False):
+            if 'site-packages' in mod_file or 'dist-packages' in mod_file:
+                return True
+           
     return False
 
 def _adjust_zones_modules(zones:list[Zone]): # [["__main__"], ["project1_a", "project1_b"]]
@@ -2060,7 +2099,7 @@ def _adjust_zones_modules(zones:list[Zone]): # [["__main__"], ["project1_a", "pr
             for attr_name in dir(mod_obj):
                 try:
                     attr = getattr(mod_obj, attr_name)
-                except AttributeError:
+                except Exception:
                     continue
                     
                 target_mod = None
@@ -2070,10 +2109,14 @@ def _adjust_zones_modules(zones:list[Zone]): # [["__main__"], ["project1_a", "pr
                     target_mod = attr.__module__
 
                 if not target_mod or\
-                        target_mod in General._reserved_anchor_modules or\
-                        target_mod in ignored: continue
+                        target_mod in General._reserved_anchor_modules: continue
+                
+                target_root = target_mod.split('.')[0]
+                
+                if target_root in ignored: continue
+                
                 if _should_ignore_module(target_mod):
-                    ignored.add(target_mod)
+                    ignored.add(target_root)
                     continue
                     
                 if target_mod not in zone.modules:

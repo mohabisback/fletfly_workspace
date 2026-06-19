@@ -624,12 +624,12 @@ def Zone(zone, path=None):
 
 class FlyPad:
     all_views = "all_views" # all views are active and built
-    home_target = "home_target" # main home only & target
-    home_ports_target = "home_ports_target" # main and all sub homes & target
-    last_port_target = "last_port_target" # last sub home only & target
-    all_from_last_port = "all_from_last_port"
-    home_last_port_target = "home_last_port_target" # home , last port & target
-    home_all_from_last_port = "home_all_from_last_port" # default, which view all views from last port or home to the target
+    root_target = "root_target" # main home only & target
+    root_homes_target = "root_homes_target" # main and all sub homes & target
+    last_home_target = "last_home_target" # last sub home only & target
+    all_from_last_home = "all_from_last_home"
+    root_last_home_target = "root_last_home_target" # home , last port & target
+    root_all_from_last_home = "root_all_from_last_home" # default, which view all views from last port or home to the target
     target_only = "target_only"
 # max_pads when <= 0 then every view is allowed.
 # max_pads is a periority, and it saves target then main home then nearest parent to target then nearest view to target
@@ -659,8 +659,8 @@ class Router: # singleton only 1 instance
 """)
         return cls._instance
     
-    def __init__(self, zone_or_class_or_list: Route, error_view:str = "", every_level_fallback=True,
-                 fly_pads:FlyPad = FlyPad.home_all_from_last_port, max_pads:int = 5, auto_class_naming = True):
+    def __init__(self, routes: Route, error_view:str = "", every_level_fallback=True,
+                 fly_pads:FlyPad = FlyPad.root_all_from_last_home, max_pads:int = 5, auto_class_naming = True):
         if hasattr(self, "_initialized"):
             return
         self.error_view = error_view
@@ -668,12 +668,12 @@ class Router: # singleton only 1 instance
         self.fly_pads = fly_pads
         self.max_pads = max_pads
         Router._auto_class_naming = auto_class_naming
-        if isinstance(zone_or_class_or_list, (list, tuple, set)):
-            zone_or_class_or_list = list(zone_or_class_or_list)
+        if isinstance(routes, (list, tuple, set)):
+            routes = list(routes)
         else:
-            zone_or_class_or_list = [zone_or_class_or_list]
+            routes = [routes]
         
-        validated = Route._validate_children(zone_or_class_or_list)
+        validated = Route._validate_children(routes)
         print("-------------------validated------------------")
         for item in validated: print(item)
 
@@ -770,7 +770,7 @@ class Router: # singleton only 1 instance
         scanned_zone = cls._scan_folder(root_dir)
 
         if cls._router_instanceis None:
-            return Router(zone_or_class_or_list=scanned_zone)
+            return Router(routes=scanned_zone)
         else:
             if scanned_zone:
                 Route._validate_route_final(scanned_zone)
@@ -1180,32 +1180,32 @@ class Router: # singleton only 1 instance
         full_chain = node.lineage + [node]
         home_node = full_chain[0]
 
-        if self.fly_pads == FlyPad.home_target:
+        if self.fly_pads == FlyPad.root_target:
             return [home_node, node]
 
-        if self.fly_pads == FlyPad.last_port_target:
+        if self.fly_pads == FlyPad.last_home_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
             return [last_port, node] if last_port else [home_node, node]
 
-        if self.fly_pads == FlyPad.home_last_port_target:
+        if self.fly_pads == FlyPad.root_last_home_target:
             last_port = next((n for n in reversed(node.lineage) if n.is_zone), None)
             if last_port and last_port != home_node:
                 return [home_node, last_port, node]
             return [home_node, node]
 
-        if self.fly_pads == FlyPad.home_ports_target:
+        if self.fly_pads == FlyPad.root_homes_target:
             wishlist = [n for n in full_chain if n.is_zone]
             if node not in wishlist: wishlist.append(node)
             return wishlist
 
-        if self.fly_pads == FlyPad.all_from_last_port:
+        if self.fly_pads == FlyPad.all_from_last_home:
             last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
             if last_port_idx is not None:
                 actual_idx = len(full_chain) - 1 - last_port_idx
                 return full_chain[actual_idx:]
             return full_chain
 
-        if self.fly_pads == FlyPad.home_all_from_last_port:
+        if self.fly_pads == FlyPad.root_all_from_last_home:
             last_port_idx = next((i for i, n in enumerate(reversed(full_chain)) if n.is_zone), None)
             if last_port_idx is not None:
                 actual_idx = len(full_chain) - 1 - last_port_idx

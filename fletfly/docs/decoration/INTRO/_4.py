@@ -1,0 +1,39 @@
+import asyncio
+import flet as ft
+from fletfly import Router, Route, slot, fly
+
+home = Route("{category}", layout_hero=False) # layout_here in route
+
+@home.at.layout
+def layout(page):           
+    return ft.Column([
+        ft.Text("Header"),
+        slot(page)
+    ])
+
+@home.at.view(hero=True)         # True means 5 in dynamic, 1 in static
+def view():
+    return ft.Text("Main view")
+
+user = Route(":id")
+
+@user.at.view(hero=2)            # max 2 pages are saved for different params
+def user_view(page):
+    category = page.fly.params.get("category", "default")
+    user_id = page.fly.params.get("id", "default")
+    return ft.Column([
+        ft.Text(f" C: {category}"),
+        ft.Text(f"id: {user_id}")
+    ])
+
+home.children.append(user)
+
+async def main(page):
+    fly(page)
+
+    target_pages = ["a/1", "a/2", "b/3", 'b/4', 'c/5', 'd/6']
+    for p in target_pages:
+        await asyncio.sleep(5)
+        page.fly(p)
+
+ft.run(main)
