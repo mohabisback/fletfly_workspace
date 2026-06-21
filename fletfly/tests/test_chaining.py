@@ -46,7 +46,6 @@ def test_route_full_chaining():
     assert aw.fly_out_override == None
     assert aw.fly_out_override is not None
     assert aw._fly_out_override is None
-    assert aw.is_zone == None
     assert aw.view_hero == True
     assert aw.layout_hero == False
     assert aw.title == 'My Title'

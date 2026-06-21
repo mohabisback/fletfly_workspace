@@ -16,15 +16,23 @@ def view(id, role, num):
     # View requests 'id' (dynamic param) and 'role'/'num' (route props)
     return ft.Text(f"User {id} with number {num} is logged in as {role}")
 
-# Route instance initialization with kwargs props
-profile = fy.Route('profile/:id',
-                layout= fy.use.layout(layout),
-                fly_ins=[fy.use.fly_in(external_func, auth=True)], # Registering external function to fly_in explicitly
-                view=fy.use.view(view),
-                role='admin', theme='dark', props={'num':3},
-)
+# Dict registration mode conversion
+profile = {
+    "path": "profile/:id",
+    "layout": layout,
+    "view": view,
+    "fly_ins": [
+        (external_func, {"auth": True})  # Explicit middleware with parameters via tuple
+    ],
+    "role": "admin",     # Auto collected prop
+    "theme": "dark",     # Auto collected prop
+    "props": {"num": 3}  # Explicit props
+}
 
-def main(page):
+# Initializing the Router with the configuration tree
+fy.Router(profile)
+
+async def main(page):
     fy.fly(page, 'profile/fletfly')
 
-ft.run(main)
+ft.run(main=main)

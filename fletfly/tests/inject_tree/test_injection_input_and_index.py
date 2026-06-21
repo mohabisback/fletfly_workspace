@@ -92,7 +92,7 @@ def test_inject_handle_index_early_return_alive():
     class zone: tree = {}
     parent = Route(path="dashboard")
     child = Route(path="")
-    child._view = dummy_view2
+    child.view = dummy_view2
 
     # Invoke injection with active parent context
     result = Route._inject_into_tree(child, zone=zone, parent_full_path="dashboard", parent=parent)

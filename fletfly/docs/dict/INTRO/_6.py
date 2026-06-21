@@ -13,10 +13,17 @@ def settings_layout():
     # returning one view means, forget everything, show me.
     return ft.View(controls=[ft.Text("I am a view")]) # try this instead
 
-home = fy.Route().layout(layout)
-
-home.child('settings', layout_override=True).layout(settings_layout, override=True)
-# override in layout method = layout_override
+home = fy.Route({
+    "path": None,                                  
+    "layout": layout,
+    "children": [
+        {
+            "path": "settings",                    # Sub route, path: "/home/settings"
+            "layout": (settings_layout, {"override": True}), # with layout
+            "layout_override": True                # in the route
+        }
+    ]
+})
 
 async def main(page):
     fy.fly(page)
@@ -27,4 +34,4 @@ async def main(page):
             await asyncio.sleep(2)
             page.fly(p)
 
-ft.run(main)
+ft.run(main=main)

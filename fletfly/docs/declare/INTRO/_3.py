@@ -1,18 +1,21 @@
 import flet as ft
-import fletfly as fy Router, Route, fly, fly_in
+import fletfly as fy 
 
 # will not be registered by creation
-home = Route('home')                # explicit paths only
+home = fy.Route('home')             # explicit path only
+shared = fy.Shared('shared')        # explicit name only
 
-Router(
+fy.Router(
     routes=[home],                  # routes Registered explicitly
+    shared=[shared],                # shared Registered explicitly
     initial_route = "/",            # don't let us detect the initial for you
     error_path = "",                # don't let us show our error page, tell us where
     auto_path_naming=False,         # don't let us name your paths
     detect_created_routes=False,    # don't let us gather your created routes
-) # don't let us detect methods as props by name or value
+    detect_shared=False,            # don't let us gather your shared
+)
 
 def main(page):
-    fly(page)
+    fy.fly(page)
 if __name__ == "__main__":
     ft.run(main)

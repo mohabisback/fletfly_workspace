@@ -1,17 +1,17 @@
 import flet as ft
-import fletfly as fy Route, fly
+import fletfly as fy 
 
 def check_role(role='user'):          # general middleware with params
     return True if role == 'admin' else 'home'
     
-home = Route()
+home = fy.Route()
 
 @home.use.view
 def home_view(): 
     return ft.Text("Main view")
 
 # Child route with fly_in_override passed directly via kwargs props
-admin = Route('admin', fly_in_override=True)
+admin = fy.Route('admin', fly_in_override=True)
 
 @admin.use.view
 def admin_view(): 
@@ -33,6 +33,6 @@ admin.use.fly_in(role='user')(check_role)  # change role to "admin", to enter th
 home.children.append(admin)
 
 def main(page):
-    fly(page, '/home/admin')
+    fy.fly(page, '/home/admin')
 
 ft.run(main=main)

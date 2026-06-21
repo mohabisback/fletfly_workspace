@@ -8,17 +8,17 @@ from fletfly import (
     fly_out, 
     child, 
     Route, 
-    _FuncDict, 
-    _FuncDict
+    UseFunc, 
+    UseFunc
 )
 
 def test_layout_direct_call_returns_dict():
-    """Test that calling layout directly returns a _FuncDict with correct config."""
+    """Test that calling layout directly returns a UseFunc with correct config."""
     def sample_view():
         pass
         
     res = layout(sample_view, hero=True, override=False, role="user")
-    assert isinstance(res, _FuncDict)
+    assert isinstance(res, UseFunc)
     assert res["func"] is sample_view
     assert res["props"] == {"role":"user"}
 
@@ -30,7 +30,7 @@ def test_fly_in_direct_call_with_cls_keyword():
     res1 = fly_in(cls=dummy_func, inheritable=True, apply_per_view=True, role="user")
     res2 = aw.fly_out(dummy_func, True, True, role="user")
  
-    assert isinstance(res1, _FuncDict)
+    assert isinstance(res1, UseFunc)
     assert res1["func"] is dummy_func
     assert res1["inheritable"] is True
     assert res1["apply_per_view"] is True
@@ -61,7 +61,7 @@ def test_descriptor_bound_instance_setattr():
     res1 = aw.view(target_view, hero=True, role="user")
     assert isinstance(res1, Route)
     res2 = view(target_view, hero=True, role="user")
-    assert isinstance(res2, _FuncDict)
+    assert isinstance(res2, UseFunc)
     assert aw._view["func"] == target_view
     assert aw.view_hero == True
     assert res2["props"].get("hero", "not there") == "not there"
@@ -84,5 +84,5 @@ def test_pre_process_invalid_type_raises_type_error():
         pass
         
     # 'hero' argument expects a boolean value
-    with pytest.raises(TypeError, match="Argument.*must be of type bool"):
+    with pytest.raises(TypeError, match="Argument.*expected to be of type bool"):
         view(sample_func, hero="not-a-bool")

@@ -19,17 +19,18 @@ def user_view(page):
         ft.Text(f"id: {user_id}")
     ])
 
-# Declarative tree composition
-home = fy.Route("{category}",
-            fy.use.layout(layout),
-            fy.use.view(view, hero=True),          # True means 5 in dynamic, 1 in static
-            layout_hero=False,                     # layout_hero in route
-            children=[
-                fy.Route(":id",
-                    fy.use.view(user_view, hero=2) # max 2 pages are saved for different params
-        )
+fy.Route({
+    "path": "{category}",
+    "layout": layout,
+    "layout_hero": False,                  # layout_hero configuration
+    "view": (view, {"hero": True}),        # True means 5 in dynamic, 1 in static
+    "children": [
+        {
+            "path": ":id",
+            "view": (user_view, {"hero": 2}) # max 2 pages are saved for different params
+        }
     ]
-)
+})
 
 async def main(page):
     fy.fly(page)

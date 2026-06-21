@@ -1,17 +1,17 @@
 import asyncio
 import flet as ft
-import fletfly as fy Route, fly, slot
+import fletfly as fy 
 
-home = Route()
+home = fy.Route()
 
 @home.use.layout
 def layout(page):
     return ft.Column([
         ft.Text('Header'),
-        slot(page)
+        fy.slot(page)
     ])
 
-settings = Route('settings', layout_override=True) # layout_override
+settings = fy.Route('settings', layout_override=True) # layout_override
 
 @settings.use.layout(override = True) # override = layout_override
 def settings_layout():          
@@ -22,12 +22,12 @@ def settings_layout():
 home.children.append(settings)
 
 async def main(page):
-    fly(page)
+    fy.fly(page)
 
     target_pages = ["home", "home/settings"]
     for _ in range(3):
         for p in target_pages:
-            await asyncio.sleep(3)
+            await asyncio.sleep(2)
             page.fly(p)
 
 ft.run(main)

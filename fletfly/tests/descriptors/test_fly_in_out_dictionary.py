@@ -1,6 +1,6 @@
 # fletfly/tests/descriptors/test_fly_in_out_dictionary.py
 import pytest
-from fletfly import fly_in, fly_out, _FuncDict
+from fletfly import fly_in, fly_out, UseFunc
 # Dummy function to be used as a middleware in tests
 def dummy_middleware(page, **kwargs):
     pass
@@ -9,7 +9,7 @@ def test_fly_in_direct_call_with_kwargs():
 
     result = fly_in(dummy_middleware, role="user", requires_auth=True)
     
-    assert isinstance(result, _FuncDict)
+    assert isinstance(result, UseFunc)
     assert result["func"] == dummy_middleware
     # inheritable defaults to True in fly_in
     assert result["inheritable"] is True
@@ -24,7 +24,7 @@ def test_fly_out_direct_call_with_kwargs():
     """
     result = fly_out(dummy_middleware, clear_cache=True)
     
-    assert isinstance(result, _FuncDict)
+    assert isinstance(result, UseFunc)
     assert result["func"] == dummy_middleware
     # inheritable defaults to False in fly_out
     assert result["inheritable"] is False
@@ -73,4 +73,4 @@ def test_direct_call_type_validation():
     with pytest.raises(TypeError) as excinfo:
         fly_in(dummy_middleware, inheritable="True")
     
-    assert "must be of type bool" in str(excinfo.value)
+    assert "expected to be of type bool" in str(excinfo.value)

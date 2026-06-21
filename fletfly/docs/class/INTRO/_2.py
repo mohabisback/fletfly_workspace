@@ -2,9 +2,10 @@ import flet as ft
 import fletfly as fy
 import asyncio # just for mocking time delay
 
-@fy.Shared('CardDeck2', value='its me everywhere')
-@fy.Shared(value='same obj same data') # auto named to 'CardDeck'
+@fy.Shared(value="It's me everywhere") # detected & auto named to 'CardDeck'
 class CardDeck(ft.TextField): pass
+# Explicitly named and registered via Router
+shared = fy.Shared('CardDeck2', CardDeck, value='same obj same data')
 
 class Home():                  # Route detection: path auto named to "/home"
     
@@ -49,8 +50,9 @@ class Home():                  # Route detection: path auto named to "/home"
             return True
 
 # handed father of class (or list of fathers of classes)
-fy.Router(Home, initial_route = "/home", error_path="/home", every_level_fallback=False, max_views=5, 
-       stack_mode=fy.StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
+fy.Router(routes=[Home], shared=[shared], initial_route = "/home",
+        error_path="/home", every_level_fallback=False, max_views=5, 
+        stack_mode=fy.StackMode.root_all_from_last_home, detect_route_subclasses=False, print_debugs=True)
 
 
 async def main(page):
@@ -58,7 +60,7 @@ async def main(page):
 
     target_pages = ["home/123", "home/456", "home/999", 'home/100']
     for p in target_pages:
-        await asyncio.sleep(10)
+        await asyncio.sleep(5)
         page.fly(p)
 
 ft.run(main)

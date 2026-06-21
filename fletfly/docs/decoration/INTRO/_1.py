@@ -1,14 +1,14 @@
 import asyncio
 import flet as ft
-import fletfly as fy Route, slot, fly
+import fletfly as fy
 
-home = Route()                          # Route detection: path auto named to "/home"
+home = fy.Route()                          # Route detection: path auto named to "/home"
 
 @home.use.layout
 def layout(page):                       # Auto-detected layout
     return ft.Column([
             ft.Text("Header"),
-            slot(page) ])               # Nameless slot for injection
+            fy.slot(page) ])               # Nameless slot for injection
             
 @home.use.fly_in
 def fly_in():                           # Middleware
@@ -22,7 +22,7 @@ def contact():                          # subroute from func, named to "/home/co
 @home.use.child('error', value='Error page')     # fast route "/home/error"
 class A(ft.Text): pass
 
-user = Route('user')                            # Subroute, named to "/home/user"
+user = fy.Route('user')                            # Subroute, named to "/home/user"
 @user.use.view
 def view():                         # main view detection, into layout inject
     return ft.Text('User page')     # injected into parent layout
@@ -30,11 +30,11 @@ def view():                         # main view detection, into layout inject
 home.children.append(user)
 
 async def main(page):
-    fly(page)
+    fy.fly(page)
 
     target_pages = ["home/contact", "home/user", "home/about", 'home/error']
     for p in target_pages:
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
         page.fly(p)
 
 ft.run(main)

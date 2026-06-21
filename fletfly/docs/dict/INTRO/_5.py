@@ -23,9 +23,15 @@ def view():
 def CardDeck(value): 
     return ft.TextField(value)
 
-shared = fy.Shared().view(CardDeck, value='I am shared')
+shared = fy.Shared(CardDeck, value='I am shared')
 
-# Chaining style composition
-home = fy.Route().layout(layout).view(view)
+fy.Route({
+    "path": 'home',
+    "layout": layout,
+    "view": view
+})
 
-ft.run(fy.fly)
+async def main(page):
+    fy.fly(page)
+
+ft.run(main=main)

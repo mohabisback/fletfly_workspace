@@ -1,44 +1,38 @@
-import flet as ft
-import fletfly as fy Route, Router, fly
 import asyncio
+import flet as ft
+import fletfly as fy
 
-a = Route()  # Route detection: path auto named to "/a"
-
-@a.use.view
 def a_view(): 
     return ft.Text('Normal class A view')
 
-a_fallback = Route('*')
-
-@a_fallback.use.view
 def a_fallback_view(): 
     return ft.Text('Fallback for A zone')
 
-b = Route()
-
-b_fallback = Route('*')
-
-@b_fallback.use.view
 def b_fallback_view(): 
     return ft.Text('Fallback for B zone')
 
-c = Route(':id')
-
-@c.use.view
 def b_view(id, color): 
     return ft.Text(f"{id} page, color is {color}")
 
-b.children.extend([c, b_fallback])
-a.children.extend([b, a_fallback])
+# Chaining style composition
+a = fy.Route().view(a_view)
 
-Router(a, error_path='a/*')
+# Branch 'b' and its children
+b = a.child('b')
+b.child(':id').view(b_view)
+b.child('*').view(b_fallback_view)
+
+# Fallback for 'a'
+a.child('*').view(a_fallback_view)
+
+fy.Router(error_path='a/*')
 
 async def main(page):
-    fly(page)
+    fy.fly(page)
     target_pages = ['a/b/123?color="red"', 'a/b/c/d/e/f/g/h/i/j/k/l', 'a/m/n/o/p/q/r/s', 'something']
     for _ in range(3):
         for p in target_pages:
-            await asyncio.sleep(5)
+            await asyncio.sleep(2)
             page.fly(p)
 
 ft.run(main)

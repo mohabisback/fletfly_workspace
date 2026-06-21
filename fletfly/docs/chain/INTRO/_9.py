@@ -1,10 +1,7 @@
 import asyncio
 import flet as ft
-import fletfly as fy Router, Route, data, fly
+import fletfly as fy
 
-home = Route()
-
-@home.use.loader
 async def loader():
     await asyncio.sleep(3)    # mocking data of 100 products
     return {"products":[         
@@ -12,16 +9,15 @@ async def loader():
             "price": f"{ (i + 1) * 10 }$"}
             for i in range(100)]}
 
-@home.use.view
 def view(page): 
     return ft.GridView(expand=True, max_extent=200, spacing=10, controls =[
             ft.Card(content=ft.Column(alignment=ft.Alignment.CENTER, controls=[
-                data(page, 
+                fy.data(page, 
                     ft.Text(value='loading...',
                              size=16,
                              weight='bold'),
                     value=f"products.{i}.name"),
-                data(page, 
+                fy.data(page, 
                     ft.Text(value='loading...',
                              size=14,
                              color='green'),
@@ -30,4 +26,6 @@ def view(page):
             for i in range(100)
         ])   
 
-ft.run(fly)
+home = fy.Route().loader(loader).view(view)
+
+ft.run(fy.fly)

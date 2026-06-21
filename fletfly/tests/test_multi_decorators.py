@@ -33,7 +33,7 @@ def test_child_class_inject():
         assert res4._class == MyClass
         assert res4.props["role"] == "user"
             
-        res5 = Route.child("page3", MyClass, [res2, res3], role="user")
+        res5 = Route.child("page3", MyClass, parents=[res2, res3], role="user")
         assert res5.path == "page3"
         assert res5._class == MyClass
         assert res5.props["role"] == "user"

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import flet as ft
 import re, sys, inspect, asyncio, os, importlib.util, time, builtins
-from .route import aliases, Route, _is_flet_instance, _call_with_payload, _page_err_msg, General
+from .route import Shared, Route, _is_flet_instance, _call_with_payload, _page_err_msg, General
 class StackMode:
     all_views = "all_views" # all views are active and built
     root_target = "root_target" # main home only & target
@@ -48,14 +48,17 @@ class Router: # singleton only 1 instance
 """)
         return General._router_instance
     
-    def __init__(self, routes:type|Route|dict|list[type|Route|dict]|None = None,
+    def __init__(self,
+                 routes:Route|type|dict|list[type|Route|dict]|None = None,
+                 shared:Shared|type|dict|list[Route|type|dict]|None = None,
                  initial_route = "",
                  error_path:str = "",
-                 every_level_fallback=True,
-                 stack_mode:StackMode = StackMode.root_all_from_last_home,
                  max_views:int = 5,
+                 stack_mode:StackMode = StackMode.root_all_from_last_home,
+                 every_level_fallback=True,
                  auto_path_naming=True,
                  detect_created_routes=True,
+                 detect_shared=True,
                  detect_route_subclasses=True,
                  detect_inner_classes=True,
                  detect_method_ordinaries=True,
@@ -75,7 +78,8 @@ class Router: # singleton only 1 instance
         General.detect_method_ordinaries = detect_method_ordinaries
         General.initial_route = initial_route
         General.print_debugs = print_debugs
-        
+        General.detect_shared = detect_shared
+
         self.error_path = error_path
         self.every_level_fallback = every_level_fallback
         self.stack_mode = stack_mode
@@ -88,7 +92,7 @@ class Router: # singleton only 1 instance
             routes = [routes]
         
         _check_time("importing all modules till start of router")
-        Route._create_tree(routes)
+        Route._create_tree(routes, shared)
         _check_time("creating initial tree")
 
         final_route = General._main_zone_tree.get("", None)

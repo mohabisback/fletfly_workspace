@@ -19,15 +19,18 @@ def user_view():
 
 def text(value=''):
     return ft.Text(value)
-
-# Declarative tree composition
-home = fy.Route('home', fy.use.layout(layout), fy.use.fly_in(fly_in_middleware),
-    children=[
-        fy.Route('contact', contact_view),
-        fy.Route('user', user_view),
-        fy.Route('about', fy.use.view(text, value ="About page")),
-        fy.Route('error', fy.use.view(lambda: ft.Text("Error page")))
-    ])
+# Wrap(decorate) your dict with Route() for:
+home = fy.Route({           # Auto detection and insertion into routes tree
+    "path": None,           # auto-path naming to: '/home'
+    "layout": layout,
+    "fly_in": fly_in_middleware,
+    "children": [
+        {"path": "contact", "view": contact_view},
+        {"path": "user", "view": user_view},
+        {"path": "about", "view": text, "props": {"value": "About page"}},
+        {"path": "error", "view": lambda: ft.Text("Error page")}
+    ]
+})
 
 async def main(page):
     fy.fly(page)
@@ -37,4 +40,3 @@ async def main(page):
         page.fly(p)
 
 ft.run(main)
-

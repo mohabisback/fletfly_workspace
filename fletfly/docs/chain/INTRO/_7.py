@@ -1,38 +1,31 @@
 import flet as ft
-import fletfly as fy Route, fly
+import fletfly as fy 
 
 def check_role(role='user'):          # general middleware with params
     return True if role == 'admin' else 'home'
     
-home = Route()
-
-@home.use.view
 def home_view(): 
     return ft.Text("Main view")
 
-# Child route with fly_in_override passed directly via kwargs props
-admin = Route('admin', fly_in_override=True)
-
-@admin.use.view
 def admin_view(): 
     return ft.Text("Admin view")
 
-# Registering local middleware explicitly
-@admin.use.fly_in
 def fly_in_self(): 
     return True
 
-# Registering inheritable middleware with props
-@admin.use.fly_in(inheritable=True, param1='a')
 def func(param1):
     return True
 
-# Registering external function to fly_in explicitly with parameters
-admin.use.fly_in(role='user')(check_role)  # change role to "admin", to enter the page
+# Chaining style composition
+home = fy.Route().view(home_view)
 
-home.children.append(admin)
+# Child route with fly_in_override passed directly via kwargs props
+home.child('admin', fly_in_override=True).view(admin_view)\
+    .fly_in(func, inheritable=True, param1='a')\
+    .fly_in(check_role, role='user')\
+    .fly_in(fly_in_self)
 
 def main(page):
-    fly(page, '/home/admin')
+    fy.fly(page, '/home/admin')
 
 ft.run(main=main)

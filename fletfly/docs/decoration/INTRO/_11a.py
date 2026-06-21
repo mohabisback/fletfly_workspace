@@ -1,10 +1,11 @@
 import flet as ft
-import fletfly as fy Route, fly, Shared
+import fletfly as fy 
 
+shared = fy.Shared()
+@shared.use.view(hero=True, value='I am "CardDeck" shared of Sub Project')
 class CardDeck(ft.TextField): pass
-shared = Shared(CardDeck, hero=True, value='I am "CardDeck" shared of Sub Project')
 
-home = Route()
+home = fy.Route()
 
 @home.use.view
 def sub_home_view():
@@ -15,7 +16,7 @@ def sub_home_view():
         'CardDeck'
     )
 
-settings = Route()
+settings = fy.Route()
 
 @settings.use.view
 def settings_view(page):
@@ -29,4 +30,4 @@ def settings_view(page):
 home.children.append(settings)
 
 if __name__ == "__main__":
-    ft.run(fly)
+    ft.run(fy.fly)

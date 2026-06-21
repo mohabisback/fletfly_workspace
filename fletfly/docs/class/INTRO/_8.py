@@ -1,6 +1,6 @@
+import asyncio
 import flet as ft
 import fletfly as fy
-import asyncio
 
 @fy.Shared(value='I am shared, change me') # auto named to 'CardDeck'
 @fy.Shared('CardDeck2', value='I am shared, change me too')
@@ -25,7 +25,7 @@ class A(fy.Route):
 async def main(page):
     fy.fly(page)
     target_pages = ['home', 'a/b/c/d/e']
-    for _ in range(5):
+    for _ in range(10):
         for p in target_pages:
             await asyncio.sleep(5)
             page.fly(p)

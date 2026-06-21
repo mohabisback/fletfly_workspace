@@ -1,20 +1,16 @@
-import fletfly as fy Route, slot, fly, Shared
 import flet as ft
+import fletfly as fy 
 
-home = Route()
-
-@home.use.layout
 def layout(page):    
     return ft.Column([
         ft.Text("Header"),
-        slot(page),        # Anonymous slot (ordered injection)
-        slot(page, 1),     # named slot (specific injection)
-        slot(page, 'a'),   # named slot (specific injection)
-        slot(page, control=ft.Card()), # default=ft.Container
-        slot(page, "CardDeck", shared=True) # stuck always to shared view named "CardDeck"
+        fy.slot(page),        # Anonymous slot (ordered injection)
+        fy.slot(page, 1),     # named slot (specific injection)
+        fy.slot(page, 'a'),   # named slot (specific injection)
+        fy.slot(page, control=ft.Card()), # default=ft.Container
+        fy.slot(page, "CardDeck", shared=True) # stuck always to shared view named "CardDeck"
     ])
 
-@home.use.view
 def view():
     return (
         {1: ft.Text("Going for slot called 1")},
@@ -27,6 +23,12 @@ def view():
 def CardDeck(value): 
     return ft.TextField(value)
 
-shared = Shared(CardDeck, value='I am shared')
+shared = fy.Shared(CardDeck, value='I am shared')
 
-ft.run(fly)
+# Declarative tree composition
+home = fy.Route(
+    fy.use.layout(layout),
+    fy.use.view(view)
+)
+
+ft.run(fy.fly)

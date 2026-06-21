@@ -509,7 +509,7 @@ class A(fy.Route):
 
 fy.Router(error_path='a/*')
 
-ft.run(ft.fly)
+ft.run(fy.fly)
 ```
 </details>
 

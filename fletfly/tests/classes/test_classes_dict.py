@@ -4,12 +4,12 @@ import fletfly
 from fletfly import (
     Route, 
     Router, 
-    _FuncDict, 
-    _FuncDict
+    UseFunc, 
+    UseFunc
 )
 
 def test_route_from_class_undecorated_method_dict():
-    """Test that an undecorated view method wrapped via aliases stores a _FuncDict."""
+    """Test that an undecorated view method wrapped via aliases stores a UseFunc."""
     # Ensure route detection configuration is enabled
         
     class MockCBV:
@@ -23,7 +23,7 @@ def test_route_from_class_undecorated_method_dict():
     route, kids = Route._route_from_class(MockCBV, None, zone)
     # Verify that view_clsattr holds the dict representation instead of a plain string
     assert hasattr(route, "view")
-    assert isinstance(route._view, _FuncDict)
+    assert isinstance(route._view, UseFunc)
     assert route.view["func"] == "view"
 
 
@@ -42,7 +42,7 @@ def test_route_from_class_static_decorated_method():
     
     # According to the second loop logic, static flagged sets the official_name attribute directly
     assert hasattr(route, "_layout")
-    assert isinstance(route._layout, _FuncDict)
+    assert isinstance(route._layout, UseFunc)
     assert route._layout["func"] == "layout"
 
 
@@ -66,7 +66,7 @@ def test_route_from_class_automated_method_routing_kids():
 
 
 def test_route_from_class_undecorated_fly_in_out_accumulation():
-    """Test that undecorated fly_in methods append a _FuncDict to the clsattr tracker."""
+    """Test that undecorated fly_in methods append a UseFunc to the clsattr tracker."""
     class MockMiddlewareCBV:
         def fly_in(self, page):
             pass
@@ -74,9 +74,9 @@ def test_route_from_class_undecorated_fly_in_out_accumulation():
     class zone: registered_children = set()
     route, class_kids = Route._route_from_class(MockMiddlewareCBV, None, zone)
     
-    # Verify that fly_ins correctly accumulates the _FuncDict wrapper
+    # Verify that fly_ins correctly accumulates the UseFunc wrapper
     assert hasattr(route, "fly_ins")
     assert isinstance(route.fly_ins, list)
     assert len(route.fly_ins) == 1
-    assert isinstance(route.fly_ins[0], _FuncDict)
+    assert isinstance(route.fly_ins[0], UseFunc)
     assert route.fly_ins[0]["func"] == "fly_in"
