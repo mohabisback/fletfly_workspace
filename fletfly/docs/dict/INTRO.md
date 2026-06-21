@@ -8,6 +8,7 @@
 ## 1. Quick Start.
 
 ```python
+import asyncio
 import flet as ft
 import fletfly as fy
 
@@ -28,15 +29,18 @@ def user_view():
 
 def text(value=''):
     return ft.Text(value)
-
-# Declarative tree composition
-home = fy.Route('home', fy.use.layout(layout), fy.use.fly_in(fly_in_middleware),
-    children=[
-        fy.Route('contact', contact_view),
-        fy.Route('user', user_view),
-        fy.Route('about', fy.use.view(text, value ="About page")),
-        fy.Route('error', fy.use.view(lambda: ft.Text("Error page")))
-    ])
+# Wrap(decorate) your dict with Route() for:
+home = fy.Route({           # Auto detection and insertion into routes tree
+    "path": None,           # auto-path naming to: '/home'
+    "layout": layout,
+    "fly_in": fly_in_middleware,
+    "children": [
+        {"path": "contact", "view": contact_view},
+        {"path": "user", "view": user_view},
+        {"path": "about", "view": text, "props": {"value": "About page"}},
+        {"path": "error", "view": lambda: ft.Text("Error page")}
+    ]
+})
 
 ft.run(fy.fly)                    # Start Router, with auto detection of routes.
 ```
@@ -125,9 +129,10 @@ fy.Router(routes=[home], shared=[CardDeck2], initial_route = "/home",
           stack_mode=fy.StackMode.root_all_from_last_home, print_debugs=True)
 
 def main(page):
-    # your main stuff per user
     fy.fly(page)
-ft.run(main)            
+
+if __name__ == "__main__":
+    ft.run(main)        
 ```
 </details>
 
@@ -141,8 +146,8 @@ import flet as ft
 import fletfly as fy 
 
 # will not be registered by creation
-home = fy.Route('home')             # explicit path only
-shared = fy.Shared('shared')        # explicit name only
+home = {'path':'home'}              # explicit path only
+shared = {'name':'shared'}          # explicit name only
 
 fy.Router(
     routes=[home],                  # routes Registered explicitly
@@ -170,6 +175,7 @@ No matter how many views you are opening in the views stack, and how many naviga
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
+import asyncio
 import flet as ft
 import fletfly as fy 
 
@@ -190,16 +196,18 @@ def user_view(page):
         ft.Text(f"id: {user_id}")
     ])
 
-home = fy.Route("{category}",
-            fy.use.layout(layout),
-            fy.use.view(view, hero=True),          # True means 5 in dynamic, 1 in static
-            layout_hero=False,                     # layout_hero in route
-            children=[
-                fy.Route(":id",
-                    fy.use.view(user_view, hero=2) # max 2 pages are saved for different params
-        )
+fy.Route({
+    "path": "{category}",
+    "layout": layout,
+    "layout_hero": False,                  # layout_hero configuration
+    "view": (view, {"hero": True}),        # True means 5 in dynamic, 1 in static
+    "children": [
+        {
+            "path": ":id",
+            "view": (user_view, {"hero": 2}) # max 2 pages are saved for different params
+        }
     ]
-)
+})
 
 ft.run(fy.fly)
 ```
@@ -245,11 +253,11 @@ def CardDeck(value):
 
 shared = fy.Shared(CardDeck, value='I am shared')
 
-# Declarative tree composition
-home = fy.Route(
-    fy.use.layout(layout),
-    fy.use.view(view)
-)
+fy.Route({
+    "path": 'home',
+    "layout": layout,
+    "view": view
+})
 
 ft.run(fy.fly)
 ```
@@ -279,16 +287,17 @@ def settings_layout():
     # returning one view means, forget everything, show me.
     return ft.View(controls=[ft.Text("I am a view")]) # try this instead
 
-# Declarative tree composition
-home = fy.Route(
-    fy.use.layout(layout),
-    children=[
-        fy.Route('settings',
-            fy.use.layout(settings_layout, override=True), # override = layout_override
-            layout_override=True, # layout_override
-        )
+home = fy.Route({
+    "path": None,                                  
+    "layout": layout,
+    "children": [
+        {
+            "path": "settings",                    # Sub route, path: "/home/settings"
+            "layout": (settings_layout, {"override": True}), # with layout
+            "layout_override": True                # in the route
+        }
     ]
-)
+})
 
 ft.run(fy.fly)
 ```
@@ -326,22 +335,24 @@ def fly_in_self():
 def func(param1):
     return True
 
-# Declarative tree composition
-home = fy.Route(
-    fy.use.view(home_view),
-    children=[
-        # Child route with fly_in_override passed directly via kwargs props
-        fy.Route('admin', 
-            fy.use.view(admin_view),
-            fly_in_override=True,
-            fly_ins = [
-                fy.use.fly_in(func, inheritable=True, param1='a'), # Registering inheritable middleware with props
-                fy.use.fly_in(check_role, role='user'),             # Registering external function to fly_in explicitly with parameters (change role to "admin", to enter the page)
-                fly_in_self
-                ],                        # Registering local middleware explicitly
-        )
+home = {
+    "path": "home",
+    "view": home_view,
+    "children": [
+        {
+            "path": "admin",          # Sub route, path: "/home/admin"
+            "view": admin_view,
+            "fly_in_override": True,  # Overriding parent middlewares
+            "fly_ins": [
+                (func, {"inheritable": True, "param1": "a"}), # Inheritable middleware with props via tuple
+                (check_role, {"role": "user"}),               # External function with parameters via tuple
+                fly_in_self                                   # Local middleware callable directly
+            ]
+        }
     ]
-)
+}
+
+fy.Router(home)
 
 def main(page):
     fy.fly(page, '/home/admin')
@@ -363,22 +374,34 @@ A shared view is a view keeping its state outside the hierarchical tree, and can
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
-import asyncio
 import flet as ft
 import fletfly as fy
 
 class CardDeck(ft.TextField): pass
-shared = fy.Shared(CardDeck, value='I am shared, change me') # auto-named to CardDeck
-CardDeck2 = fy.Shared(CardDeck, value='I am shared, change me too')
 
-def home_layout(page):    # Auto-detected layout
+# Auto detected and added
+fy.Shared({
+    "view": CardDeck,
+    "value": 'I am shared, change me'
+})
+
+# Explicitly registered via Router
+CardDeck2 = {
+    "name": "CardDeck2",
+    "view": CardDeck,
+    "props": {
+        "value": 'I am shared, change me too'
+    }
+}
+
+def home_layout(page):
     return ft.Column([
-        fy.slot(page, "CardDeck", shared=True), # stuck always
+        fy.slot(page, "CardDeck", shared=True),
         fy.slot(page) 
     ])
 
 def home_view(): 
-    return 'CardDeck2'     # Shared but delivered by view
+    return 'CardDeck2'
 
 def e_layout(page):
     return ft.Column([
@@ -386,18 +409,20 @@ def e_layout(page):
         fy.slot(page, "CardDeck2", shared=True)
     ])
 
-# Declarative tree composition
+# --- Home Route Dict ---
+home = {
+    "path": "home",
+    "layout": home_layout,
+    "view": home_view
+}
 
-# --- Home Route ---
-home = fy.Route(
-    fy.use.layout(home_layout),
-    fy.use.view(home_view)
-)
+# --- Deep Nested Route Dict ---
+e = {
+    "path": "a/b/c/d/e",
+    "layout": e_layout
+}
 
-# --- Deep Nested Route (a/b/c/d/e) ---
-e = fy.Route('/a/b/c/d/e',
-    fy.use.layout(e_layout)
-)
+fy.Router([home, e], shared=[CardDeck2])
 
 ft.run(fy.fly)
 ```
@@ -440,12 +465,18 @@ def view(page):
             for i in range(100)
         ])   
 
-home = fy.Route(
-    fy.use.loader(loader),
-    fy.use.view(view)
-)
+home = {
+    "path": "home",
+    "loader": loader,
+    "view": view
+}
 
-ft.run(fy.fly)
+fy.Router(home)
+
+async def main(page):
+    fy.fly(page)
+
+ft.run(main=main)
 ```
 </details>
 
@@ -481,18 +512,24 @@ def view(id, role, num):
     # View requests 'id' (dynamic param) and 'role'/'num' (route props)
     return ft.Text(f"User {id} with number {num} is logged in as {role}")
 
-# Route instance initialization with kwargs props
-profile = fy.Route('profile/:id',
-                layout= fy.use.layout(layout),
-                fly_ins=[fy.use.fly_in(external_func, auth=True)], # Registering external function to fly_in explicitly
-                view=fy.use.view(view),
-                role='admin', theme='dark', props={'num':3},
-)
+profile = {
+    "path": "profile/:id",
+    "layout": layout,
+    "view": view,
+    "fly_ins": [
+        (external_func, {"auth": True})  # Explicit middleware with parameters via tuple
+    ],
+    "role": "admin",     # Auto collected prop
+    "theme": "dark",     # Auto collected prop
+    "props": {"num": 3}  # Explicit props
+}
 
-def main(page):
+fy.Router(profile)
+
+async def main(page):
     fy.fly(page, 'profile/fletfly')
 
-ft.run(main)
+ft.run(main=main)
 ```
 </details>
 
@@ -501,6 +538,7 @@ ft.run(main)
 ## 11. Microfrontend With Zone and page.fly.
 - Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
 - Use `zone()` function and navigate with `page.fly()`, to reach relative paths in your sub projects.
+- Deliver your module and let us handle the auto-detection magic, or manually provide your routes and shared objects.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -509,10 +547,14 @@ ft.run(main)
 ```Python
 import flet as ft
 import fletfly as fy 
-from _11a import home as Project1 # Imported the Route instance instead of the class
+import _11a as Project1 # import module of sub project
 
 class CardDeck(ft.TextField): pass
-shared = fy.Shared(CardDeck, value='I am "CardDeck" shared of Main Zone')
+
+fy.Shared({ # Auto detected, named and added
+    "view": CardDeck,
+    "value": 'I am "CardDeck" shared of Main Zone'
+})
 
 def home_view(): 
     return (
@@ -521,16 +563,25 @@ def home_view():
         'CardDeck' 
     )
 
-project = fy.Zone(Project1) # Zone, auto named to '/home/project'
-
-home = fy.Route(
-    fy.use.view(home_view),
-    children=[
-        project
+home = {
+    "path": "home",
+    "view": home_view,
+    "children": [
+        fy.Zone(
+            modules= Project1,      # you have to pass the module itself
+            routes = Project1.home, # we can't auto-detect unless wrapped
+          # shared = Project1.shared   # it is auto-detected by wrapping
+            path = 'project',    
+            )       
     ]
-)
+}
 
-ft.run(fy.fly)
+fy.Router(home)
+
+async def main(page):
+    fy.fly(page)
+
+ft.run(main=main)
 ```
 #### Sub Project
 ```Python
@@ -538,7 +589,13 @@ import flet as ft
 import fletfly as fy 
 
 class CardDeck(ft.TextField): pass
-shared = fy.Shared(CardDeck, hero=True, value='I am "CardDeck" shared of Sub Project')
+
+# Auto detected, named and added
+fy.Shared({
+    "view": CardDeck,
+    "hero": True,
+    "value": 'I am "CardDeck" shared of Sub Project'
+})
 
 def sub_home_view():
     return (
@@ -556,17 +613,24 @@ def settings_view():
         'CardDeck'
     )
 
-home = fy.Route(
-    fy.use.view(sub_home_view),
-    children=[
-        fy.Route('settings',
-            fy.use.view(settings_view)
-        )
+home = {
+    "path": "home",
+    "view": sub_home_view,
+    "children": [
+        {
+        "path": "settings",
+        "view": settings_view
+        }
     ]
-)
+}
+
+
+async def main(page):
+    fy.fly(page)
 
 if __name__ == "__main__":
-    ft.run(fy.fly)
+    fy.Router(home)       # Router must be here
+    ft.run(main=main)
 ```
 </details>
 
@@ -580,6 +644,7 @@ if __name__ == "__main__":
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
 ```Python
+import asyncio
 import flet as ft
 import fletfly as fy
 
@@ -595,25 +660,29 @@ def b_fallback_view():
 def b_view(id, color): 
     return ft.Text(f"{id} page, color is {color}")
 
-# Declarative tree composition
-a = fy.Route(  # Route detection: path auto named to "/a"
-    fy.use.view(a_view),
-    children=[
-        fy.Route('b',
-            children=[
-                fy.Route(':id',
-                    fy.use.view(b_view)
-                ),
-                fy.Route('*',
-                    fy.use.view(b_fallback_view)
-                )
-            ]
-        ),
-        fy.Route('*',
-            fy.use.view(a_fallback_view)
-        )
+a = {
+    "path": "a",
+    "view": a_view,
+    "children": [
+        {
+        "path": "b",
+        "children": [
+            {
+           "path": ":id",
+            "view": b_view
+            },
+            {
+            "path": "*",
+            "view": b_fallback_view
+            }
+        ]
+        },
+        {
+        "path": "*",
+        "view": a_fallback_view
+        }
     ]
-)
+}
 
 fy.Router(a, error_path='a/*')
 
@@ -623,14 +692,12 @@ ft.run(fy.fly)
 
 <small>**[<font size="1">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
-## 13. Deep Nesting & Route Reusability.
+## 13. Auto Tree Injection, Deep Nesting & Route Reusability.
 
-- Deeply nested routing structures are fully supported out of the box.
-
-- Route Multi-Instantiation: Reuse the same view multiple times across different paths with different properties.
-
-- Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
-
+- **Auto Tree Injection:** Stop manually nesting complex subtrees. Just define your paths, and the engine automatically handles the routing hierarchy. We will inject descendents for you, inheriting all layouts & middlwares.
+- **Deep Nesting:** Deeply nested routing structures are fully supported out of the box.
+- **Route Multi-Instantiation:** Reuse the same view (or class) multiple times across different paths with different properties.
+- **Stacking Children:** Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
 
@@ -639,47 +706,64 @@ import asyncio
 import flet as ft
 import fletfly as fy
 
-def color_page(color='green'): 
+def color_page(color='black'): 
     return ft.Text(f"Color is {color}", color=color)
 
-blue_page = fy.Route(color_page, color='blue')
-orange_page = fy.Route(fy.use.view(color_page), color='orange')
+# Auto detected by wrapping
+fy.Route({ # this will directly go beside his brothers deep in the tree
+    "path": "a/b/c/d/e/blue", # look at the tree printed in next section
+    "view": color_page,
+    "color": "blue"
+})
+# delivered to router
+green_page = {
+    "path": "a/b/c/d/e/green",          # will directly go beside his brothers
+    "view": (color_page, {"color": "green"}) # notice the printed tree next section
+}
 
-# Declarative tree composition
-a = fy.Route('a',
-    children=[
-        fy.Route('b',
-            children=[
-                fy.Route('c',
-                    children=[
-                        fy.Route('d',
-                            children=[
-                                fy.Route('e',
-                                    fy.use.child('green_page', fy.use.view(color_page, color='green')),
-                                    fy.Route('cyan', fy.use.view(color_page), color='cyan'),
-                                    blue_page,
-                                    children=[
-                                        fy.Route('red_page', fy.use.view(color_page), color='red'),   
-                                        fy.Route(':color', fy.use.view(color_page)),                  
-                                        orange_page
-                                            ],
-                                        )
-                                    ]
-                                )
-                            ]
-                        )
+a = {
+    "path": "a",
+    "layout": lambda page: (ft.Text("Layout Header"), fy.slot(page)),
+    "fly_in": lambda: True,   # middleware for all descendents
+    "children": [
+        {
+        "path": "b",
+        "children": [
+            {
+            "path": "c",
+            "children": [
+                {
+                "path": "d",
+                "children": [
+                    {
+                    "path": "e",
+                    "children": [
+                        {
+                        "path": "red",
+                        "view": fy.use.view(color_page, color="red"),
+                        },
+                        {
+                        "path": ":color",
+                        "view": color_page
+                        },
                     ]
-                )
+                    }
+                ]
+                }
             ]
-        )
+            }
+        ]
+        }
+    ]
+}
 
-fy.Router(a, print_path_zone='/a/b/c/d/e') # print only this branch
+fy.Router([a, green_page], print_path_zone='/a/b/c/d/e') # print only this branch
 
 async def main(page):
     fy.fly(page)
     target_pages = [
-        'a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
-        'a/b/c/d/e/cyan', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow'
+        'a/b/c/d/e/red', 'a/b/c/d/e/blue', 'a/b/c/d/e/orange',
+        'a/b/c/d/e/cyan', 'a/b/c/d/e/green', 'a/b/c/d/e/yellow'
     ]
     for _ in range(1): 
         for p in target_pages:
@@ -704,56 +788,52 @@ ft.run(main)
 <summary><font size="7"><b>👁️ Terminal Example</b></font></summary>
 
 ```text
-[fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.68ms
-[fletfly Debug] Time taken during [ creating initial tree ]: 0.85ms
-[fletfly Debug] Time taken during [ parsing static, dynamic & shared nodes maps ]: 0.42ms
+[fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.34ms
+[fletfly Debug] Time taken during [ creating initial tree ]: 1.13ms
+[fletfly Debug] Time taken during [ parsing static, dynamic & shared nodes maps ]: 0.71ms
 -------------------- fletfly -- tree branch ---------------------
 ─ /a/b/c/d/e/ ─── cls:               view:               ly:               to:                ins: 0  outs: 0 
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── :color/ ─────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [DYN]/a/b/c/d/e/:color
+    ├── blue/ ───────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/blue
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── red-page/ ───── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/red-page
+    ├── green/ ──────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/green
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── green-page/ ─── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/green-page
+    ├── red/ ────────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/red
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── cyan-page/ ──── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/cyan-page
-    │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── blue-page/ ──── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/blue-page
-    │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    └── orange-page/ ── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/orange-page
+    └── :color/ ─────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [DYN]/a/b/c/d/e/:color
       -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
 
 --------------------- fletfly -- static map ---------------------
-layouts=[0]  view="N/A" fly_to=/a/b/c/d/e/red-page  path=''
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/red-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/green-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/cyan-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/blue-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/orange-page'
+layouts=[0]  view="N/A" fly_to=/a/b/c/d/e/red  path=''
+layouts=[1]  view="N/A" fly_to=None  path='/a'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/blue'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/green'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/red'
 -------------------- fletfly -- dynamic map ---------------------
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/:color'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/:color'
 -------------------- fletfly -- shared map ----------------------
 -----------------------------------------------------------------
-[fletfly Debug] Time taken during [ triggering initial _handle_route_change by flet ]: 1717.70ms
+http://127.0.0.1:11729
+[fletfly Debug] Time taken during [ triggering initial _handle_route_change by flet ]: 2894.62ms
 ---------- match path = / ----------
-[fletfly] Redirecting by <fly_to> to: path '/a/b/c/d/e/red-page'
----------- match path = /a/b/c/d/e/red-page ----------
-[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 3.70ms
-[fletfly Debug] Time taken during [ reconciling views ]: 0.34ms
-[fletfly Debug] Time taken during [ page update ]: 1.48ms
-[fletfly Debug] Active views: 1 ['red-page']
-[fletfly Debug] Active layouts: 0 
+[fletfly] Redirecting by <fly_to> to: path '/a/b/c/d/e/red'
+---------- match path = /a/b/c/d/e/red ----------
+[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.57ms
+[fletfly Debug] Time taken during [ reconciling views ]: 3.51ms
+[fletfly Debug] Time taken during [ page update ]: 2.94ms
+[fletfly Debug] Active views: 2 ['a', 'red']
+[fletfly Debug] Active layouts: 1 ['a']
 [fletfly Debug] Active shared views: 0 
 [fletfly Debug] Active instances: 0 
 [fletfly Debug] Hero views: 0 
 [fletfly Debug] Hero layouts: 0 
 [fletfly Debug] Hero shared: 0 
----------- match path = /a/b/c/d/e/blue-page ----------
-[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.67ms
-[fletfly Debug] Time taken during [ reconciling views ]: 1.44ms
-[fletfly Debug] Time taken during [ page update ]: 1.02ms
-[fletfly Debug] Active views: 2 ['red-page', 'blue-page']
-[fletfly Debug] Active layouts: 0 
+---------- match path = /a/b/c/d/e/blue ----------
+[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 1.04ms
+[fletfly Debug] Time taken during [ reconciling views ]: 1.27ms
+[fletfly Debug] Time taken during [ page update ]: 1.80ms
+[fletfly Debug] Active views: 2 ['a', 'blue']
+[fletfly Debug] Active layouts: 1 ['a']
 [fletfly Debug] Active shared views: 0 
 [fletfly Debug] Active instances: 0 
 [fletfly Debug] Hero views: 0 

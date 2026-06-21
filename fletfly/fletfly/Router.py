@@ -63,6 +63,7 @@ class Router: # singleton only 1 instance
                  detect_inner_classes=True,
                  detect_method_ordinaries=True,
                  detect_method_routes=True,
+                 detect_zone_modules=True,
                  print_path_zone='/', 
                  print_static_pages=True,
                  print_dynamic_pages=True,
@@ -79,18 +80,13 @@ class Router: # singleton only 1 instance
         General.initial_route = initial_route
         General.print_debugs = print_debugs
         General.detect_shared = detect_shared
+        General.detect_zone_modules = detect_zone_modules
 
         self.error_path = error_path
         self.every_level_fallback = every_level_fallback
         self.stack_mode = stack_mode
         self.max_views = max_views
-        if routes is None:
-            routes = []
-        elif isinstance(routes, (list, tuple, set)):
-            routes = list(routes)
-        else:
-            routes = [routes]
-        
+
         _check_time("importing all modules till start of router")
         Route._create_tree(routes, shared)
         _check_time("creating initial tree")
@@ -723,19 +719,10 @@ class Router: # singleton only 1 instance
                 ok_chain = [home_node] + node.lineage
         else:
             ok_chain = node.lineage
-
-        def get_real_node(empty_node: Router._FlightNode):
-            new_node = None
-            if empty_node.fly_to:
-                empty_to = self.static_map.get(empty_node.fly_to, None)
-                if empty_to: 
-                    new_node = empty_to
-            return new_node if new_node else empty_node
-        
-        temp_chain = [get_real_node(n) for n in ok_chain]
+    
         final_chain = [node]
         insert_idx = 0
-        for item in temp_chain:
+        for item in ok_chain:
             if item not in final_chain:
                 final_chain.insert(insert_idx, item)
                 insert_idx+=1

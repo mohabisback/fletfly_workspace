@@ -2,8 +2,8 @@ import flet as ft
 import fletfly as fy 
 
 # will not be registered by creation
-home = fy.Route('home')             # explicit path only
-shared = fy.Shared('shared')        # explicit name only
+home = {'path':'home'}              # explicit path only
+shared = {'name':'shared'}          # explicit name only
 
 fy.Router(
     routes=[home],                  # routes Registered explicitly

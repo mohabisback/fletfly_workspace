@@ -5,11 +5,15 @@ import fletfly as fy
 def color_page(color='green'): 
     return ft.Text(f"Color is {color}", color=color)
 
-blue_page = fy.Route(color_page, color='blue')
-orange_page = fy.Route(fy.use.view(color_page), color='orange')
+# Auto detected, injected directly beside his deeply nested brothers
+fy.Route('a/b/c/d/e/blue', color_page, color='blue') 
+# Delivered directly to the router
+green_page = fy.Route('a/b/c/d/e/green', fy.use.view(color_page, color='green'))
 
 # Declarative tree composition
 a = fy.Route('a',
+    layout=lambda page: (ft.Text("Layout Header"), fy.slot(page)), 
+    fly_in=lambda: True,  # middleware for all descendents)
     children=[
         fy.Route('b',
             children=[
@@ -18,13 +22,9 @@ a = fy.Route('a',
                         fy.Route('d',
                             children=[
                                 fy.Route('e',
-                                    fy.use.child('green_page', fy.use.view(color_page, color='green')),
-                                    fy.Route('cyan', fy.use.view(color_page), color='cyan'),
-                                    blue_page,
+                                    fy.use.child('red', fy.use.view(color_page, color='red')),
                                     children=[
-                                        fy.Route('red_page', fy.use.view(color_page), color='red'),   
-                                        fy.Route(':color', fy.use.view(color_page)),                  
-                                        orange_page
+                                        fy.Route(':color', fy.use.view(color_page))
                                             ],
                                         )
                                     ]
@@ -36,13 +36,13 @@ a = fy.Route('a',
             ]
         )
 
-fy.Router(a, print_path_zone='/a/b/c/d/e') # print only this branch
+fy.Router([a, 'green_page'], print_path_zone='/a/b/c/d/e') # print only this branch
 
 async def main(page):
     fy.fly(page)
     target_pages = [
-        'a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
-        'a/b/c/d/e/cyan', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow'
+        'a/b/c/d/e/red', 'a/b/c/d/e/blue', 'a/b/c/d/e/orange',
+        'a/b/c/d/e/cyan', 'a/b/c/d/e/green', 'a/b/c/d/e/yellow'
     ]
     for _ in range(1): 
         for p in target_pages:

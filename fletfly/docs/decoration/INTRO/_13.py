@@ -2,44 +2,51 @@ import flet as ft
 import fletfly as fy 
 import asyncio
 
-a = fy.Route()
-b = fy.Route()
-c = fy.Route()
-d = fy.Route()
-e = fy.Route()
 
-# Hierarchy assembly
+# Auto detected by wrapping
+blue_page=fy.Route(
+    path="a/b/c/d/e/blue", # injected directly beside his brothers
+    color="blue"
+)
+
+# delivered to router
+green_page = fy.Route(
+    path="a/b/c/d/e/green", # injected directly beside his brothers
+)
+
+a = fy.Route(
+    path="a", 
+    layout=lambda page: (ft.Text("Layout Header"), fy.slot(page)), 
+    fly_in=lambda: True  # middleware for all descendents
+)
+b = fy.Route(path="b")
+c = fy.Route(path="c")
+d = fy.Route(path="d")
+e = fy.Route(path="e")
+
 a.children.append(b)
 b.children.append(c)
 c.children.append(d)
 d.children.append(e)
 
-cyan_page = fy.Route(color='cyan')
-
-@cyan_page.use.view                      # add function as view
-@e.use.child('red_page', color='red')    # add function as child
-@e.use.child(':color')                   # as dynamic child
-def color_page(color='green'): 
+@blue_page.use.view                 # route uses the func as view
+@green_page.use.view(color='green') # route uses the func as view
+@e.use.child('red', color='red')    # creates sub route with func as view
+@e.use.child(':color')              # creates sub route with func as view
+def color_page(color='black'): 
     return ft.Text(f"Color is {color}", color=color)
-e.use.child('green_page', color='green')(color_page) # as child
 
-e.children.extend([
-            cyan_page,
-            fy.child('blue-page' ,color_page, color='blue'),
-            fy.child(color_page, 'orange-page', color='orange')
-])
-
-fy.Router(a, print_path_zone='/a/b/c/d/e') # print only this branch
+fy.Router([a, green_page], print_path_zone='/a/b/c/d/e') # print only this branch
 
 async def main(page):
     fy.fly(page)
     target_pages = [
-        'a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
-        'a/b/c/d/e/cyan', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow'
+        'a/b/c/d/e/red', 'a/b/c/d/e/blue', 'a/b/c/d/e/orange',
+        'a/b/c/d/e/cyan', 'a/b/c/d/e/green', 'a/b/c/d/e/yellow'
     ]
     for _ in range(1): 
         for p in target_pages:
             await asyncio.sleep(2)
             page.fly(p)
 
-ft.run(main)
+ft.run(main=main)

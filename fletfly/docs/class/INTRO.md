@@ -430,6 +430,7 @@ ft.run(main)
 ## 11. Microfrontend With Zone and page.fly.
 - Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
 - Use `zone()` function and navigate with `page.fly()`, to reach relative paths in your sub projects.
+- Deliver your module and let us handle the auto-detection magic, or manually provide your routes and shared objects.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -438,7 +439,7 @@ ft.run(main)
 ```Python
 import flet as ft
 import fletfly as fy
-from _11a import Home as Project1
+import _11a as Project1 # import module of sub project
 
 @fy.Shared(value = 'I am "CardDeck" shared of Main Zone')
 class CardDeck(ft.TextField): pass
@@ -449,8 +450,12 @@ class Home(fy.Route): # Main project '/home'
                 ft.Button("Go Sub Project", on_click=lambda e: e.page.fly('home/project')),
                 'CardDeck' )
     
-    Project = fy.Zone(Project1) # Zone, auto named to '/home/project'
-
+    project = fy.Zone(
+        modules= Project1,            # module of second project
+        # routes = Project1.home,     # if auto-detection is off
+        # shared = Project1.shared,   # if auto-detection is off
+        # path = 'project'            #if auto-naming is off
+            )
 ft.run(fy.fly)
 ```
 #### Sub Project
@@ -517,13 +522,12 @@ ft.run(fy.fly)
 
 <small>**[<font size="1">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
-## 13. Deep Nesting & Class Reusability.
+## 13. Auto Tree Injection, Deep Nesting & Route Reusability.
 
-- Deeply nested routing structures (CBV/FBV) are fully supported out of the box.
-
-- Route Multi-Instantiation: Reuse the same class multiple times across different paths with different properties.
-
-- Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
+- **Auto Tree Injection:** Stop manually nesting complex subtrees. Just define your paths, and the engine automatically handles the routing hierarchy. We will inject descendents for you, inheriting all layouts & middlwares.
+- **Deep Nesting:** Deeply nested routing structures are fully supported out of the box.
+- **Route Multi-Instantiation:** Reuse the same view (or class) multiple times across different paths with different properties.
+- **Stacking Children:** Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>

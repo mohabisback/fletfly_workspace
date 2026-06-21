@@ -453,6 +453,7 @@ ft.run(main)
 ## 11. Microfrontend With Zone and page.fly.
 - Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
 - Use `zone()` function and navigate with `page.fly()`, to reach relative paths in your sub projects.
+- Deliver your module and let us handle the auto-detection magic, or manually provide your routes and shared objects.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -461,7 +462,7 @@ ft.run(main)
 ```Python
 import flet as ft
 import fletfly as fy 
-from _11a import home as Project1 # Imported the Route instance instead of the class
+import _11a as Project1 # import the second project
 
 class CardDeck(ft.TextField): pass
 shared = fy.Shared().view(CardDeck).props(value='I am "CardDeck" shared of Main Zone')
@@ -473,7 +474,12 @@ def home_view():
         'CardDeck' 
     )
 
-project = fy.Zone(Project1) # Zone, auto named to '/home/project'
+project = fy.Zone(
+    modules= Project1,          # module of second project
+  # routes = Project1.home,     # if auto-detection is off
+  # shared = Project1.shared,   # if auto-detection is off
+  # path = 'project'            #if auto-naming is off
+    )
 
 home = fy.Route().view(home_view)
 home.child(project)
@@ -556,13 +562,12 @@ ft.run(fy.fly)
 
 <small>**[<font size="1">More About Fallbacks</font>](docs/class/fallback.md)**</small>
 
-## 13. Deep Nesting & Route Reusability.
+## 13. Auto Tree Injection, Deep Nesting & Route Reusability.
 
-- Deeply nested routing structures are fully supported out of the box.
-
-- Route Multi-Instantiation: Reuse the same view multiple times across different paths with different properties.
-
-- Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
+- **Auto Tree Injection:** Stop manually nesting complex subtrees. Just define your paths, and the engine automatically handles the routing hierarchy. We will inject descendents for you, inheriting all layouts & middlwares.
+- **Deep Nesting:** Deeply nested routing structures are fully supported out of the box.
+- **Route Multi-Instantiation:** Reuse the same view (or class) multiple times across different paths with different properties.
+- **Stacking Children:** Support for stacking multiple `@child` decorators or calling `child()` multiple times with distinct configurations.
 
 <details>
 <summary><font size="7"><b>👁️ Code Example</b></font></summary>
@@ -575,27 +580,27 @@ import fletfly as fy
 def color_page(color='green'): 
     return ft.Text(f"Color is {color}", color=color)
 
-blue_page = fy.Route().view(color_page).props(color='blue')
-orange_page = fy.Route().view(color_page).props(color='orange')
+# Auto detected route and injected beside its brothers in the tree
+fy.Route('a/b/c/d/e/blue').view(color_page).props(color='blue')
 
-# Chaining style composition
-a = fy.Route('a')
+# handed to Router, also injected in the tree beside its brothers
+green_page = fy.Route('a/b/c/d/e/green').view(color_page).props(color='green')
+
+a = fy.Route('a')\
+    .layout(lambda page: (ft.Text("Layout Header"), fy.slot(page)))\
+    .fly_in(lambda: True)  # middleware for all descendents))
 e = a.child('b').child('c').child('d').child('e')
 
-e.child('green_page').view(color_page).props(color='green')
-e.child('cyan').view(color_page, color='cyan')
-e.child(blue_page)
 e.child('red_page').view(color_page).props(color='red')
 e.child(':color').view(color_page)
-e.child(orange_page)
 
-fy.Router(print_path_zone='/a/b/c/d/e') # print only this branch
+fy.Router([a, green_page], print_path_zone='/a/b/c/d/e') # print only this branch
 
 async def main(page):
     fy.fly(page)
     target_pages = [
-        'a/b/c/d/e/red-page', 'a/b/c/d/e/blue-page', 'a/b/c/d/e/orange-page',
-        'a/b/c/d/e/cyan', 'a/b/c/d/e/green-page', 'a/b/c/d/e/yellow'
+        'a/b/c/d/e/red', 'a/b/c/d/e/blue', 'a/b/c/d/e/orange',
+        'a/b/c/d/e/cyan', 'a/b/c/d/e/green', 'a/b/c/d/e/yellow'
     ]
     for _ in range(1): 
         for p in target_pages:
@@ -620,56 +625,52 @@ ft.run(main)
 <summary><font size="7"><b>👁️ Terminal Example</b></font></summary>
 
 ```text
-[fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.68ms
-[fletfly Debug] Time taken during [ creating initial tree ]: 0.85ms
-[fletfly Debug] Time taken during [ parsing static, dynamic & shared nodes maps ]: 0.42ms
+[fletfly Debug] Time taken during [ importing all modules till start of router ]: 0.76ms
+[fletfly Debug] Time taken during [ creating initial tree ]: 0.88ms
+[fletfly Debug] Time taken during [ parsing static, dynamic & shared nodes maps ]: 0.41ms
 -------------------- fletfly -- tree branch ---------------------
 ─ /a/b/c/d/e/ ─── cls:               view:               ly:               to:                ins: 0  outs: 0 
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── :color/ ─────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [DYN]/a/b/c/d/e/:color
+    ├── blue/ ───────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/blue
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
     ├── red-page/ ───── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/red-page
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── green-page/ ─── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/green-page
+    ├── :color/ ─────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [DYN]/a/b/c/d/e/:color
     │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── cyan-page/ ──── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/cyan-page
-    │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    ├── blue-page/ ──── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/blue-page
-    │ -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
-    └── orange-page/ ── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/orange-page
+    └── green/ ──────── cls:               view:<color_page>   ly:               to:                ins: 0  outs: 0  [STC]/a/b/c/d/e/green
       -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  -  - 
 
 --------------------- fletfly -- static map ---------------------
-layouts=[0]  view="N/A" fly_to=/a/b/c/d/e/red-page  path=''
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/red-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/green-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/cyan-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/blue-page'
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/orange-page'
+layouts=[0]  view="N/A" fly_to=/a/b/c/d/e/blue  path=''
+layouts=[1]  view="N/A" fly_to=None  path='/a'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/blue'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/red-page'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/green'
 -------------------- fletfly -- dynamic map ---------------------
-layouts=[0]  view=<color_page> fly_to=None  path='/a/b/c/d/e/:color'
+layouts=[1]  view=<color_page> fly_to=None  path='/a/b/c/d/e/:color'
 -------------------- fletfly -- shared map ----------------------
 -----------------------------------------------------------------
-[fletfly Debug] Time taken during [ triggering initial _handle_route_change by flet ]: 1717.70ms
+http://127.0.0.1:54289
+[fletfly Debug] Time taken during [ triggering initial _handle_route_change by flet ]: 1535.71ms
 ---------- match path = / ----------
-[fletfly] Redirecting by <fly_to> to: path '/a/b/c/d/e/red-page'
----------- match path = /a/b/c/d/e/red-page ----------
-[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 3.70ms
-[fletfly Debug] Time taken during [ reconciling views ]: 0.34ms
-[fletfly Debug] Time taken during [ page update ]: 1.48ms
-[fletfly Debug] Active views: 1 ['red-page']
-[fletfly Debug] Active layouts: 0 
+[fletfly] Redirecting by <fly_to> to: path '/a/b/c/d/e/blue'
+---------- match path = /a/b/c/d/e/blue ----------
+[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 1.55ms
+[fletfly Debug] Time taken during [ reconciling views ]: 3.44ms
+[fletfly Debug] Time taken during [ page update ]: 2.02ms
+[fletfly Debug] Active views: 2 ['a', 'blue']
+[fletfly Debug] Active layouts: 1 ['a']
 [fletfly Debug] Active shared views: 0 
 [fletfly Debug] Active instances: 0 
 [fletfly Debug] Hero views: 0 
 [fletfly Debug] Hero layouts: 0 
 [fletfly Debug] Hero shared: 0 
----------- match path = /a/b/c/d/e/blue-page ----------
-[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.67ms
-[fletfly Debug] Time taken during [ reconciling views ]: 1.44ms
-[fletfly Debug] Time taken during [ page update ]: 1.02ms
-[fletfly Debug] Active views: 2 ['red-page', 'blue-page']
-[fletfly Debug] Active layouts: 0 
+---------- match path = /a/b/c/d/e/red ----------
+[fletfly Debug] Time taken during [ navigation preparation for reconciling ]: 0.94ms
+[fletfly Debug] Time taken during [ reconciling views ]: 0.80ms
+[fletfly Debug] Time taken during [ page update ]: 1.45ms
+[fletfly Debug] Active views: 2 ['a', 'red']
+[fletfly Debug] Active layouts: 1 ['a']
 [fletfly Debug] Active shared views: 0 
 [fletfly Debug] Active instances: 0 
 [fletfly Debug] Hero views: 0 

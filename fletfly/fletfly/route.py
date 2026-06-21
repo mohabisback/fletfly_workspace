@@ -29,7 +29,7 @@ class General:
     shared_map = {}
     _attr_prefix = "$"
     _zones = []
-    _reserved_anchor_modules = set()
+    _preserved_modules = set()
 
     # Router
     initial_route = ""
@@ -40,6 +40,7 @@ class General:
     detect_method_ordinaries = True
     detect_route_subclasses = True
     detect_inner_classes = True
+    detect_zone_modules = True
     print_debugs = True
     _router_instance = None
 
@@ -327,7 +328,7 @@ class _MethodHandler:
 
     def _child_item(self, item):
         if item is None: return None
-        if isinstance(item, (Route, Zone)):
+        if isinstance(item, (Route, Zone, dict)):
             return item
         elif callable(item):
             _get_set_payload(item)
@@ -1207,9 +1208,14 @@ class Route():
         self._dict = None
 
         # dict
-        if len(args) == 1 and isinstance(args[0], dict) and not kwargs:
+        if len(args) > 0 and isinstance(args[0], dict):
             self._dict = args[0]
-            args = []
+            self._route_from_dict(self, args[0])
+            args = args[1:]
+        if len(args) > 0 and isinstance(args[0], type):
+            self._class = args[0]
+            args = args[1:]
+
         self._adjust_locals(args, kwargs)
         self.parent = None
         # Dynamic calling module detection
@@ -1426,18 +1432,11 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             if route_node._class and not getattr(route_node, "_fletfly_method_child", None):
                 route, more_children = cls._route_from_class(route_node._class, route_node, zone)
                 children.extend(more_children)
-            elif route_node._dict:
-                route, more_children = cls._route_from_dict(route_node._dict, route_node, zone)
-                children.extend(more_children)
             else:
                 route = route_node
             route.children = []
         elif isinstance(route_node, type):
             route, more_children = cls._route_from_class(route_node, None, zone)
-            children.extend(more_children)
-            route.children = []
-        elif isinstance(route_node, dict):
-            route, more_children = cls._route_from_dict(route_node, None, zone)
             children.extend(more_children)
             route.children = []
 
@@ -1662,11 +1661,12 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     for kid_dict in list_of_dicts: # dic has kwargs, and single keys for expected.
                         kid_props = kid_dict.pop("props", {})
 
-                        if item_name in ["view", "layout"]:
-                            setattr(route, item_name, UseFunc(func=attr_name, name=item_name, props=kid_props))
+                        if item_name in ["view", "layout", "loader"]:
+                            if getattr(route, f"_{item_name}", None) is None:
+                                setattr(route, item_name, UseFunc(func=attr_name, name=item_name, props=kid_props))
+                                for item in kid_dict:
+                                    setattr(route, item, kid_dict[item])
                             remove_aliases_of(item_name)
-                            for item in kid_dict:
-                                setattr(route, item, kid_dict[item])
 
                         elif item_name in ["fly_in", "fly_out"]:
                             dic = UseFunc(func=attr_name, name=item_name, props=kid_props)
@@ -1698,14 +1698,17 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     _get_set_payload(attr_val)
                     if General.detect_method_ordinaries:
                         if official_name in ["view", "layout", "loader"]:
-                            setattr(route, official_name, UseFunc(func=attr_val if static else attr_name, name=official_name))
+                            if getattr(route, f"_{official_name}", None) is None:
+                                setattr(route, official_name, UseFunc(func=attr_val if static else attr_name, name=official_name))
+                            remove_aliases_of(official_name)
                         elif official_name in ("fly_in", "fly_out"):
                             getattr(route, f"{official_name}s", []).append(attr_val if static else attr_name)
                         elif official_name in ("index", "child"):
                             sub = create_index_child(attr_name, attr_val, {}, official_name)
                 else:
                     if official_name in ("path", "name"): # actual value
-                        setattr(route, official_name, attr_val)
+                        if getattr(route, f"_{official_name}", None) is None:
+                            setattr(route, official_name, attr_val)
                         remove_aliases_of(local_aliases[attr_name])
                     if official_name == "children":
                         remove_aliases_of(local_aliases[attr_name])
@@ -1715,12 +1718,14 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         else:
                             raise ValueError(f"[fletfly] {attr_name} value should be iterable (list | tuple).")
                     elif official_name in ["title", "icon"]:
-                        setattr(route, official_name, General._attr_prefix+attr_name)
+                        if getattr(route, f"_{official_name}", None) is None:
+                            setattr(route, official_name, General._attr_prefix+attr_name)
                         remove_aliases_of(local_aliases[attr_name])
                     elif official_name in ["fly_in", "fly_out"]:
                         getattr(route, f"{official_name}s", []).append(attr_val)
                     elif official_name not in ("path", "name"): # booleans
-                        setattr(route, official_name, attr_name)
+                        if getattr(route, f"_{official_name}", None) is None:
+                            setattr(route, official_name, attr_name)
                         remove_aliases_of(local_aliases[attr_name])
             # inspect methods                        
             elif inspect.isfunction(attr_val) and General.detect_method_routes:
@@ -1738,20 +1743,17 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         raise ValueError(f"f[fletfly] Route in attr'{attr_name}' any adjustment will affect original route, use copy() method")
                     else:
                         sub._potential_path = attr_name
-                        registered_kids.append(sub)
+                registered_kids.append(sub)
             elif isinstance(attr_val, UseFunc):
                 n = attr_val.get("name", None)
                 if n:
                     setattr(route, n, attr_val)
-
-        registered_kids = cls._register_children(registered_kids, zone.registered_children)
+        
+        zone.registered_children.update(registered_kids)
         return route, list(class_kids) + registered_kids
     
     @classmethod
-    def _route_from_dict(cls, original_dict: dict, route, zone):
-        if not route:
-            route = Route()
-            route._dict = original_dict
+    def _route_from_dict(cls, route, original_dict: dict):
 
         temp_dict = dict(original_dict)
         route_dict = {}
@@ -1762,25 +1764,12 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     break
         route.props = (temp_dict.pop("props", {}) or {}) | temp_dict
 
-        children = route_dict.pop("children", [])
+        if not isinstance(route, Shared):
+            children = route_dict.pop("children", [])
+            route.children.extend(children)
         
         for key, val in route_dict.items():
             setattr(route, key, val)
-            
-        children = cls._register_children(children, zone.registered_children)
-        return route, children
-    
-    def _register_children(children, register_set):
-        cleaned_children = []
-        for child in children:
-            if isinstance(child, dict):
-                a = Route()
-                a._dict = child
-            else:
-                a = child
-            cleaned_children.append(a)
-            register_set.update(cleaned_children)
-        return cleaned_children
 
     # get inner classes and children classes and register them all in registered_children
     @classmethod
@@ -1789,25 +1778,27 @@ Command Bunker, injection, if there is a path, then create a node in the map.
         _fletfly_children="_fletfly_children"
         children = set()
         clas = None
-        dic = None
+        def clean_from_dict(items):
+            new_items = []
+            for item in items:
+                if isinstance(item, dict):
+                    a = Route(item)
+                    a.__module__ = "Unknown Module"
+                    new_items.append(a)
+                else:
+                    new_items.append(item)
+            return new_items
+        
         if isinstance(class_route_zone, Route):
+            class_route_zone.children = clean_from_dict(class_route_zone.children)
             children.update(class_route_zone.children)
             if class_route_zone._class:
                 clas = class_route_zone._class
                 routed_classes.add(clas)
-            elif getattr(class_route_zone, "_dict", None):
-                dic = class_route_zone._dict
         elif isinstance(class_route_zone, type):
             clas = class_route_zone
         elif isinstance(class_route_zone, Zone):
             General._zones.append(class_route_zone)
-        elif isinstance(class_route_zone, dict):
-            dic = class_route_zone
-        if dic:
-            for alias in aliases["children"]:
-                if alias in dic:
-                    children.update(dic[alias])
-                    break
         if clas:
             for attr_name, attr_value in clas.__dict__.items():
                 if attr_name.startswith("_"):
@@ -1823,19 +1814,19 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                     if not isinstance(attr_value, (list, tuple, set)):
                         raise ValueError(f"[fletfly] {attr_name} must be with type <list | tuple>")
                     else:
-                        children.update(attr_value)
+                        children.update(clean_from_dict(attr_value))
             
             if not hasattr(clas, _fletfly_children):
                 setattr(clas, _fletfly_children, set())
             getattr(clas, _fletfly_children, set()).update(children)
         
-        cls._register_children(children, registered_children)
+        registered_children.update(children)
         for child in children:
             cls._unify_class_children(child, registered_children, routed_classes)
         return children
 
     @classmethod
-    def _create_tree(cls, anchors:list=None, shared:list=None):
+    def _create_tree(cls, routes, shared):
         if General.detect_route_subclasses:
             General._inherited_classes = set(Route.__subclasses__())
             General._inherited_classes.discard(Shared)
@@ -1851,25 +1842,25 @@ Command Bunker, injection, if there is a path, then create a node in the map.
 
         for unit in (General._inherited_classes | General._pending_routes):
             cls._unify_class_children(unit, General._registered_children, General._routed_classes)
-        
-        zone0 = Zone(anchors, path="", shared=shared)
-        zone0.modules.add('__main__')
+
+        zone0 = Zone(path="", routes=routes, shared=shared, modules=['__main__'])
         General._zones.append(zone0)
         z_idx = 0
         while z_idx < len(General._zones):
             z = General._zones[z_idx]
-            for unit in z.anchors:
+            for unit in z.routes:
                 cls._unify_class_children(unit, z.registered_children, z.routed_classes)
             z_idx += 1
         
-        _adjust_zones_modules(General._zones)
+        if General.detect_zone_modules: 
+            _adjust_zones_modules(General._zones)
         zone0._create_tree()
         General._main_zone_tree = zone0.tree
     
     @classmethod
     def _check_root_fly_to(cls, tree):
         root = tree.get('')
-        if root and root._view is None and root._index is None and root._fly_to is None:
+        if root and root._view is None and root._layout is None and root._index is None and root._fly_to is None:
             common_paths = ['/home', '/index', '/main', '/dashboard', '/start']
             found_target = None
             
@@ -2114,9 +2105,6 @@ class Shared(Route):
             a = Shared()
             a.view =args[0]
             return args[0]
-        elif len(args) == 1 and not kwargs and isinstance(args[0], dict):
-            a = Shared()
-            a._dict = args[0]
         else:
             return super().__new__(cls) 
     def __repr__(self):
@@ -2125,46 +2113,47 @@ class Shared(Route):
 
 class Zone:
     def __init__(self,
-                routes_or_modules,
-                path=None,
-                shared=None):
+                modules, # must be entered to avoid auto-detection of its content in main zone
+                routes=None,
+                shared=None,
+                path=None):
         self.path = path
-        routes_or_modules = list(routes_or_modules) if isinstance(routes_or_modules, (tuple, list, set)) else [routes_or_modules]
+        
+        modules = list(modules) if isinstance(modules, (tuple, list, set)) else ([modules] if modules else [])
+        self.modules = set()
+        for m in modules:
+            m_name = None
+            if isinstance(m, str):
+                if not m in sys.modules:
+                    raise ImportError(f"[fletfly] Module '{m}' is not loaded in sys.modules.")
+                m_name = m
+            elif isinstance(m, types.ModuleType):
+                m_name = m.__name__
+            if m_name:
+                if m_name in General._preserved_modules:
+                    raise ValueError(f"[fletfly] Module '{m_name} is used for other zone, zone modules must be destinct.'")
+                self.modules.add(m_name)
+        General._preserved_modules.update(self.modules)
+
         shared = list(shared) if isinstance(shared, (tuple, list, set)) else ([shared] if shared else [])
         self.shared = set()
-        for item in shared:
-            if isinstance(item, dict):
-                print(11111111111111111, "i came here")
-                a = Shared()
-                a._dict = item
+        for s in shared:
+            if isinstance(s, dict):
+                a = Shared(s)
                 a.__module__ = "Unknown_module"
                 self.shared.add(a)
-            elif isinstance(item, type):
-                a = Shared()
-                a._class = item
-                a.__module__ = item.__module__
-                self.shared.add(a)
             else:
-                self.shared.add(item)
-        self.anchors = []
-        self.modules = set()
-        for item in routes_or_modules:
-            mod = None
-            if isinstance(item, str) and item in sys.modules:
-                mod = item
-            elif isinstance(item, types.ModuleType):
-                mod = item.__name__
-            elif isinstance(item, (Route, type, types.FunctionType, types.MethodType)):
-                mod = item.__module__
-                self.anchors.append(item)
-            elif isinstance(item, dict):
-                self.anchors.append(item)
+                self.shared.add(s)
 
-            if mod and mod in General._reserved_anchor_modules:
-                raise ValueError(f"[fletfly] Module {mod} is used in different zones. Different zones can't have same original modules, but can have shared modules.")
-            elif mod:
-                self.modules.add(mod)
-        General._reserved_anchor_modules.update(self.modules) 
+        routes = list(routes) if isinstance(routes, (tuple, list, set)) else ([routes] if routes else [])
+        self.routes = set()
+        for r in routes:
+            if isinstance(r, dict):
+                a = Route(r)
+                a.__module__ = "Unknown_module"
+                self.routes.add(a)
+            else:
+                self.routes.add(r)
         
         self.parents = []
         self.registered_children = set()
@@ -2173,8 +2162,8 @@ class Zone:
         self.shared_map = {}
         self.zone_root = None
 
-        # Dynamic calling module detection
         if self.path is None:
+            self.__module__ = "Unknown_module"
             frame = sys._getframe(1)
             while frame:
                 module_name = frame.f_globals.get('__name__')
@@ -2184,7 +2173,6 @@ class Zone:
                 frame = frame.f_back
 
     def _create_tree(self)->Route:
-        print(111111111111111, self.modules)
         inh = {c for c in General._inherited_classes if c.__module__ in self.modules}
         pnd = {c for c in General._pending_routes if c.__module__ in self.modules}
  
@@ -2192,7 +2180,8 @@ class Zone:
         rou = General._routed_classes | self.routed_classes
         
         pre_finals = ((inh | pnd)-(reg | rou))
-        finals = [i for i in self.anchors if isinstance(i, dict) or i not in pre_finals] + list(pre_finals)
+        
+        finals = self.routes | pre_finals
 
         for unit in finals:
             Route._inject_into_tree(route_node=unit, zone=self)
@@ -2205,8 +2194,6 @@ class Zone:
         for unit in self.shared | inh_sh | pnd_sh:
             if unit._class:
                 shared, _ = Route._route_from_class(unit._class, unit, zone=self)
-            elif getattr(unit, "_dict", None):
-                shared, _ = Route._route_from_dict(unit._dict, unit, zone= self)
             else:
                 shared = unit
             if not shared._name:
@@ -2227,8 +2214,7 @@ class Zone:
                     for k, v in mod.__dict__.items():
                         if v is self:                            
                             route._potential_path = k
-                            break
-            
+                            break           
             return route
         else:
             print(f"[fletfly] Failed to create Zone {self.path}")
@@ -2261,9 +2247,10 @@ def _adjust_zones_modules(zones:list[Zone]): # [["__main__"], ["project1_a", "pr
     """
     Builds an isolated routing hierarchy treating all inputs as uniform zones.
     Index 0 represents the Root Zone (Main Project).
-    """
-    ignored = set()
- 
+    """      
+
+    ignored = set() 
+
     for zone in zones:
         queue = list(zone.modules)
         while queue:
@@ -2280,10 +2267,11 @@ def _adjust_zones_modules(zones:list[Zone]): # [["__main__"], ["project1_a", "pr
                 if isinstance(attr, types.ModuleType):
                     target_mod = attr.__name__
                 elif isinstance(attr, (Route, type, types.FunctionType, types.MethodType)):
-                    target_mod = attr.__module__
+                    target_mod = getattr(attr, "__module__", None)
+                    if target_mod is None and hasattr(attr, "__class__"):
+                        target_mod = getattr(attr.__class__, "__module__", None)
 
-                if not target_mod or\
-                        target_mod in General._reserved_anchor_modules: continue
+                if not target_mod or target_mod in General._preserved_modules: continue
                 
                 target_root = target_mod.split('.')[0]
                 

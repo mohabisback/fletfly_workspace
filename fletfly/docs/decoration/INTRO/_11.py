@@ -1,6 +1,6 @@
 import flet as ft
 import fletfly as fy 
-from _11a import home as Project1 # Imported the Route instance instead of the class
+import _11a as Project1 # Import module of Sub project
 
 shared = fy.Shared()
 @shared.use.view(value='I am "CardDeck" shared of Main Zone')
@@ -16,7 +16,12 @@ def home_view():
         'CardDeck' 
     )
     
-project = fy.Zone(Project1) # Zone, auto named to '/home/project'
+project = fy.Zone(
+    modules= Project1,          # module of second project
+  # routes = Project1.home,     # if auto-detection is off
+  # shared = Project1.shared,   # if auto-detection is off
+  # path = 'project'            #if auto-naming is off
+    )
 home.children.append(project)
 
 ft.run(fy.fly)

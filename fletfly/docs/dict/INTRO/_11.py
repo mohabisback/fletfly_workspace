@@ -1,7 +1,6 @@
 import flet as ft
 import fletfly as fy 
-from _11a import home as subhome # Imported the Route configuration dict/tree
-import _11a
+import _11a as Project1 # import module of sub project
 
 class CardDeck(ft.TextField): pass
 
@@ -21,12 +20,12 @@ home = {
     "path": "home",
     "view": home_view,
     "children": [
-        fy.Zone([
-            subhome,    # we can't detect module of dict
-            _11a        # you have to pass the module itself
-            ],          # for auto-detection of routes and shared
-            'project'
-            )
+        fy.Zone(
+            modules= Project1,      # you have to pass the module itself
+            routes = Project1.home, # we can't auto-detect unless wrapped
+          # shared = Project1.shared   # it is auto-detected by wrapping
+            path = 'project',    
+            )       
     ]
 }
 

@@ -14,30 +14,35 @@ def b_fallback_view():
 def b_view(id, color): 
     return ft.Text(f"{id} page, color is {color}")
 
-# Declarative tree composition
-a = fy.Route(  # Route detection: path auto named to "/a"
-    fy.use.view(a_view),
-    children=[
-        fy.Route('b',
-            children=[
-                fy.Route(':id',
-                    fy.use.view(b_view)
-                ),
-                fy.Route('*',
-                    fy.use.view(b_fallback_view)
-                )
-            ]
-        ),
-        fy.Route('*',
-            fy.use.view(a_fallback_view)
-        )
+a = {
+    "path": "a",
+    "view": a_view,
+    "children": [
+        {
+        "path": "b",
+        "children": [
+            {
+           "path": ":id",
+            "view": b_view
+            },
+            {
+            "path": "*",
+            "view": b_fallback_view
+            }
+        ]
+        },
+        {
+        "path": "*",
+        "view": a_fallback_view
+        }
     ]
-)
+}
 
 fy.Router(a, error_path='a/*')
 
 async def main(page):
     fy.fly(page)
+
     target_pages = ['a/b/123?color="red"', 'a/b/c/d/e/f/g/h/i/j/k/l', 'a/m/n/o/p/q/r/s', 'something']
     for _ in range(3):
         for p in target_pages:
