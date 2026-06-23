@@ -3,7 +3,7 @@ import fletfly as fty
 
 # 1. ميدل وير بيعمل ريدايركت لمسار "نسبي"
 def mw_redirector():
-    print(f"🔄 [MW] Redirecting from: {fty.route}")
+    print(f"🔄 [MW] Redirecting from: {fty._route}")
     # هل هيروح لـ /login ولا لـ /dashboard/login ؟
     return "login" 
 

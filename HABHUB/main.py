@@ -66,23 +66,23 @@ def search_view(page: ft.Page):
     )
 
 
-zone = fty.route(path="/", viewer=get_home, fly_ins=[
+zone = fty._route(path="/", viewer=get_home, fly_ins=[
     fty.fly_in(fly_in1, msg="done once every view of home page", inheritable=False),
     fly_in2, # default, done once every inheriting sub
     fty.fly_in(fly_in1, msg="repeated every sub view", apply_per_view=False),
     ], children=[
     
         # simple route(route) with path(string) and viewer(callable returns a view)
-        fty.route(path="/error", viewer=get_err),
+        fty._route(path="/error", viewer=get_err),
 
         # route with children(subroutes)
-        fty.route(path="/:id", fly_out=fly_in2, viewer=search_view, children=[
-            fty.route(fly_to="something", children=[
-                fty.route(fly_to="something2"),
-                fty.route(path="/[chat]", fly_out=fly_in2, viewer=test_view, children=[
-                    fty.route('hi', layout=test_view, children=[
-                        fty.route("bye", view=test_view),
-                        fty.route("", view=test_view)
+        fty._route(path="/:id", fly_out=fly_in2, viewer=search_view, children=[
+            fty._route(fly_to="something", children=[
+                fty._route(fly_to="something2"),
+                fty._route(path="/[chat]", fly_out=fly_in2, viewer=test_view, children=[
+                    fty._route('hi', layout=test_view, children=[
+                        fty._route("bye", view=test_view),
+                        fty._route("", view=test_view)
                     ])
                 ])
             ])

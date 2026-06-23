@@ -143,7 +143,7 @@ def mw_son(must_arg1, must_arg2, optional_arg1 = "default optional_arg1", option
     print("optional_arg1:", optional_arg1)
     print("optional_arg2:", optional_arg2)
     print("injected page is working:", fty.page)
-    print("injected route is working:", fty.route)
+    print("injected route is working:", fty._route)
     print("injected is_final is working:", fty.is_final)
     return True
 
@@ -154,7 +154,7 @@ def mw_auth(must_arg1, must_arg2, optional_arg1 = "default optional_arg1", optio
     print("optional_arg1:", optional_arg1)
     print("optional_arg2:", optional_arg2)
     print("injected page is working:", fty.page)
-    print("injected route is working:", fty.route)
+    print("injected route is working:", fty._route)
     print("injected is_final is working:", fty.is_final)
     return True
 
@@ -166,7 +166,7 @@ def mw_role(must_arg1, must_arg2, optional_arg1 = "default optional_arg1", optio
     print("optional_arg1:", optional_arg1)
     print("optional_arg2:", optional_arg2)
     print("injected page is working:", fty.page)
-    print("injected route is working:", fty.route)
+    print("injected route is working:", fty._route)
     print("injected is_final is working:", fty.is_final)
     return True
 # --- تجربة الـ Nesting في الخريطة (Static Map) ---

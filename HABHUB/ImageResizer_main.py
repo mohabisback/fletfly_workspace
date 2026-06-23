@@ -1,8 +1,9 @@
 #ImageResizer.main.py
 import flet as ft
 import fletfly as fty
-from fletfly import Route, General, route
-route = Route
+from fletfly import Route, General
+from fletfly import _route
+_route = Route
 from ImageResizer.home import get_view as get_home
 from ImageResizer.about import get_view as get_about
 from ImageResizer.error import get_view as get_err
@@ -69,16 +70,16 @@ Pages = {
                 }
             }
         }
-route = route("", get_home,[
-    route("error", get_err),
-    route("about", get_about),
-    route("contact", get_about, [
-        route("email", test_view),
-        route("phone", get_err),
-        route("test", test_view, [
-               route("user", None, [
-                   route(":id", profile_view),
-                   route("search", search_view)
+_route = _route("", get_home,[
+    _route("error", get_err),
+    _route("about", get_about),
+    _route("contact", get_about, [
+        _route("email", test_view),
+        _route("phone", get_err),
+        _route("test", test_view, [
+               _route("user", None, [
+                   _route(":id", profile_view),
+                   _route("search", search_view)
                ])
         ])
     ])
@@ -86,7 +87,7 @@ route = route("", get_home,[
 
 def main(page: ft.Page): # will never run in case of beeing sub project
     page.title = TITLE
-    fty.Router(page, route, error_land="/error")
+    fty.Router(page, _route, error_land="/error")
 
 if __name__ == "__main__":
     ft.run(main)

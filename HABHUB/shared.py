@@ -1,5 +1,5 @@
 import flet as ft
-from fletfly import Router, Route, slot, fly, Shared, view
+from fletfly import _Router, Route, slot, fly, Shared, view
 
 
 class Home(Route):
@@ -57,5 +57,5 @@ Shared('class as view2', Shared.view(F, value="2222 This is a class inherited fr
 Shared('class as view3').view(F, value='This is a class acting as a view')
 Shared('class as view4').view = view(F, value="2222 This is a class inherited from ft.Text")
 
-Router(print_shared_views=True)
+_Router(print_shared_views=True)
 ft.run(fly)

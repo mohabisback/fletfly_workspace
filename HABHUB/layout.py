@@ -17,7 +17,7 @@ def shared_card_deck1(page):
         border=ft.Border.all(2, ft.Colors.AMBER_400)
     )
 
-@fty.route
+@fty._route
 class H:
     """الطبقة الخارجية - الغلاف الكلي باستخدام نظام الـ Slots الجديد المؤمن بالـ page session"""
     is_root = True
