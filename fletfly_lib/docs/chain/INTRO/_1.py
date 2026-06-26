@@ -27,13 +27,13 @@ contact = home.child().view(contact_view) # auto named
 user = home.child().view(user_view)
 about = home.child().view(text, value="About page")
 
-home.child('error').view(lambda: ft.Text("Error page"))
+c = home.child('error').view(lambda: ft.Text("Error page"))
 
 async def main(page):
     fy.fly(page)
     target_pages = ["home/contact", "home/user", "home/about", 'home/error']
     for p in target_pages:
         await asyncio.sleep(2)
-        page.fly(p)
+        fy.fly(page, p)
 
 ft.run(main)

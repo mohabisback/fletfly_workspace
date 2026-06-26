@@ -27,6 +27,6 @@ async def main(page):
     target_pages = ["a/1", "a/2", "b/3", 'b/4', 'c/5', 'd/6']
     for p in target_pages:
         await asyncio.sleep(2)
-        page.fly(p)
+        fy.fly(page, p)
 
 ft.run(main)

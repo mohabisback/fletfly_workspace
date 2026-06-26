@@ -8,7 +8,7 @@ class CardDeck(ft.TextField): pass
 class Home(fy.Route): # Main project '/home'
     def view(self): return (
                 ft.Text ("Main Home page"),
-                ft.Button("Go Sub Project", on_click=lambda e: e.page.fly('home/project')),
+                ft.Button("Go Sub Project", on_click=lambda e: e.fy.fly(page, 'home/project')),
                 'CardDeck' )
     
     project = fy.Zone(

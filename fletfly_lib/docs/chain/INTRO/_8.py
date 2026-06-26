@@ -3,8 +3,8 @@ import flet as ft
 import fletfly as fy
 
 class CardDeck(ft.TextField): pass
-shared = fy.Shared().view(CardDeck).props(value='I am shared, change me') # auto-named to CardDeck
-CardDeck2 = fy.Shared().view(CardDeck).props(value='I am shared, change me too')
+shared = fy.Shared().view(CardDeck).props(value='11111111111111111111') # auto-named to CardDeck
+CardDeck2 = fy.Shared().view(CardDeck).props(value='22222222222222222222')
 
 def home_layout(page):    # Auto-detected layout
     return ft.Column([
@@ -30,11 +30,11 @@ home = fy.Route().layout(home_layout).view(home_view)
 e = fy.Route('/a/b/c/d/e').layout(e_layout)
 
 async def main(page):
-    fy.fly(page)
+    fy.fly(page, 'a/b/c/d/e')
     target_pages = ['home', 'a/b/c/d/e']
     for _ in range(10):
         for p in target_pages:
-            await asyncio.sleep(2)
-            page.fly(p)
+            await asyncio.sleep(5)
+            fy.fly(page, p)
 
 ft.run(main=main)

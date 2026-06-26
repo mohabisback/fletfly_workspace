@@ -6,15 +6,15 @@ def test_defaults():
     """Verify Route sets up correct defaults and registers itself globally."""
     aw = Route()
     
-    assert aw._view is None
-    assert aw._layout is None
-    assert aw._path is None
+    assert aw._view == "UNSET"
+    assert aw._layout == "UNSET"
+    assert aw._path == "UNSET"
     assert aw.children == []
     assert aw.fly_ins == []
     assert aw.fly_outs == []
     assert aw.fly_ins == []
     assert aw.fly_outs == []
-    assert aw._class is None
+    assert aw._class == None
     
     assert aw in General._pending_routes
 

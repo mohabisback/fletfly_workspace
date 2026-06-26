@@ -17,7 +17,7 @@ def test_auto_path_naming_disabled():
     route, kids = Route._route_from_class(SilentRoute, None, zone)
     
     # Path must strictly remain None because auto-naming is turned off
-    assert route._path is None
+    assert route._path == "UNSET"
 
 
 def test_detect_methods_routes_disabled():

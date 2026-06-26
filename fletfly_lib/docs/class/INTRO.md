@@ -96,8 +96,8 @@ class Home():                  # Route detection: path auto named to "/home"
     
         def view(self, page):  # Injected into self or inheritable layout
             return (
-                ft.Text(f"{page.fly.params.get('id','default')}"),   # URL params
-                {"slot_a":ft.Text(f"{page.fly.query.get('color', 'default')}")}, # URL query
+                ft.Text(f"{fy.fly(page).params.get('id','default')}"),   # URL params
+                {"slot_a":ft.Text(f"{fy.fly(page).query.get('color', 'default')}")}, # URL query
                 "CardDeck"   # shared view returned as part of view
             )
     
@@ -427,9 +427,9 @@ ft.run(main)
 
 <small>**[<font size="1">More About Props</font>](docs/class/props.md)**</small>
 
-## 11. Microfrontend With Zone and page.fly.
+## 11. Microfrontend With Zone and fy.fly(page).
 - Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
-- Use `zone()` function and navigate with `page.fly()`, to reach relative paths in your sub projects.
+- Use `zone()` function and navigate with `fy.fly(page, )`, to reach relative paths in your sub projects.
 - Deliver your module and let us handle the auto-detection magic, or manually provide your routes and shared objects.
 
 <details>
@@ -447,7 +447,7 @@ class CardDeck(ft.TextField): pass
 class Home(fy.Route): # Main project '/home'
     def view(self): return (
                 ft.Text ("Main Home page"),
-                ft.Button("Go Sub Project", on_click=lambda e: e.page.fly('home/project')),
+                ft.Button("Go Sub Project", on_click=lambda e: e.fy.fly(page, 'home/project')),
                 'CardDeck' )
     
     project = fy.Zone(
@@ -471,8 +471,8 @@ class Home(fy.Route):
     def view(self):
         return (
             ft.Text ("Sub project Home page"),
-            ft.Button('Go settings', on_click=lambda e: e.page.fly('home/settings')),
-            ft.Button('Go Root Home', on_click=lambda e: e.page.fly('home', root=True)),
+            ft.Button('Go settings', on_click=lambda e: e.fy.fly(page, 'home/settings')),
+            ft.Button('Go Root Home', on_click=lambda e: e.fy.fly(page, 'home', root=True)),
             'CardDeck'
         )
     class Settings:
@@ -480,8 +480,8 @@ class Home(fy.Route):
         def view(self):
             return (
                 ft.Text ("Sub project Settings page"),
-                ft.Button('Go Home', on_click=lambda e: e.page.fly('home')),
-                ft.Button('Go Root Home', on_click=lambda e: e.page.fly('home', root=True)),
+                ft.Button('Go Home', on_click=lambda e: e.fy.fly(page, 'home')),
+                ft.Button('Go Root Home', on_click=lambda e: e.fy.fly(page, 'home', root=True)),
                 'CardDeck'
             )
 if __name__ == "__main__":
@@ -563,7 +563,7 @@ async def main(page):
     for _ in range(1): 
         for p in target_pages:
             await asyncio.sleep(2)
-            page.fly(p)
+            fy.fly(page, p)
 ft.run(main)
 ```
 </details>

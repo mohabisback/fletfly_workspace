@@ -100,7 +100,7 @@ def test_18():
     def sample_func(page): pass
     aw = Route()
     aw.layout()
-    assert aw._layout == None
+    assert aw._layout == "UNSET"
     assert not aw.layout_hero
     assert not aw._layout_override
 

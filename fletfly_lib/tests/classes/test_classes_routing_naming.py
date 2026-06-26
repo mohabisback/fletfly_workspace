@@ -37,4 +37,4 @@ def test_fallback_naming_skipped_for_non_normal_decorated_routes():
     route, kids = Route._route_from_class(CustomLayoutOnly, None, zone)
     
     # Path must remain None because auto-naming is explicitly gated behind normal_route condition
-    assert route._path is None
+    assert route._path == "UNSET"

@@ -8,7 +8,7 @@ shared = fy.Shared().view(CardDeck).props(value='I am "CardDeck" shared of Main 
 def home_view(): 
     return (
         ft.Text("Main Home page"),
-        ft.Button("Go Sub Project", on_click=lambda e: e.page.fly('home/project')),
+        ft.Button("Go Sub Project", on_click=lambda e: e.fy.fly(page, 'home/project')),
         'CardDeck' 
     )
 

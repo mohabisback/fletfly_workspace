@@ -9,7 +9,7 @@ from fletfly import (
     child, 
     Route, 
     UseFunc, 
-    UseFunc
+    use
 )
 
 def test_layout_direct_call_returns_dict():
@@ -27,7 +27,7 @@ def test_fly_in_direct_call_with_cls_keyword():
     """Test that passing 'cls' as a keyword argument converts it to 'func' properly."""
     def dummy_func(): pass
     aw = Route()
-    res1 = fly_in(cls=dummy_func, inheritable=True, apply_per_view=True, role="user")
+    res1 = use.fly_in(func=dummy_func, inheritable=True, apply_per_view=True, role="user")
     res2 = aw.fly_out(dummy_func, True, True, role="user")
  
     assert isinstance(res1, UseFunc)

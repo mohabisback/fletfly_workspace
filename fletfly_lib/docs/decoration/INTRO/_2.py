@@ -41,8 +41,8 @@ user = fy.Route(':id')
 @user.use.view
 def user_view(page):  # Injected into self or inheritable layout
     return (
-        ft.Text(f"{page.fly.params.get('id','default')}"),   # URL params
-        {"slot_a":ft.Text(f"{page.fly.query.get('color', 'default')}")}, # URL query
+        ft.Text(f"{fy.fly(page).params.get('id','default')}"),   # URL params
+        {"slot_a":ft.Text(f"{fy.fly(page).query.get('color', 'default')}")}, # URL query
         "CardDeck"   # shared view returned as part of view
     )
 
@@ -62,6 +62,6 @@ async def main(page):
     target_pages = ["home/123", "home/456", "home/999", 'home/100']
     for p in target_pages:
         await asyncio.sleep(5)
-        page.fly(p)
+        fy.fly(page, p)
 
 ft.run(main)

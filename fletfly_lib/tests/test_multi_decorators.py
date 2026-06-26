@@ -113,7 +113,7 @@ def test_inject_method():
     assert res4.fly_ins[2]["apply_per_view"]==True
     assert res4.fly_in_override == True
     assert res4.layout_override == False
-    assert res4.layout_hero == None
+    assert res4.layout_hero == "UNSET"
     assert res4.view_hero == True
 
 
@@ -280,7 +280,7 @@ def test_inject_class():
     assert res4.fly_ins[2]["apply_per_view"]==True
     assert res4.fly_in_override == True
     assert res4.layout_override == False
-    assert res4.layout_hero == None
+    assert res4.layout_hero == "UNSET"
     assert res4.view_hero == True
 
 

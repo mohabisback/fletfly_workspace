@@ -1,11 +1,14 @@
 """
-15. Redirecting With `fly_to` vs Directing with `fly`
-### `fy.fly(page, route)`: 
+## 15. Navigation With `fly(page)` 
+### General usage
+- Relative Directing according to the current zone, as: fly(page, 'home').
+- Absolute Directing according the root of main zone, as: fly(page, 'home', True).
+- Fetches page params & query as: fly(page).params | fly(page).query
+### Usage in main function.
 - Initiates the core Router engine (if not initiated by `Router()` definition)
 - Directing navigation on runtime for each user based on any conditions.
-### `fly_to`
-- Class/ Router level property, automatically intercepts and reroute traffic to another route.
 """
+
 import asyncio
 import flet as ft
 import fletfly as fy
@@ -30,7 +33,7 @@ async def main(page):
 
     # force directing in a while
     await asyncio.sleep(5)
-    page.fly('error')
+    fy.fly(page, 'error')
 
 
 ft.run(main=main)

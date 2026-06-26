@@ -7,9 +7,6 @@ b = a.__args__
 print(str in b) # True
 
 
-obj = Route()
-
-
 text = ft.Text("hi")
 con = ft.Container(content = text)
 

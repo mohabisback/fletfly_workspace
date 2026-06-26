@@ -25,6 +25,6 @@ async def main(page):
     for _ in range(3):
         for p in target_pages:
             await asyncio.sleep(2)
-            page.fly(p)
+            fy.fly(page, p)
 
 ft.run(main)

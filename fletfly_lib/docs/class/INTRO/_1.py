@@ -33,6 +33,6 @@ async def main(page):
     target_pages = ["home/contact", "home/user", "home/about", 'home/error']
     for p in target_pages:
         await asyncio.sleep(2)
-        page.fly(p)
+        fy.fly(page, p)
 
 ft.run(main)

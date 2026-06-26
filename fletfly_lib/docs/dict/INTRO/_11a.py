@@ -13,16 +13,16 @@ fy.Shared({
 def sub_home_view():
     return (
         ft.Text("Sub project Home page"),
-        ft.Button('Go settings', on_click=lambda e: e.page.fly('home/settings')),
-        ft.Button('Go Root Home', on_click=lambda e: e.page.fly('home', root=True)),
+        ft.Button('Go settings', on_click=lambda e: e.fy.fly(page, 'home/settings')),
+        ft.Button('Go Root Home', on_click=lambda e: e.fy.fly(page, 'home', root=True)),
         'CardDeck'
     )
 
 def settings_view():
     return (
         ft.Text("Sub project Settings page"),
-        ft.Button('Go Home', on_click=lambda e: e.page.fly('home')),
-        ft.Button('Go Root Home', on_click=lambda e: e.page.fly('home', root=True)),
+        ft.Button('Go Home', on_click=lambda e: e.fy.fly(page, 'home')),
+        ft.Button('Go Root Home', on_click=lambda e: e.fy.fly(page, 'home', root=True)),
         'CardDeck'
     )
 
