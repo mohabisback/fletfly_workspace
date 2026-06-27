@@ -288,8 +288,10 @@ class _MethodHandler:
                 final_val = UNSET
                 if value is UNSET: pass
                 else: # Explicit None is allowed here
-                    if getattr(instance, self.set_name, UNSET) is not UNSET:
-                        print(f"[fletfly] WARNING: second re-setting of {self.name} for route route '{instance.path}'.")
+                    if self.name == "index":
+                        print(11111111111111, self.set_name, value)
+                    if getattr(instance, self.set_name, UNSET) not in (None, UNSET):
+                        print(f"[fletfly] WARNING: second re-setting of {self.name} for route of path: '{instance.path}'.")
                     if self.name == "index":
                         idx = self._child_item(value)
                         if idx:
@@ -491,7 +493,7 @@ class _MethodHandler:
             if self.name == "index":
                 route.path = ""
                 if instance:
-                    setattr(instance, self.set_name, route)
+                    setattr(instance, self.name, route)
             else:
                 _inject_child_parents(route, kwargs)
             return route
@@ -730,7 +732,7 @@ class _BoolAttr:
         # Return a new wrapper instance with the current value and context
         return self.__class__(self.name, value=val, ctx=instance)
     def __set__(self, instance, value):
-        if value is not None and not isinstance(value, bool):
+        if value is not None and not isinstance(value, (bool,str)):
             raise TypeError(f"[fletfly] {self.name} is expected to be bool | None.")
         if instance is not None:
             setattr(instance, self.set_name, value)
@@ -765,14 +767,14 @@ class _HeroAttr:
         # Return a new wrapper instance with the current value and context
         return self.__class__(self.name, value=val, ctx=instance)
     def __set__(self, instance, value):
-        if instance is not None and not isinstance(value, (bool, int)):
+        if instance is not None and not isinstance(value, (bool, int, str)):
             raise TypeError(f"[fletfly] {self.name} is expected to be bool | int | None")
         if instance is not None:
             setattr(instance, self.set_name, value)
     def __call__(self, value=None):
-        if instance is not None and not isinstance(value, (bool, int)):
-            raise TypeError(f"[fletfly] {self.name} is expected to be bool | int | None")
         if instance := self.ctx:
+            if not isinstance(value, (bool, int)):
+                    raise TypeError(f"[fletfly] {self.name} is expected to be bool | int | None")
             setattr(instance, self.set_name, value)
             return instance
         return value
@@ -1069,7 +1071,6 @@ class Route():
     def use(self):
         return UseProxy(self)
     
-
     def __init__(self, *args, **kwargs):
         self._layout=UNSET
         self._view=UNSET
@@ -1405,8 +1406,7 @@ Command Bunker, injection, if there is a path, then create a node in the map.
                         silly = True
                         break
                 if not silly: name = potential
-
-            if not name and route._class:
+            if not name and route._class and not hasattr(route, "_fletfly_method_child"):
                 name = getattr(route._class, "__name__", None)
             
             if not name and route._view:
@@ -1496,23 +1496,28 @@ Command Bunker, injection, if there is a path, then create a node in the map.
             route._class = _class
         
         def create_index_child(att_name, clbl, props, index_child):
-            sub = Route(props=props)
-            if inspect.isfunction(clbl):
+            sub = None
+            if isinstance(clbl, Route):
+                sub = clbl
+            elif isinstance(clbl, type) and General.detect_inner_classes:
+                sub = Route(props=props)
+                class_kids.discard(clbl)
+                sub._class=clbl
+            elif callable(clbl) and General.detect_method_routes:
+                sub = Route(props=props)
                 sub.view=UseFunc(func=att_name, name="view", props = {})
                 sub._class=_class
                 sub._fletfly_method_child = True
-            elif inspect.isclass(clbl):
-                if isinstance(clbl, type):
-                    class_kids.discard(clbl)
-                sub._class=attr_val
-            if index_child == "index":
-                if route._index is UNSET:
+            
+            
+            if sub:
+                if index_child == "index":
                     sub.path == ""
                     route.index = sub
-            else:
-                registered_kids.append(sub)
-                if sub._path is UNSET:
-                    sub._potential_path = attr_name
+                else:
+                    if sub._path is UNSET:
+                        sub._potential_path = attr_name
+                    registered_kids.append(sub)
             return sub
 
         # first loop for flagged functions
@@ -2039,7 +2044,6 @@ class Zone:
                     self.__module__ = module_name
                     break
                 frame = frame.f_back
-
     def _create_tree(self)->Route:
         inh = {c for c in General._inherited_classes if c.__module__ in self.modules}
         pnd = {c for c in General._pending_routes if c.__module__ in self.modules}
@@ -2052,7 +2056,6 @@ class Zone:
         finals = self.routes | pre_finals
 
         for unit in finals:
-            print(222222222222222, unit)
             Route._inject_into_tree(route_node=unit, zone=self)
         
         Route._check_root_fly_to(self.tree)
@@ -2060,8 +2063,14 @@ class Zone:
         # shared
         pnd_sh = {c for c in General._pending_shared if c.__module__ in self.modules}
         inh_sh = {c for c in General._inherited_shared if c.__module__ in self.modules}
-        for unit in self.shared | inh_sh | pnd_sh:
-            if unit._class:
+        final_shared = self.shared | inh_sh | pnd_sh
+
+        for unit in final_shared:
+            if isinstance(unit, type):
+                shared = Shared()
+                shared._class = unit
+                shared, _ = Route._route_from_class(unit, shared, zone=self)
+            elif unit._class:
                 shared, _ = Route._route_from_class(unit._class, unit, zone=self)
             else:
                 shared = unit
@@ -2077,13 +2086,13 @@ class Zone:
         if route:
             route.path = self.path
             route._zone = self
-            if route._path is None and self.__module__:
+            if route._path in (UNSET, None) and self.__module__ and General.auto_path_naming:
                 mod = sys.modules.get(self.__module__)
                 if mod:
                     for k, v in mod.__dict__.items():
                         if v is self:                            
-                            route._potential_path = k
-                            break           
+                            route.path = k
+                            break 
             return route
         else:
             print(f"[fletfly] Failed to create Zone {self.path}")

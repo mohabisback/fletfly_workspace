@@ -67,7 +67,7 @@ class page7(Route):
 class page8(Route):
     path = "/:name/[age]/{address}"
     def view(page):
-        return ft.Text(f"This is home999 of {page.fly.params.get("name", "No one")}")
+        return ft.Text(f"This is home999 of {fly(page).params.get("name", "No one")}")
     class page81: pass
 class page9(Route):
     url = "/home9"

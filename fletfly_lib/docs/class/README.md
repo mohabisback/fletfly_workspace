@@ -1,19 +1,8 @@
-> 💡 **Note:** This is the workspace for the [`fletfly`](./fletfly) library project.
-
 # fletfly
 **The Component Composition Engine for Flet.**
 
 "Stop writing procedural routing logic. With `fletfly`, fly with flet."
 
----
-> 💡 **Polyglot Design Note:** This guide uses **Class-Based Routes** as our primary example to demonstrate the engine's hierarchical power. Choose a dedicated guide for other paradigms based on your technical background:
->
-> * **[Class-Based Routes](fletfly/docs/class/README.md)** — *Django (CBV), ASP.NET Controllers, Spring Boot*
-> * **[Dict-Based Routes](fletfly/docs/dict/README.md)** — *Vue Router, Angular Router, React Router (Objects)*
-> * **[Declarative Routes](fletfly/docs/declare/README.md)** — *SwiftUI, Flutter (GoRouter), React Router (JSX)*
-> * **[File-Based Routes](fletfly/docs/file/README.md)** — *Next.js, Nuxt.js, SvelteKit*
-> * **[Route-Based Decorators](fletfly/docs/decoration/README.md)** — *FastAPI, Flask, NestJS*
-> * **[Chain-Based Routes](fletfly/docs/chain/README.md)** — *Laravel Core, Express.js (Chained)*
 ---
 
 ## 1. Quick Start.
@@ -171,7 +160,7 @@ if __name__ == "__main__":
 ```
 </details>
 
-<small>**[<font size="1">More About Aliases, Implicit and Explicit</font>](fletfly/docs/Explicit.md)**</small>
+<small>**[<font size="1">More About Aliases, Implicit and Explicit</font>](docs/Explicit.md)**</small>
 
 ## 4. Persistent Engine: Intelligent Reconciliation & Hero content.
 No matter how many views you are opening in the views stack, and how many navigations you made, you only use 1 instance of each layout, 1 instance of each view or shared view, and you can choose whether to garbage it at the end of its usage or keep it alive by the view_hero & layout_hero options.
@@ -205,7 +194,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About State Persistence & Hero</font>](fletfly/docs/HERO.md)**</small>
+<small>**[<font size="1">More About State Persistence & Hero</font>](docs/HERO.md)**</small>
 
 ## 5. Active Injection With Slots (Outlets).
 Slots are at your service not the other way around.
@@ -246,7 +235,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Slots</font>](fletfly/docs/SLOTS.md)**</small>
+<small>**[<font size="1">More About Slots</font>](docs/SLOTS.md)**</small>
 
 ## 6. Layout Override.
 Break the inheritance gracefully when you need an isolated view (like a login or settings page) within a nested structure.
@@ -276,7 +265,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Layouts Overriding</font>](fletfly/docs/Layout.md)**</small>
+<small>**[<font size="1">More About Layouts Overriding</font>](docs/Layout.md)**</small>
 
 ## 7. Multi & Inheritable Middleware System.
 No matter how many middleware checks You want to perform, we have your back.
@@ -318,7 +307,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About fly_in Middlewares</font>](fletfly/docs/FLYIN.md)**</small>
+<small>**[<font size="1">More About fly_in Middlewares</font>](docs/FLYIN.md)**</small>
 
 ## 8. Shared Views.
 A shared view is a view keeping its state outside the hierarchical tree, and can be:
@@ -358,7 +347,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Shared</font>](fletfly/docs/SHARED.md)**</small>
+<small>**[<font size="1">More About Shared</font>](docs/SHARED.md)**</small>
 
 ## 9. Lazy Loaders & data
 Don't keep your users waiting till the data is fetched, open your pages, with default values, use `data()` markers, and fetch your data by `loader()` function.
@@ -397,7 +386,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Loaders & data</font>](fletfly/docs/LOADER.md)**</small>
+<small>**[<font size="1">More About Loaders & data</font>](docs/LOADER.md)**</small>
 
 ## 10. Smart Dependency Injection
 Stop worrying about matching boilerplate signatures. 
@@ -436,7 +425,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Props</font>](fletfly/docs/props.md)**</small>
+<small>**[<font size="1">More About Props</font>](docs/props.md)**</small>
 
 ## 11. Microfrontend With Zone and fy.fly(page).
 - Add complete projects to your main project, not only one level but nested projects, inserted anywhere in your tree, without changing a letter in your code.
@@ -500,7 +489,7 @@ if __name__ == "__main__":
 ```
 </details>
 
-<small>**[<font size="1">More About Zone and fly</font>](fletfly/docs/zone.md)**</small>
+<small>**[<font size="1">More About Zone and fly</font>](docs/zone.md)**</small>
 
 
 ## 12. Index vs Child vs Children 
@@ -550,7 +539,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Fallbacks</font>](fletfly/docs/children.md)**</small>
+<small>**[<font size="1">More About Fallbacks</font>](docs/children.md)**</small>
 
 ## 13. Dynamic Routes: Params & Query
 - **Flexible Notation:** Dynamic paths are fully supported using three main styles: `:id`, `[id]`, and `{id}`.
@@ -593,7 +582,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Fallbacks</font>](fletfly/docs/dynamic.md)**</small>
+<small>**[<font size="1">More About Fallbacks</font>](docs/dynamic.md)**</small>
 
 
 ## 14. Navigation With `fly(page)` 
@@ -635,7 +624,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Fallbacks</font>](fletfly/docs/fly.md)**</small>
+<small>**[<font size="1">More About Fallbacks</font>](docs/fly.md)**</small>
 
 
 ## 15. Redirecting With `fly_to` 
@@ -673,7 +662,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Fallbacks</font>](fletfly/docs/fly_to.md)**</small>
+<small>**[<font size="1">More About Fallbacks</font>](docs/fly_to.md)**</small>
 
 
 
@@ -736,7 +725,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Children & Nesting</font>](fletfly/docs/CHILDREN.md)**</small>
+<small>**[<font size="1">More About Children & Nesting</font>](docs/CHILDREN.md)**</small>
 
 ## 17. Every level fallback
 - Set your fallback style for any or all levels.
@@ -767,7 +756,7 @@ ft.run(fy.fly)
 ```
 </details>
 
-<small>**[<font size="1">More About Fallbacks</font>](fletfly/docs/fallback.md)**</small>
+<small>**[<font size="1">More About Fallbacks</font>](docs/fallback.md)**</small>
 
 
 ## 18. Auto Tree Injection, Deep Nesting.
@@ -822,7 +811,7 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Children & Nesting</font>](fletfly/docs/CHILDREN.md)**</small>
+<small>**[<font size="1">More About Children & Nesting</font>](docs/CHILDREN.md)**</small>
 
 ## 19. Router Configs and Debugs Example
 - Set the max views opened in the same time.
@@ -893,7 +882,7 @@ http://127.0.0.1:35615
 ```
 </details>
 
-<small>**[<font size="1">More About Configs</font>](fletfly/docs/CONFIGS.md)**</small>
+<small>**[<font size="1">More About Configs</font>](docs/CONFIGS.md)**</small>
 
 
 ## 20. Route Copy & Reusability
@@ -934,4 +923,4 @@ ft.run(main)
 ```
 </details>
 
-<small>**[<font size="1">More About Children & Nesting</font>](fletfly/docs/CHILDREN.md)**</small>
+<small>**[<font size="1">More About Children & Nesting</font>](docs/CHILDREN.md)**</small>

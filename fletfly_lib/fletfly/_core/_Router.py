@@ -55,7 +55,7 @@ class Router: # singleton only 1 instance
                  initial_route = "",
                  error_path:str = "",
                  max_views:int = 5,
-                 stack_mode:StackMode = StackMode.root_all_from_last_home,
+                 stack_mode:StackMode = StackMode.all_views,
                  every_level_fallback=True,
                  auto_path_naming=True,
                  detect_created_routes=True,
@@ -1320,7 +1320,7 @@ class Router: # singleton only 1 instance
                         print(f"[fletfly] WARNING: The view returned shared name '{value}', but NO shared content is registered with this name!")
                         return None
                 if not _is_flet_instance(value) and not isinstance(value, Router._SharedObj):
-                    print(f"[fletfly] Return of layout or view functions must be of ft.Control type or string for shared views")
+                    print(f"[fletfly] Return of layout or view functions must be of ft.Control type (or string for shared views)")
                     print(f"[fletfly] Value of type {type(value)} is detected and ignored.")
                     return None
                 if v_flag is not None and (len(objs_map[""]) > 0 or len(list(objs_map.keys())) > 1):
@@ -1457,9 +1457,10 @@ class Router: # singleton only 1 instance
             if son_obj.objs_map and not layout_obj.holders: return son_obj
             if layout_obj.holders and not son_obj.objs_map: return layout_obj
 
-            nameless_list = list(son_obj.objs_map.pop("",[]))
+            nameless_list = list(son_obj.objs_map.get("",[]))
             
             for key, ctrl in son_obj.objs_map.items():
+                if key == "": continue
                 inserted = False
                 for holder in layout_obj.holders:
                     if getattr(holder, "_slot_name", None) == key:
@@ -1473,10 +1474,9 @@ class Router: # singleton only 1 instance
             extra_views = 0
             holder_index = 0
             extra_shared_views = 0
-            num_holders = len(nameless_holders)
-            
+            num_nameless_holders = len(nameless_holders)
             for ctrl in nameless_list:
-                if holder_index < num_holders:
+                if holder_index < num_nameless_holders:
                     nameless_holders[holder_index].content = ctrl
                     holder_index += 1
                 else:
@@ -1484,9 +1484,9 @@ class Router: # singleton only 1 instance
             if extra_views:
                 print(f"[fletfly] {extra_views} nameless view part/s have no slot including {extra_shared_views} shared views.")
                 
-            remaining_holders = num_holders - holder_index
-            if remaining_holders > 0:
-                print(f"[fletfly] {remaining_holders} nameless holders have got no views")
+            remaining_nameless_holders = num_nameless_holders - holder_index
+            if remaining_nameless_holders > 0:
+                print(f"[fletfly] {remaining_nameless_holders} nameless holders have got no views")
             return layout_obj
 
         @classmethod
